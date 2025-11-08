@@ -733,7 +733,7 @@ body {
         <path id="gaugeFill" d="M 20 140 A 110 110 0 0 1 240 140"
               fill="none" stroke="#FF5E5E" stroke-width="14" stroke-linecap="round"
               stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
-        <text id="batteryPercent" x="130" y="80" text-anchor="middle" dominant-baseline="middle"
+        <text id="batteryPercent" x="130" y="130" text-anchor="middle" dominant-baseline="middle"
               font-size="34" font-weight="700" fill="#222">--%</text>
       </svg>
       <div class="battery-title">Стан батареї</div>
@@ -747,7 +747,7 @@ body {
           <path id="nextFeedFill" d="M 20 140 A 110 110 0 0 1 240 140"
                 fill="none" stroke="#1976D2" stroke-width="14" stroke-linecap="round"
                 stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
-          <text id="nextFeedPercent" x="130" y="80" text-anchor="middle" dominant-baseline="middle"
+          <text id="nextFeedPercent" x="130" y="130" text-anchor="middle" dominant-baseline="middle"
                 font-size="30" font-weight="600" fill="#1976D2">— год — хв</text>
         </svg>
       </div>
