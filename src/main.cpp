@@ -6,7 +6,15 @@
 #include "time.h"
 #include "esp_sleep.h"
 #include "esp_wifi.h"
+
 #include "wifi_manager.h"
+
+void configureBatteryAdc() {
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32) || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3)
+  analogReadResolution(12);
+  analogSetAttenuation(ADC_11db);
+#endif
+}
 
 Servo mg996r;
 Preferences preferences;
@@ -38,6 +46,60 @@ struct FeedTime {
 FeedTime feedTimes[MAX_FEED_TIMES];
 int feedTimesCount = 0;
 
+static inline bool isDigitChar(char c) {
+  return c >= '0' && c <= '9';
+}
+
+int extractIntField(const String& obj, char fieldKey, int fallback) {
+  String pattern = "\"";
+  pattern += fieldKey;
+  pattern += "\":";
+  int pos = obj.indexOf(pattern);
+  if (pos == -1) {
+    String shortPattern = "";
+    shortPattern += fieldKey;
+    shortPattern += ":";
+    pos = obj.indexOf(shortPattern);
+    if (pos == -1) return fallback;
+  }
+
+  int colon = obj.indexOf(':', pos);
+  if (colon == -1) return fallback;
+
+  int valueStart = colon + 1;
+  while (valueStart < obj.length()) {
+    char c = obj.charAt(valueStart);
+    if (c == ' ' || c == '\t' || c == '"' || c == '\'') {
+      valueStart++;
+      continue;
+    }
+    break;
+  }
+  if (valueStart >= obj.length()) return fallback;
+
+  bool negative = false;
+  if (obj.charAt(valueStart) == '-') {
+    negative = true;
+    valueStart++;
+  }
+
+  int valueEnd = valueStart;
+  while (valueEnd < obj.length() && isDigitChar(obj.charAt(valueEnd))) {
+    valueEnd++;
+  }
+
+  if (valueEnd == valueStart) return fallback;
+
+  int value = obj.substring(negative ? valueStart - 1 : valueStart, valueEnd).toInt();
+  return value;
+}
+
+struct NextFeedInfo {
+  int minutesUntil = -1;
+  int targetHour = -1;
+  int targetMinute = -1;
+};
+
 // Старі змінні для сумісності
 int feedHour1 = 10;
 int feedMinute1 = 0;
@@ -45,6 +107,46 @@ int feedHour2 = 20;
 int feedMinute2 = 0;
 bool feed1Done = false;
 bool feed2Done = false;
+
+NextFeedInfo computeNextFeed() {
+  NextFeedInfo info;
+  time_t now = time(nullptr);
+  struct tm timeinfo;
+  if (!localtime_r(&now, &timeinfo)) {
+    return info;
+  }
+
+  const int nowTotal = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+  int bestDiff = (24 * 60) + 1;
+  bool found = false;
+
+  auto considerSlot = [&](int hour, int minute) {
+    if (hour < 0 || minute < 0) return;
+    hour = constrain(hour, 0, 23);
+    minute = constrain(minute, 0, 59);
+    int slotTotal = hour * 60 + minute;
+    int diff = slotTotal - nowTotal;
+    if (diff <= 0) diff += 24 * 60;
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      info.minutesUntil = diff;
+      info.targetHour = hour;
+      info.targetMinute = minute;
+      found = true;
+    }
+  };
+
+  for (int i = 0; i < feedTimesCount; ++i) {
+    considerSlot(feedTimes[i].hour, feedTimes[i].minute);
+  }
+
+  if (!found) {
+    considerSlot(feedHour1, feedMinute1);
+    considerSlot(feedHour2, feedMinute2);
+  }
+
+  return info;
+}
 
 // --- Кількість повторів годування ---
 int feedRepeats = 1;
@@ -61,23 +163,37 @@ const unsigned long SLEEP_INTERVAL = 60000;    // сон на 1 хвилину �
 float batteryVoltage = 0.0;
 float batteryPercent = 0.0;
 // === Оновлено для 2 x 18650 з калібруванням ===
-const float DIVIDER_RATIO = 3.3;       // базовий дільник
-const float CALIBRATION_FACTOR = 0.886; // підкоригувати під мультиметр
+const int BATTERY_SAMPLES = 16;
+const float ADC_REFERENCE_VOLTAGE = 3.3f;
+const float ADC_MAX_VALUE = 4095.0f;
+const float VOLTAGE_DIVIDER_RATIO = 5.08f;   // розраховано під MH Electronic сенсор
+const float BATTERY_CALIBRATION = 1.00f;     // додаткова корекція (налаштувати за потреби)
 
 // === Utilities ===
 float readBatteryVoltage() {
-  int raw = analogRead(BATTERY_PIN);
-  // 12-бітний ADC, 3.3V max, множимо на коефіцієнт дільника та калібруємо
-  float voltage = (raw / 4095.0) * 3.3 * DIVIDER_RATIO;
-  voltage *= CALIBRATION_FACTOR; // точна підгонка під мультиметр
+  uint32_t accumulator = 0;
+  for (int i = 0; i < BATTERY_SAMPLES; ++i) {
+    accumulator += analogRead(BATTERY_PIN);
+    delayMicroseconds(200);
+  }
+  float raw = accumulator / static_cast<float>(BATTERY_SAMPLES);
+  float voltage = (raw / ADC_MAX_VALUE) * ADC_REFERENCE_VOLTAGE * VOLTAGE_DIVIDER_RATIO;
+  voltage *= BATTERY_CALIBRATION;
   return voltage;
 }
 
 float voltageToPercent(float v) {
-  // Орієнтовно для 2S Li-Ion (8.4V max, 6.0V min)
-  if (v >= 8.4) return 100.0;
-  if (v <= 6.0) return 0.0;
-  return (v - 6.0) / (8.4 - 6.0) * 100.0;
+  // 2S Li-Ion: 8.4V ~ 100%, 6.6V ~ 0% (критично)
+  const float MAX_VOLTAGE = 8.4f;
+  const float MIN_VOLTAGE = 6.6f;
+
+  if (v >= MAX_VOLTAGE) return 100.0f;
+  if (v <= MIN_VOLTAGE) return 0.0f;
+
+  float percent = (v - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE) * 100.0f;
+  if (percent < 0.0f) percent = 0.0f;
+  if (percent > 100.0f) percent = 100.0f;
+  return percent;
 }
 
 int speedToStepDelayMs(float sliderSpeed) {
@@ -617,7 +733,7 @@ body {
         <path id="gaugeFill" d="M 20 140 A 110 110 0 0 1 240 140"
               fill="none" stroke="#FF5E5E" stroke-width="14" stroke-linecap="round"
               stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
-        <text id="batteryPercent" x="130" y="90" text-anchor="middle" dominant-baseline="middle"
+        <text id="batteryPercent" x="130" y="80" text-anchor="middle" dominant-baseline="middle"
               font-size="34" font-weight="700" fill="#222">--%</text>
       </svg>
       <div class="battery-title">Стан батареї</div>
@@ -631,14 +747,13 @@ body {
           <path id="nextFeedFill" d="M 20 140 A 110 110 0 0 1 240 140"
                 fill="none" stroke="#1976D2" stroke-width="14" stroke-linecap="round"
                 stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
-          <text id="nextFeedPercent" x="130" y="90" text-anchor="middle" dominant-baseline="middle"
+          <text id="nextFeedPercent" x="130" y="80" text-anchor="middle" dominant-baseline="middle"
                 font-size="30" font-weight="600" fill="#1976D2">— год — хв</text>
         </svg>
       </div>
       <div class="next-feed-title">До наступного годування</div>
     </div>
   </div>
-  <div class="battery-gauge-note">Оновлено щойно</div>
 </div>
 
 <div class="card">
@@ -722,6 +837,15 @@ document.getElementById('angleSlider').addEventListener('input', function(){
   updateAngleLabel(val);
   fetch('/api/setAngle?angle='+val);
 });
+
+function voltageToPercentClient(v) {
+  const MAX_VOLTAGE = 8.4;
+  const MIN_VOLTAGE = 6.6;
+  if (!Number.isFinite(v)) return null;
+  if (v >= MAX_VOLTAGE) return 100;
+  if (v <= MIN_VOLTAGE) return 0;
+  return Math.round(((v - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE)) * 100);
+}
 
 function showToast(text = 'Збережено') {
   const toast = document.getElementById('toast');
@@ -860,10 +984,23 @@ function loadFeedTimes(feedTimes) {
 
 function normalizeFeedSchedule(status) {
   const schedule = [];
-  if (status.feedTimes && status.feedTimes.length) {
-    status.feedTimes.forEach(ft => {
-      const rawHour = ft.h !== undefined ? ft.h : (ft.hour !== undefined ? ft.hour : 0);
-      const rawMinute = ft.m !== undefined ? ft.m : (ft.minute !== undefined ? ft.minute : 0);
+  let feedArray = [];
+  if (Array.isArray(status.feedTimes)) {
+    feedArray = status.feedTimes;
+  } else if (typeof status.feedTimes === 'string' && status.feedTimes.trim().length && status.feedTimes.trim() !== 'null') {
+    try {
+      const parsed = JSON.parse(status.feedTimes);
+      if (Array.isArray(parsed)) {
+        feedArray = parsed;
+      }
+    } catch (e) {
+      console.warn('Unable to parse feedTimes string', e);
+    }
+  }
+  if (feedArray.length) {
+    feedArray.forEach(ft => {
+      const rawHour = ft && ft.h !== undefined ? ft.h : (ft && ft.hour !== undefined ? ft.hour : 0);
+      const rawMinute = ft && ft.m !== undefined ? ft.m : (ft && ft.minute !== undefined ? ft.minute : 0);
       const hour = parseInt(rawHour, 10);
       const minute = parseInt(rawMinute, 10);
       if (!isNaN(hour) && !isNaN(minute)) {
@@ -872,7 +1009,9 @@ function normalizeFeedSchedule(status) {
         schedule.push({ hour: normHour, minute: normMinute, total: normHour * 60 + normMinute });
       }
     });
-  } else if (status.feedHour1 !== undefined && status.feedMinute1 !== undefined) {
+  }
+
+  if (!schedule.length && status.feedHour1 !== undefined && status.feedMinute1 !== undefined) {
     const h1 = Number(status.feedHour1);
     const m1 = Number(status.feedMinute1);
     const h2 = Number(status.feedHour2);
@@ -909,8 +1048,22 @@ function updateNextFeedingProgress(status) {
   if (!percentTextEl || !fillPath) return;
 
   const schedule = normalizeFeedSchedule(status);
+  let minutesUntilNext = (typeof status.nextFeedMinutes === 'number' && status.nextFeedMinutes >= 0)
+    ? status.nextFeedMinutes
+    : null;
+  const targetHour = (typeof status.nextFeedHour === 'number' && status.nextFeedHour >= 0)
+    ? status.nextFeedHour
+    : null;
+  const targetMinute = (typeof status.nextFeedMinute === 'number' && status.nextFeedMinute >= 0)
+    ? status.nextFeedMinute
+    : null;
+
   if (!schedule.length) {
-    percentTextEl.innerText = '— год — хв';
+    if (minutesUntilNext !== null) {
+      percentTextEl.textContent = formatDurationMinutes(minutesUntilNext);
+    } else {
+      percentTextEl.textContent = '— год — хв';
+    }
     fillPath.style.strokeDasharray = 345.58;
     fillPath.style.strokeDashoffset = 345.58;
     return;
@@ -918,32 +1071,55 @@ function updateNextFeedingProgress(status) {
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const circumference = 345.58;
+  fillPath.style.strokeDasharray = circumference;
 
-  let nextIndex = schedule.findIndex(item => item.total > nowMinutes);
-  if (nextIndex === -1) nextIndex = 0;
+  let nextIndex = -1;
+  if (targetHour !== null && targetMinute !== null) {
+    const targetTotal = ((targetHour % 24) + 24) % 24 * 60 + (((targetMinute % 60) + 60) % 60);
+    nextIndex = schedule.findIndex(item => item.total === targetTotal);
+  }
+  if (nextIndex === -1) {
+    nextIndex = schedule.findIndex(item => item.total > nowMinutes);
+    if (nextIndex === -1) nextIndex = 0;
+  }
+
   const next = schedule[nextIndex];
   const prev = schedule[(nextIndex - 1 + schedule.length) % schedule.length];
 
-  let minutesUntilNext = next.total - nowMinutes;
-  if (minutesUntilNext <= 0) minutesUntilNext += 24 * 60;
+  if (minutesUntilNext === null) {
+    minutesUntilNext = next.total - nowMinutes;
+    if (minutesUntilNext <= 0) minutesUntilNext += 24 * 60;
+  }
 
   let interval = next.total - prev.total;
   if (interval <= 0) interval += 24 * 60;
 
-  const elapsed = Math.max(0, interval - minutesUntilNext);
-  const percent = Math.max(0, Math.min(100, (elapsed / interval) * 100));
+  const clampedMinutes = Math.max(0, Math.min(minutesUntilNext, interval));
+  const percent = interval > 0 ? Math.max(0, Math.min(100, (clampedMinutes / interval) * 100)) : 0;
 
-  const circumference = 345.58;
-  fillPath.style.strokeDasharray = circumference;
   const offset = circumference - (percent / 100) * circumference;
   fillPath.style.strokeDashoffset = offset;
-  percentTextEl.innerText = formatDurationMinutes(minutesUntilNext);
+  percentTextEl.textContent = formatDurationMinutes(minutesUntilNext);
 }
 
 function updateBatteryGauge(percent) {
   const gaugeFill = document.getElementById('gaugeFill');
   const percentLabel = document.getElementById('batteryPercent');
   if (!gaugeFill || !percentLabel) return;
+
+  if (!Number.isFinite(percent)) {
+    const circumference = 345.58;
+    gaugeFill.style.strokeDasharray = circumference;
+    gaugeFill.style.strokeDashoffset = circumference;
+    percentLabel.textContent = '--%';
+    percentLabel.setAttribute('fill', '#4CAF50');
+    const gaugeWrapper = document.querySelector('.battery-gauge-wrapper');
+    if (gaugeWrapper) {
+      gaugeWrapper.removeAttribute('data-low-battery');
+    }
+    return;
+  }
 
   const safePercent = Math.max(0, Math.min(100, percent));
   const radius = 120;
@@ -952,44 +1128,80 @@ function updateBatteryGauge(percent) {
 
   gaugeFill.style.strokeDasharray = circumference;
   gaugeFill.style.strokeDashoffset = offset;
-  percentLabel.innerText = `${safePercent}%`;
+  percentLabel.textContent = `${safePercent}%`;
 
   let color = '#FF5E5E';
-  if (safePercent >= 80) {
+  if (safePercent >= 75) {
     color = '#4CAF50';
-  } else if (safePercent >= 40) {
-    color = '#FF5E5E';
+  } else if (safePercent >= 35) {
+    color = '#FF9800';
   } else {
     color = '#D32F2F';
   }
 
   gaugeFill.style.stroke = color;
-  percentLabel.style.color = color;
+  percentLabel.setAttribute('fill', color);
+
+  const gaugeWrapper = document.querySelector('.battery-gauge-wrapper');
+  if (gaugeWrapper) {
+    if (safePercent <= 15) {
+      gaugeWrapper.setAttribute('data-low-battery', 'true');
+    } else {
+      gaugeWrapper.removeAttribute('data-low-battery');
+    }
+  }
 }
 
 function statusUpdate(){
   fetch('/api/status').then(r=>r.json()).then(j=>{
-    const batteryPercent = Math.round(j.batteryPercent);
-    document.getElementById('batteryVoltage').innerText=j.batteryVoltage.toFixed(2);
-    updateBatteryGauge(batteryPercent);
+    const batteryVoltageEl = document.getElementById('batteryVoltage');
+    if (batteryVoltageEl) {
+      if (typeof j.batteryVoltage === 'number' && Number.isFinite(j.batteryVoltage)) {
+        batteryVoltageEl.innerText = j.batteryVoltage.toFixed(2);
+      } else {
+        batteryVoltageEl.innerText = '--';
+      }
+    }
+
+    let batteryPercentValue = null;
+    if (typeof j.batteryVoltage === 'number' || typeof j.batteryVoltage === 'string') {
+      const computed = voltageToPercentClient(Number(j.batteryVoltage));
+      if (Number.isFinite(computed)) {
+        batteryPercentValue = computed;
+      }
+    }
+    if (batteryPercentValue === null) {
+      const rawPercent = Number(j.batteryPercent);
+      if (Number.isFinite(rawPercent)) {
+        batteryPercentValue = Math.round(rawPercent);
+      }
+    }
+    if (batteryPercentValue !== null) {
+      updateBatteryGauge(Math.max(0, Math.min(100, batteryPercentValue)));
+    } else {
+      updateBatteryGauge(null);
+    }
     updateNextFeedingProgress(j);
     document.getElementById('angleSlider').value=j.currentAngle; updateAngleLabel(j.currentAngle);
     document.getElementById('speedSlider').value=j.speed; updateSpeed(j.speed);
     document.getElementById('feedRepeats').value=j.feedRepeats;
-    if(j.wifiSSID) {
-      document.getElementById('wifiSSID').value=j.wifiSSID;
+    const wifiSSIDInput = document.getElementById('wifiSSID');
+    if(wifiSSIDInput && j.wifiSSID) {
+      wifiSSIDInput.value = j.wifiSSID;
     }
     // Оновлюємо статус WiFi
     const statusText = document.getElementById('wifiStatusText');
-    if(j.isAPMode) {
-      statusText.innerText = 'Режим точки доступу (AP) - ' + (j.wifiSSID || 'не налаштовано');
-      statusText.style.color = '#FF9800';
-    } else if(j.wifiIP) {
-      statusText.innerText = 'Підключено до: ' + (j.wifiSSID || 'невідомо') + ' (IP: ' + j.wifiIP + ')';
-      statusText.style.color = '#4CAF50';
-    } else {
-      statusText.innerText = 'Не підключено';
-      statusText.style.color = '#f44336';
+    if (statusText) {
+      if(j.isAPMode) {
+        statusText.innerText = 'Режим точки доступу (AP) - ' + (j.wifiSSID || 'не налаштовано');
+        statusText.style.color = '#FF9800';
+      } else if(j.wifiIP) {
+        statusText.innerText = 'Підключено до: ' + (j.wifiSSID || 'невідомо') + ' (IP: ' + j.wifiIP + ')';
+        statusText.style.color = '#4CAF50';
+      } else {
+        statusText.innerText = 'Не підключено';
+        statusText.style.color = '#f44336';
+      }
     }
     
     // Завантажуємо динамічні годування
@@ -1288,8 +1500,21 @@ function updateInfo(){
     document.getElementById('infoSSID').innerText = j.wifiSSID || 'не налаштовано';
     document.getElementById('infoIP').innerText = j.wifiIP || 'не підключено';
     document.getElementById('infoMode').innerText = j.isAPMode ? 'Точка доступу (AP)' : 'Станція (STA)';
-    document.getElementById('infoVoltage').innerText = j.batteryVoltage.toFixed(2) + ' В';
-    document.getElementById('infoPercent').innerText = Math.round(j.batteryPercent) + '%';
+    if (typeof j.batteryVoltage === 'number' && Number.isFinite(j.batteryVoltage)) {
+      document.getElementById('infoVoltage').innerText = j.batteryVoltage.toFixed(2) + ' В';
+    } else {
+      document.getElementById('infoVoltage').innerText = '-- В';
+    }
+    const infoPercentEl = document.getElementById('infoPercent');
+    let infoPercentVal = voltageToPercentClient(Number(j.batteryVoltage));
+    if (!Number.isFinite(infoPercentVal)) {
+      infoPercentVal = Number(j.batteryPercent);
+    }
+    if (Number.isFinite(infoPercentVal)) {
+      infoPercentEl.innerText = Math.round(infoPercentVal) + '%';
+    } else {
+      infoPercentEl.innerText = '--%';
+    }
     document.getElementById('infoSpeed').innerText = j.speed;
     document.getElementById('infoRepeats').innerText = j.feedRepeats;
     document.getElementById('infoPowerSave').innerText = j.powerSaveMode ? 'Увімкнено' : 'Вимкнено';
@@ -1337,6 +1562,11 @@ void handleStatus(){
   json += "\"powerSaveMode\":"+String(powerSaveMode ? "true" : "false")+",";
   json += "\"batteryVoltage\":"+String(batteryVoltage,2)+",";
   json += "\"batteryPercent\":"+String(batteryPercent,0)+",";
+
+  NextFeedInfo nextFeed = computeNextFeed();
+  json += "\"nextFeedMinutes\":"+String(nextFeed.minutesUntil)+",";
+  json += "\"nextFeedHour\":"+String(nextFeed.targetHour)+",";
+  json += "\"nextFeedMinute\":"+String(nextFeed.targetMinute)+",";
   
   // Додаємо масив годувань
   json += "\"feedTimes\":[";
@@ -1378,55 +1608,63 @@ void handleSetFeedTimes(){
   if(server.hasArg("data")) {
     // Новий формат - JSON масив
     String jsonData = server.arg("data");
-    feedTimesCount = 0;
-    
-    // Простий парсинг JSON масиву [{h:10,m:0,r:1},...]
-    int start = 0;
-    while(feedTimesCount < MAX_FEED_TIMES && start < jsonData.length()) {
-      int objStart = jsonData.indexOf('{', start);
-      if(objStart == -1) break;
-      
-      int objEnd = jsonData.indexOf('}', objStart);
-      if(objEnd == -1) break;
-      
-      String obj = jsonData.substring(objStart + 1, objEnd);
-      int h = 10, m = 0, r = 1;
-      
-      // Парсимо h, m, r
-      int hPos = obj.indexOf("\"h\":");
-      if(hPos == -1) hPos = obj.indexOf("h:");
-      if(hPos != -1) {
-        int hEnd = obj.indexOf(',', hPos);
-        if(hEnd == -1) hEnd = obj.length();
-        h = obj.substring(obj.indexOf(':', hPos) + 1, hEnd).toInt();
-      }
-      
-      int mPos = obj.indexOf("\"m\":");
-      if(mPos == -1) mPos = obj.indexOf("m:");
-      if(mPos != -1) {
-        int mEnd = obj.indexOf(',', mPos);
-        if(mEnd == -1) mEnd = obj.length();
-        m = obj.substring(obj.indexOf(':', mPos) + 1, mEnd).toInt();
-      }
-      
-      int rPos = obj.indexOf("\"r\":");
-      if(rPos == -1) rPos = obj.indexOf("r:");
-      if(rPos != -1) {
-        int rEnd = obj.indexOf('}', rPos);
-        if(rEnd == -1) rEnd = obj.length();
-        r = obj.substring(obj.indexOf(':', rPos) + 1, rEnd).toInt();
-      }
-      
-      feedTimes[feedTimesCount].hour = h;
-      feedTimes[feedTimesCount].minute = m;
-      feedTimes[feedTimesCount].repeats = r;
-      feedTimes[feedTimesCount].done = false;
-      feedTimesCount++;
-      
-      start = objEnd + 1;
+    jsonData.trim();
+
+    // Вичищаємо попередні значення у сховищі
+    char removeKey[20];
+    for(int i = 0; i < MAX_FEED_TIMES; i++) {
+      sprintf(removeKey, "feedH%d", i);
+      preferences.remove(removeKey);
+      sprintf(removeKey, "feedM%d", i);
+      preferences.remove(removeKey);
+      sprintf(removeKey, "feedR%d", i);
+      preferences.remove(removeKey);
     }
-    
-    // Зберігаємо в Preferences
+
+    feedTimesCount = 0;
+    for(int i = 0; i < MAX_FEED_TIMES; i++) {
+      feedTimes[i].hour = 0;
+      feedTimes[i].minute = 0;
+      feedTimes[i].repeats = 1;
+      feedTimes[i].done = false;
+    }
+
+    int depth = 0;
+    int objStart = -1;
+    const int len = jsonData.length();
+    for(int idx = 0; idx < len && feedTimesCount < MAX_FEED_TIMES; idx++) {
+      char c = jsonData.charAt(idx);
+      if(c == '{') {
+        if(depth == 0) {
+          objStart = idx;
+        }
+        depth++;
+      } else if(c == '}') {
+        depth--;
+        if(depth == 0 && objStart != -1) {
+          String obj = jsonData.substring(objStart + 1, idx);
+          int h = extractIntField(obj, 'h', 10);
+          int m = extractIntField(obj, 'm', 0);
+          int r = extractIntField(obj, 'r', 1);
+
+          h = constrain(h, 0, 23);
+          m = constrain(m, 0, 59);
+          r = max(1, r);
+
+          feedTimes[feedTimesCount].hour = h;
+          feedTimes[feedTimesCount].minute = m;
+          feedTimes[feedTimesCount].repeats = r;
+          feedTimes[feedTimesCount].done = false;
+          feedTimesCount++;
+          objStart = -1;
+        }
+      }
+    }
+
+    if(feedTimesCount == 0) {
+      feedTimes[feedTimesCount++] = {10, 0, 1, false};
+    }
+
     preferences.putInt("feedTimesCount", feedTimesCount);
     char key[20];
     for(int i = 0; i < feedTimesCount; i++) {
@@ -1437,17 +1675,24 @@ void handleSetFeedTimes(){
       sprintf(key, "feedR%d", i);
       preferences.putInt(key, feedTimes[i].repeats);
     }
-    
-    // Для сумісності зберігаємо перші два
+
     if(feedTimesCount > 0) {
       feedHour1 = feedTimes[0].hour;
       feedMinute1 = feedTimes[0].minute;
       feedRepeats1 = feedTimes[0].repeats;
+    } else {
+      feedHour1 = 10;
+      feedMinute1 = 0;
+      feedRepeats1 = 1;
     }
     if(feedTimesCount > 1) {
       feedHour2 = feedTimes[1].hour;
       feedMinute2 = feedTimes[1].minute;
       feedRepeats2 = feedTimes[1].repeats;
+    } else {
+      feedHour2 = 0;
+      feedMinute2 = 0;
+      feedRepeats2 = 1;
     }
   } else {
     // Старий формат для сумісності
@@ -1498,6 +1743,7 @@ void handleSetPowerMode(){
 // === Setup ===
 void setup(){
   Serial.begin(115200);
+  configureBatteryAdc();
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   pinMode(BATTERY_PIN, INPUT);
 
