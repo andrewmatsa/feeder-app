@@ -1,20 +1,3 @@
-.networks-wrapper {
-  margin-top: 12px;
-  max-height: 220px;
-  overflow-y: auto;
-}
-.networks-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 6px;
-}
-.note-text {
-  font-size: 12px;
-  color: #666;
-  margin-top: 12px;
-  line-height: 1.5;
-}
 #include "wifi_manager.h"
 
 // === WiFi Variables ===
