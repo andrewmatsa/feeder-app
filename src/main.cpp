@@ -46,6 +46,8 @@ struct FeedTime {
 FeedTime feedTimes[MAX_FEED_TIMES];
 int feedTimesCount = 0;
 
+static constexpr long KIEV_UTC_OFFSET_SECONDS = 2 * 3600; // UTC+2. За потреби змініть на 3*3600.
+
 static inline bool isDigitChar(char c) {
   return c >= '0' && c <= '9';
 }
@@ -100,6 +102,8 @@ struct NextFeedInfo {
   int targetMinute = -1;
 };
 
+static const long DEFAULT_TIMEZONE_OFFSET_SECONDS = 2 * 3600; // UTC+2 (Київ, зимовий час)
+
 // Старі змінні для сумісності
 int feedHour1 = 10;
 int feedMinute1 = 0;
@@ -111,12 +115,13 @@ bool feed2Done = false;
 NextFeedInfo computeNextFeed() {
   NextFeedInfo info;
   time_t now = time(nullptr);
-  struct tm timeinfo;
-  if (!localtime_r(&now, &timeinfo)) {
+  struct tm localTime;
+  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
+  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
     return info;
   }
 
-  const int nowTotal = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+  const int nowTotal = localTime.tm_hour * 60 + localTime.tm_min;
   int bestDiff = (24 * 60) + 1;
   bool found = false;
 
@@ -162,12 +167,11 @@ const unsigned long SLEEP_INTERVAL = 60000;    // сон на 1 хвилину �
 // --- Напруга батареї ---
 float batteryVoltage = 0.0;
 float batteryPercent = 0.0;
-// === Оновлено для 2 x 18650 з калібруванням ===
 const int BATTERY_SAMPLES = 16;
 const float ADC_REFERENCE_VOLTAGE = 3.3f;
 const float ADC_MAX_VALUE = 4095.0f;
 const float VOLTAGE_DIVIDER_RATIO = 5.08f;   // розраховано під MH Electronic сенсор
-const float BATTERY_CALIBRATION = 1.00f;     // додаткова корекція (налаштувати за потреби)
+const float BATTERY_CALIBRATION = 0.58f;     // додаткова корекція (налаштувати за потреби)
 
 // === Utilities ===
 float readBatteryVoltage() {
@@ -228,14 +232,34 @@ void updateActivity() {
 
 bool isTimeForFeeding() {
   time_t now = time(nullptr);
-  struct tm timeinfo;
-  if (!localtime_r(&now, &timeinfo)) return false;
-  
-  int curHour = timeinfo.tm_hour;
-  int curMinute = timeinfo.tm_min;
-  
-  return (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) ||
-         (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done);
+  struct tm localTime;
+  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
+  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+    return false;
+  }
+
+  int curHour = localTime.tm_hour;
+  int curMinute = localTime.tm_min;
+
+  bool active = false;
+  if (feedTimesCount == 0) {
+    active = (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) ||
+             (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done);
+    if (curMinute != feedMinute1) feed1Done = false;
+    if (curMinute != feedMinute2) feed2Done = false;
+  } else {
+    for (int i = 0; i < feedTimesCount; ++i) {
+      if (curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
+        active = true;
+        feedTimes[i].done = true;
+        break;
+      }
+      if (curMinute != feedTimes[i].minute) {
+        feedTimes[i].done = false;
+      }
+    }
+  }
+  return active;
 }
 
 void moveServoSmooth(int target) {
@@ -734,7 +758,7 @@ body {
               fill="none" stroke="#FF5E5E" stroke-width="14" stroke-linecap="round"
               stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
         <text id="batteryPercent" x="130" y="130" text-anchor="middle" dominant-baseline="middle"
-              font-size="34" font-weight="700" fill="#222">--%</text>
+              font-size="28" font-weight="700" fill="#222">--%</text>
       </svg>
       <div class="battery-title">Стан батареї</div>
       <div class="battery-subtitle">Напруга: <span id="batteryVoltage">--</span> В</div>
@@ -748,7 +772,7 @@ body {
                 fill="none" stroke="#1976D2" stroke-width="14" stroke-linecap="round"
                 stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
           <text id="nextFeedPercent" x="130" y="130" text-anchor="middle" dominant-baseline="middle"
-                font-size="30" font-weight="600" fill="#1976D2">— год — хв</text>
+                font-size="28" font-weight="600" fill="#1976D2">— год — хв</text>
         </svg>
       </div>
       <div class="next-feed-title">До наступного годування</div>
@@ -819,6 +843,7 @@ body {
     <div>
       <div class="section-title">Автоматичне годування</div>
       <div class="section-subtitle">Налаштуйте розклад годувань</div>
+      <div class="section-subtitle" id="localTimeLabel">Час: --:--</div>
     </div>
   </div>
   <div id="feedTimesContainer">
@@ -1160,6 +1185,15 @@ function statusUpdate(){
         batteryVoltageEl.innerText = j.batteryVoltage.toFixed(2);
       } else {
         batteryVoltageEl.innerText = '--';
+      }
+    }
+
+    const timeLabel = document.getElementById('localTimeLabel');
+    if (timeLabel) {
+      if (typeof j.currentTime === 'string') {
+        timeLabel.innerText = 'Час: ' + j.currentTime;
+      } else {
+        timeLabel.innerText = 'Час: --:--';
       }
     }
 
@@ -1583,6 +1617,14 @@ void handleStatus(){
   json += "\"feedMinute2\":"+String(feedMinute2)+",";
   json += "\"feedRepeats1\":"+String(feedRepeats1)+",";
   json += "\"feedRepeats2\":"+String(feedRepeats2)+",";
+  time_t now = time(nullptr);
+  struct tm localTime;
+  char timeBuf[6] = "--:--";
+  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
+  if (gmtime_r(&adjusted, &localTime) && localTime.tm_year + 1900 >= 2020) {
+    snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", localTime.tm_hour, localTime.tm_min);
+  }
+  json += "\"currentTime\":\""+String(timeBuf)+"\",";
   json += "\"wifiSSID\":\""+savedSSID+"\",";
   json += "\"isAPMode\":"+String(isAPMode ? "true" : "false")+",";
   if(!isAPMode && WiFi.status() == WL_CONNECTED) {
@@ -1839,10 +1881,14 @@ void loop(){
 
   // --- Automatic feeding by schedule ---
   time_t now = time(nullptr);
-  struct tm timeinfo;
-  if (localtime_r(&now, &timeinfo)) {
-    int curHour = timeinfo.tm_hour;
-    int curMinute = timeinfo.tm_min;
+  struct tm localTime;
+  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
+  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+    return;
+  }
+  if (localTime.tm_year + 1900 >= 2020) {
+    int curHour = localTime.tm_hour;
+    int curMinute = localTime.tm_min;
 
     // Перевіряємо всі годування з масиву
     for(int i = 0; i < feedTimesCount; i++) {
@@ -1851,25 +1897,27 @@ void loop(){
         feedSequence(feedTimes[i].repeats);
         feedTimes[i].done = true;
       }
-      
-      // Скидаємо прапорець коли хвилина змінилася
-      if (curHour != feedTimes[i].hour || curMinute != feedTimes[i].minute) {
+
+      // Скидаємо прапорець, коли хвилина змінилася
+      if (curMinute != feedTimes[i].minute) {
         feedTimes[i].done = false;
       }
     }
-    
-    // Для сумісності зі старим кодом
-    if (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) {
-      Serial.printf("Auto feeding (slot 1) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats1);
-      feedSequence(feedRepeats1);
-      feed1Done = true;
+
+    // Для сумісності зі старим кодом (коли працює тільки 2 фіксованих годування)
+    if (feedTimesCount == 0) {
+      if (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) {
+        Serial.printf("Auto feeding (slot 1 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats1);
+        feedSequence(feedRepeats1);
+        feed1Done = true;
+      }
+      if (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done) {
+        Serial.printf("Auto feeding (slot 2 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats2);
+        feedSequence(feedRepeats2);
+        feed2Done = true;
+      }
+      if (curMinute != feedMinute1) feed1Done = false;
+      if (curMinute != feedMinute2) feed2Done = false;
     }
-    if (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done) {
-      Serial.printf("Auto feeding (slot 2) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats2);
-      feedSequence(feedRepeats2);
-      feed2Done = true;
-    }
-    if (curHour != feedHour1 || curMinute != feedMinute1) feed1Done = false;
-    if (curHour != feedHour2 || curMinute != feedMinute2) feed2Done = false;
   }
 }

@@ -64,7 +64,7 @@ void initWiFi(Preferences& preferences) {
   if(!isAPMode) {
     if(!MDNS.begin("fish")) Serial.println("Error setting up MDNS!");
     else Serial.println("mDNS responder started: http://fish.local");
-    configTime(3*3600,0,"pool.ntp.org","time.google.com");
+    configTime(0,0,"pool.ntp.org","time.google.com");
   }
 }
 
@@ -724,7 +724,7 @@ void handleSetWiFi(WebServer& server, Preferences& preferences){
         // Запускаємо MDNS
         if(!MDNS.begin("fish")) Serial.println("Error setting up MDNS!");
         else Serial.println("mDNS responder started: http://fish.local");
-        configTime(3*3600,0,"pool.ntp.org","time.google.com");
+        configTime(0,0,"pool.ntp.org","time.google.com");
       }
     }
   } else {
@@ -763,7 +763,7 @@ void handleReconnectWiFi(WebServer& server){
       isAPMode = false;
       if(!MDNS.begin("fish")) Serial.println("Error setting up MDNS!");
       else Serial.println("mDNS responder started: http://fish.local");
-      configTime(3*3600,0,"pool.ntp.org","time.google.com");
+      configTime(0,0,"pool.ntp.org","time.google.com");
     }
   }
 }
