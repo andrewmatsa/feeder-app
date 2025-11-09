@@ -610,7 +610,7 @@ h2 {
   text-decoration: none;
   color: #4b5563;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.2s ease;
   border: none;
   background: transparent;
