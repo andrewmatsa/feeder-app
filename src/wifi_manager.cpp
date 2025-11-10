@@ -71,7 +71,7 @@ void initWiFi(Preferences& preferences) {
 void setupWiFiHandlers(WebServer& server, Preferences& preferences) {
   server.on("/wifi", [&server](){ handleWiFi(server); });
   server.on("/api/setWiFi", [&server, &preferences](){ handleSetWiFi(server, preferences); });
-  server.on("/api/scanWiFi", [&server](){ handleScanWiFi(server); });
+  server.on("/api/forgetWiFi", [&server, &preferences](){ handleForgetWiFi(server, preferences); });
   server.on("/api/reconnectWiFi", [&server](){ handleReconnectWiFi(server); });
 }
 
@@ -154,20 +154,24 @@ h2 {
   position: fixed;
   top: 20px;
   left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(45deg, #4CAF50, #45a049);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -10px);
+  transform-origin: center;
+  background: #111;
+  color: #fff;
+  padding: 14px 26px;
+  border-radius: 999px;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
   font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3px;
   z-index: 1000;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: none;
 }
 .toast.show {
   opacity: 1;
+  transform: translate(-50%, 0);
 }
 .section-header {
   display: flex;
@@ -231,17 +235,6 @@ h2 {
   color: #555;
   font-weight: 500;
 }
-.networks-wrapper {
-  margin-top: 12px;
-  max-height: 220px;
-  overflow-y: auto;
-}
-.networks-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 6px;
-}
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -254,41 +247,22 @@ h2 {
   width: auto;
   display: inline-flex;
 }
-.network-item {
-  padding: 10px;
-  margin-bottom: 6px;
-  background: rgba(0,0,0,0.03);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: background 0.2s ease;
+.button-row button.secondary {
+  background: #f3f4f6;
+  color: #1f2937;
+  box-shadow: none;
 }
-.network-item:hover {
-  background: rgba(0,0,0,0.06);
+.button-row.ap-mode {
+  justify-content: center;
 }
-.network-signal {
-  font-size: 11px;
-  color: #666;
-  margin-left: 8px;
+.button-row.ap-mode button.secondary {
+  display: none;
 }
-.network-lock {
-  font-size: 11px;
-  color: #f44336;
-  margin-left: 6px;
+.button-row button.secondary:hover {
+  background: #e5e7eb;
 }
-.network-action {
-  font-size: 12px;
-  color: #2196F3;
-}
-.networks-empty {
-  padding: 10px;
-  border-radius: 8px;
-  background: rgba(0,0,0,0.03);
-  color: #666;
-  font-size: 12px;
-  text-align: center;
+.button-row button.secondary:active {
+  background: #d1d5db;
 }
 .note-text {
   font-size: 12px;
@@ -471,33 +445,6 @@ body {
   <div class="section-header">
     <div class="section-icon">
       <svg viewBox="0 0 24 24">
-        <path d="M12 3v3"></path>
-        <path d="M12 18v3"></path>
-        <path d="M3 12h3"></path>
-        <path d="M18 12h3"></path>
-        <path d="M5.64 5.64l2.12 2.12"></path>
-        <path d="M16.24 16.24l2.12 2.12"></path>
-        <circle cx="12" cy="12" r="3"></circle>
-      </svg>
-    </div>
-    <div>
-      <div class="section-title">Пошук мереж</div>
-      <div class="section-subtitle">Скануйте та обирайте точку доступу</div>
-    </div>
-  </div>
-  <div class="button-row">
-    <button onclick="scanWiFi()" style="background: linear-gradient(45deg, #2196F3, #1976D2);">Сканувати мережі</button>
-  </div>
-  <div id="wifiList" class="networks-wrapper" style="display: none;">
-    <div class="networks-title">Доступні мережі</div>
-    <div id="wifiNetworks"></div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="section-header">
-    <div class="section-icon">
-      <svg viewBox="0 0 24 24">
         <path d="M12 17a2 2 0 1 0 0-4"></path>
         <path d="M5 10V8a7 7 0 0 1 14 0v2"></path>
         <rect x="5" y="10" width="14" height="10" rx="2"></rect>
@@ -516,11 +463,12 @@ body {
     <label>Пароль:</label>
     <input type="password" id="wifiPassword" placeholder="Введіть пароль" style="width: 100%;">
   </div>
-  <div class="button-row">
+  <div class="button-row" id="wifiActions">
     <button onclick="saveWiFi()">Зберегти WiFi</button>
+    <button class="secondary" onclick="forgetWiFi()">Забути мережу</button>
   </div>
   <div class="note-text">
-    <strong>Примітка:</strong> Після збереження пристрій перезапустить підключення. Якщо підключення не вдасться, пристрій створить точку доступу "FishFeeder-Setup" з паролем "12345678".
+    <strong>Примітка:</strong> Після збереження пристрій перезапустить підключення. Якщо підключення не вдасться, пристрій створить точку доступу "FishFeeder-Setup" з паролем "12345678". Кнопка «Забути» видаляє збережені креденшіали та одразу повертає пристрій у режим точки доступу, який доступний за адресами <code>http://192.168.4.1</code> або <code>http://fish.local</code>.
   </div>
 </div>
 
@@ -542,6 +490,7 @@ body {
     <span class="power-toggle-box"></span>
     <span class="power-toggle-text">Режим економії енергії</span>
   </label>
+  <div class="note-text">Після автоматичного годування контролер переходить у легкий сон і прокидається за 30&nbsp;секунд до наступного, зменшуючи споживання.</div>
   <div class="button-row">
     <button onclick="savePowerMode()">Зберегти енергозбереження</button>
   </div>
@@ -555,44 +504,6 @@ function showToast(text = 'Збережено') {
   setTimeout(() => {
     toast.classList.remove('show');
   }, 2000);
-}
-
-function scanWiFi(){
-  showToast('Сканування мереж...');
-  fetch('/api/scanWiFi')
-    .then(r=>r.json())
-    .then(networks=>{
-      const listDiv = document.getElementById('wifiList');
-      const networksDiv = document.getElementById('wifiNetworks');
-      networksDiv.innerHTML = '';
-      
-      if(networks.length === 0) {
-        networksDiv.innerHTML = '<div class="networks-empty">Мережі не знайдено</div>';
-      } else {
-        networks.forEach(net => {
-          const netDiv = document.createElement('div');
-          netDiv.className = 'network-item';
-          netDiv.onclick = function() {
-            document.getElementById('wifiSSID').value = net.ssid;
-            document.getElementById('wifiPassword').focus();
-          };
-          netDiv.innerHTML = `
-            <div>
-              <strong>${net.ssid}</strong>
-              <span class="network-signal">${net.rssi} dBm</span>
-              ${net.encrypted ? '<span class="network-lock">🔒</span>' : ''}
-            </div>
-            <span class="network-action">Обрати</span>
-          `;
-          networksDiv.appendChild(netDiv);
-        });
-      }
-      listDiv.style.display = 'block';
-      showToast('Сканування завершено');
-    })
-    .catch(()=>{
-      showToast('Помилка сканування');
-    });
 }
 
 function reconnectWiFi(){
@@ -628,6 +539,18 @@ function saveWiFi(){
     });
 }
 
+function forgetWiFi(){
+  showToast('Видаляю мережу...');
+  fetch('/api/forgetWiFi')
+    .then(()=>{
+      document.getElementById('wifiSSID').value = '';
+      document.getElementById('wifiPassword').value = '';
+      showToast('Мережу забуто. Підключіться до FishFeeder-Setup');
+      setTimeout(()=>{ window.location.reload(); }, 2000);
+    })
+    .catch(()=> showToast('Помилка видалення WiFi'));
+}
+
 function savePowerMode(){
   const enabled = document.getElementById('powerSaveMode').checked;
   fetch('/api/setPowerMode?enabled='+enabled)
@@ -639,22 +562,40 @@ function updateStatus(){
   fetch('/api/status').then(r=>r.json()).then(j=>{
     const statusText = document.getElementById('wifiStatusText');
     const statusPill = document.getElementById('wifiStatusPill');
+    const actionsRow = document.getElementById('wifiActions');
     if (statusPill) {
       statusPill.classList.remove('success','warning','error');
     }
     statusText.style.color = '';
-    if(j.wifiSSID) {
-      document.getElementById('wifiSSID').value=j.wifiSSID;
+    const ssidInput = document.getElementById('wifiSSID');
+    if(ssidInput) {
+      if(j.wifiSSID) {
+        ssidInput.value = j.wifiSSID;
+      } else {
+        ssidInput.value = '';
+      }
+    }
+    const passwordInput = document.getElementById('wifiPassword');
+    if (passwordInput && (!j.wifiSSID || j.isAPMode)) {
+      passwordInput.value = '';
     }
     if(j.isAPMode) {
       statusText.innerText = 'Режим точки доступу (AP) - ' + (j.wifiSSID || 'не налаштовано');
       if (statusPill) statusPill.classList.add('warning');
+      if (actionsRow) actionsRow.style.display = 'flex';
+      if (actionsRow) actionsRow.classList.add('ap-mode');
     } else if(j.wifiIP) {
       statusText.innerText = 'Підключено до: ' + (j.wifiSSID || 'невідомо') + ' (IP: ' + j.wifiIP + ')';
       if (statusPill) statusPill.classList.add('success');
+      if (actionsRow) {
+        actionsRow.style.display = 'flex';
+        actionsRow.classList.remove('ap-mode');
+      }
     } else {
       statusText.innerText = 'Не підключено';
       if (statusPill) statusPill.classList.add('error');
+      if (actionsRow) actionsRow.style.display = 'flex';
+      if (actionsRow) actionsRow.classList.add('ap-mode');
     }
     const powerToggle = document.getElementById('powerSaveMode');
     if (powerToggle) {
@@ -732,23 +673,17 @@ void handleSetWiFi(WebServer& server, Preferences& preferences){
   }
 }
 
-void handleScanWiFi(WebServer& server){
-  Serial.println("Scanning WiFi networks...");
-  int n = WiFi.scanNetworks();
-  
-  String json = "[";
-  for(int i = 0; i < n; i++) {
-    if(i > 0) json += ",";
-    json += "{";
-    json += "\"ssid\":\""+WiFi.SSID(i)+"\",";
-    json += "\"rssi\":"+String(WiFi.RSSI(i))+",";
-    json += "\"encrypted\":"+String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false");
-    json += "}";
-  }
-  json += "]";
-  
-  server.send(200, "application/json", json);
-  Serial.println("WiFi scan completed, found " + String(n) + " networks");
+void handleForgetWiFi(WebServer& server, Preferences& preferences){
+  preferences.remove("wifiSSID");
+  preferences.remove("wifiPassword");
+  savedSSID = "";
+  savedPassword = "";
+
+  server.send(200,"text/plain","ok");
+  delay(200);
+
+  WiFi.disconnect(true, true);
+  startAPMode();
 }
 
 void handleReconnectWiFi(WebServer& server){

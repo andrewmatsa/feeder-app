@@ -26,7 +26,7 @@ extern const char* pageWiFi;
 // === WiFi Handlers ===
 void handleWiFi(WebServer& server);
 void handleSetWiFi(WebServer& server, Preferences& preferences);
-void handleScanWiFi(WebServer& server);
+void handleForgetWiFi(WebServer& server, Preferences& preferences);
 void handleReconnectWiFi(WebServer& server);
 
 #endif

@@ -48,6 +48,9 @@ int feedTimesCount = 0;
 
 static constexpr long KIEV_UTC_OFFSET_SECONDS = 2 * 3600; // UTC+2. За потреби змініть на 3*3600.
 
+unsigned long lastAutoFeedMillis = 0;
+bool autoFeedSleepPending = false;
+
 static inline bool isDigitChar(char c) {
   return c >= '0' && c <= '9';
 }
@@ -212,22 +215,16 @@ int speedToStepDelayMs(float sliderSpeed) {
 
 // === Power Management ===
 void enterLightSleep() {
-  Serial.println("Перехід в легкий сон для економії енергії...");
-  esp_wifi_stop();
+  Serial.println("Перехід у light sleep для економії енергії...");
   esp_sleep_enable_timer_wakeup(SLEEP_INTERVAL * 1000); // пробудження через 1 хвилину
-  esp_light_sleep_start();
-  esp_wifi_start();
-  if(!isAPMode && savedSSID.length() > 0) {
-    WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
-    while(WiFi.status() != WL_CONNECTED) { delay(100); }
-    Serial.println("Пробудження зі сну, WiFi відновлено");
-  } else if(isAPMode) {
-    startAPMode();
+  if (esp_light_sleep_start() == ESP_OK) {
+    Serial.println("Пробудження зі sleep");
   }
 }
 
 void updateActivity() {
   lastActivity = millis();
+  autoFeedSleepPending = false;
 }
 
 bool isTimeForFeeding() {
@@ -241,25 +238,17 @@ bool isTimeForFeeding() {
   int curHour = localTime.tm_hour;
   int curMinute = localTime.tm_min;
 
-  bool active = false;
   if (feedTimesCount == 0) {
-    active = (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) ||
-             (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done);
-    if (curMinute != feedMinute1) feed1Done = false;
-    if (curMinute != feedMinute2) feed2Done = false;
-  } else {
-    for (int i = 0; i < feedTimesCount; ++i) {
-      if (curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
-        active = true;
-        feedTimes[i].done = true;
-        break;
-      }
-      if (curMinute != feedTimes[i].minute) {
-        feedTimes[i].done = false;
-      }
+    return (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) ||
+           (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done);
+  }
+
+  for (int i = 0; i < feedTimesCount; ++i) {
+    if (curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
+      return true;
     }
   }
-  return active;
+  return false;
 }
 
 void moveServoSmooth(int target) {
@@ -291,6 +280,14 @@ void feedSequence(int repeats = 1) {
     delay(50);
   }
   manualMoving = false;
+}
+
+void performAutoFeeding(int repeats) {
+  feedSequence(repeats);
+  if (powerSaveMode) {
+    lastAutoFeedMillis = millis();
+    autoFeedSleepPending = true;
+  }
 }
 
 // === Web page ===
@@ -380,6 +377,12 @@ button.remove-btn:hover {
 button.remove-btn:active {
   background: #c62828;
   box-shadow: 0 6px 14px rgba(240,61,61,0.18);
+}
+.note-text {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 10px 0 4px;
 }
 .feed-block {
   margin-bottom: 8px;
@@ -1584,7 +1587,14 @@ window.onload = function() {
 )rawliteral";
 
 // === Handlers ===
-void handleRoot(){ server.send(200,"text/html",pageIndex); }
+void handleRoot(){
+  if (isAPMode || WiFi.status() != WL_CONNECTED) {
+    server.sendHeader("Location", "/wifi", true);
+    server.send(302, "text/plain", "");
+    return;
+  }
+  server.send(200,"text/html",pageIndex);
+}
 void handleInfo(){ server.send(200,"text/html",pageInfo); }
 
 void handleStatus(){
@@ -1778,6 +1788,9 @@ void handleSetPowerMode(){
   if(server.hasArg("enabled")){
     powerSaveMode = server.arg("enabled") == "true";
     preferences.putBool("powerSaveMode", powerSaveMode);
+    if (!powerSaveMode) {
+      autoFeedSleepPending = false;
+    }
     updateActivity();
   }
   server.send(200,"text/plain","ok");
@@ -1799,6 +1812,8 @@ void setup(){
   speedSetting = preferences.getFloat("speed",20.0);
   feedRepeats = preferences.getInt("feedRepeats",1);
   powerSaveMode = preferences.getBool("powerSaveMode", true);
+  autoFeedSleepPending = false;
+  lastAutoFeedMillis = 0;
   
   // Завантажуємо масив годувань
   feedTimesCount = preferences.getInt("feedTimesCount", 0);
@@ -1896,7 +1911,7 @@ void loop(){
     for(int i = 0; i < feedTimesCount; i++) {
       if (curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
         Serial.printf("Auto feeding (slot %d) %02d:%02d, repeats: %d\n", i+1, curHour, curMinute, feedTimes[i].repeats);
-        feedSequence(feedTimes[i].repeats);
+        performAutoFeeding(feedTimes[i].repeats);
         feedTimes[i].done = true;
       }
 
@@ -1910,16 +1925,38 @@ void loop(){
     if (feedTimesCount == 0) {
       if (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) {
         Serial.printf("Auto feeding (slot 1 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats1);
-        feedSequence(feedRepeats1);
+        performAutoFeeding(feedRepeats1);
         feed1Done = true;
       }
       if (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done) {
         Serial.printf("Auto feeding (slot 2 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats2);
-        feedSequence(feedRepeats2);
+        performAutoFeeding(feedRepeats2);
         feed2Done = true;
       }
       if (curMinute != feedMinute1) feed1Done = false;
       if (curMinute != feedMinute2) feed2Done = false;
+    }
+  }
+
+  if (powerSaveMode && autoFeedSleepPending && !manualMoving && !isAPMode) {
+    if (millis() - lastAutoFeedMillis >= 60000UL) {
+      NextFeedInfo nextInfo = computeNextFeed();
+      if (nextInfo.minutesUntil > 0) {
+        long secondsUntil = static_cast<long>(nextInfo.minutesUntil) * 60L;
+        if (secondsUntil > 60) {
+          Serial.printf("Power save: entering light sleep for up to %ld seconds (next feed in %ld seconds)\n",
+                        secondsUntil - 30, secondsUntil);
+          autoFeedSleepPending = false;
+          uint64_t wakeMicros = (secondsUntil - 30) * 1000000ULL;
+          if (wakeMicros < 30000000ULL) wakeMicros = 30000000ULL;
+          esp_sleep_enable_timer_wakeup(wakeMicros);
+          enterLightSleep();
+        } else {
+          autoFeedSleepPending = false;
+        }
+      } else {
+        autoFeedSleepPending = false;
+      }
     }
   }
 }
