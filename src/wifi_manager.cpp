@@ -11,7 +11,16 @@ bool isAPMode = false;
 bool connectToWiFi() {
   if(savedSSID.length() == 0) return false;
   
+  // ============================================================================
+  // ОПТИМІЗАЦІЯ ШВИДКОСТІ WiFi
+  // ============================================================================
   WiFi.mode(WIFI_STA);
+  
+  // Оптимізації для швидкого підключення
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false); // Вимкнути power save для швидкості
+  WiFi.setTxPower(WIFI_POWER_19_5dBm); // Максимальна потужність для швидкості
+  
   WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
   Serial.print("Connecting to WiFi: " + savedSSID);
   
@@ -35,6 +44,11 @@ bool connectToWiFi() {
 void startAPMode() {
   Serial.println("Starting Access Point mode...");
   WiFi.mode(WIFI_AP);
+  
+  // Оптимізації для швидкої роботи AP
+  WiFi.setSleep(false); // Вимкнути power save для швидкості
+  WiFi.setTxPower(WIFI_POWER_19_5dBm); // Максимальна потужність
+  
   WiFi.softAP(apSSID, apPassword);
   IPAddress IP = WiFi.softAPIP();
   Serial.println("AP Mode started");
@@ -125,8 +139,7 @@ button {
   font-weight: 600;
   letter-spacing: 0.2px;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
-  box-shadow: 0 10px 18px rgba(0,0,0,0.18);
+  transition: transform 0.15s ease, background 0.2s ease;
 }
 button:hover {
   transform: translateY(-1px);
@@ -211,6 +224,80 @@ h2 {
   font-size: 12px;
   color: #9099A6;
   margin-top: 2px;
+}
+.hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.app-illustration svg {
+  width: 65px;
+  height: auto;
+  display: block;
+  transform: translateY(-6px);
+  filter: drop-shadow(0 16px 28px rgba(17, 24, 39, 0.2));
+}
+.hero-bubble {
+  animation: hero-bubble-rise 2.4s ease-in-out infinite;
+  transform-box: fill-box;
+}
+.hero-bubble-1 { animation-delay: 0s; }
+.hero-bubble-2 { animation-delay: 0.4s; }
+.hero-bubble-3 { animation-delay: 0.8s; }
+@keyframes hero-bubble-rise {
+  0% { transform: translateY(0px); opacity: 0.9; }
+  50% { transform: translateY(-6px); opacity: 0.55; }
+  100% { transform: translateY(0px); opacity: 0.9; }
+}
+.hero-svg-fish {
+  animation: hero-fish-bob 4.5s ease-in-out infinite;
+  transform-origin: 32px 42px;
+  transform-box: fill-box;
+}
+@keyframes hero-fish-bob {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3.5px); }
+}
+.app-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.app-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: 0.4px;
+}
+.app-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  letter-spacing: 0.3px;
+}
+.lang-switcher {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 1100;
+}
+.lang-btn {
+  border: 1px solid rgba(0,0,0,0.15);
+  background: #fff;
+  color: #111;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lang-btn.active {
+  background: #111;
+  color: #fff;
 }
 .status-pill.success {
   background: rgba(76,175,80,0.14);
@@ -357,7 +444,7 @@ h2 {
   font-size: 22px;
   line-height: 1;
   color: inherit;
-  display: inline-flex;
+  display: inline-block;
 }
 .bottom-tab-icon-svg {
   width: 22px;
@@ -376,7 +463,9 @@ h2 {
   color: #111827;
   background: rgba(15, 23, 42, 0.1);
 }
-.bottom-tab.active .bottom-tab-icon,
+.bottom-tab.active .bottom-tab-icon {
+  color: #111827;
+}
 .bottom-tab.active .home-icon {
   color: #111827;
 }
@@ -410,12 +499,33 @@ body {
 </head>
 <body>
 <div id="toast" class="toast">Збережено</div>
-<div class="page-title">
-  <svg viewBox="0 0 24 24">
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    <circle class="filled" cx="12" cy="12" r="3" />
-  </svg>
-  <span>Налаштування WiFi</span>
+<div class="lang-switcher">
+  <button type="button" id="wifiLangUkBtn" class="lang-btn">UK</button>
+  <button type="button" id="wifiLangEnBtn" class="lang-btn">EN</button>
+</div>
+<div class="hero-header">
+  <div class="app-illustration">
+    <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
+      <path d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
+      <g fill="#8d9ba3">
+        <path d="M48.1 60.5c-1.2 1.2-3.6 2.7-6.2 0s-5.4-7.5-4.2-8.7c1.2-1.2 5.8 1.7 8.4 4.4c2.6 2.6 3.2 3.1 2 4.3"/>
+        <ellipse cx="33.4" cy="35.3" rx="2.2" ry="3.2"/>
+        <ellipse cx="37.6" cy="39.2" rx="1.2" ry="2.5"/>
+        <ellipse cx="39.9" cy="36" rx=".6" ry="1.7"/>
+      </g>
+      <g fill="#75d6ff">
+        <ellipse class="hero-bubble hero-bubble-1" cx="5.3" cy="44" rx="1.7" ry="1.8"/>
+        <ellipse class="hero-bubble hero-bubble-2" cx="6.3" cy="23.4" rx="4.3" ry="4.5"/>
+        <ellipse class="hero-bubble hero-bubble-3" cx="12.8" cy="10.3" rx="8" ry="8.3"/>
+      </g>
+      <ellipse cx="18.7" cy="38.5" rx="7.1" ry="7.4" fill="#fcfcfa"/>
+      <ellipse cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
+    </svg>
+  </div>
+  <div class="app-heading">
+    <div class="app-title">AquaFeed Control</div>
+    <div class="app-subtitle">Налаштування WiFi</div>
+  </div>
 </div>
 
 <div class="card">
@@ -491,13 +601,48 @@ body {
     <span class="power-toggle-text">Режим економії енергії</span>
   </label>
   <div class="note-text">Після автоматичного годування контролер переходить у легкий сон і прокидається за 30&nbsp;секунд до наступного, зменшуючи споживання.</div>
+  <label class="power-toggle" style="margin-top: 16px;">
+    <input type="checkbox" id="displayEnabled">
+    <span class="power-toggle-box"></span>
+    <span class="power-toggle-text">Увімкнути OLED дисплей</span>
+  </label>
+  <div class="note-text">Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.</div>
   <div class="button-row">
     <button onclick="savePowerMode()">Зберегти енергозбереження</button>
+    <button onclick="saveDisplayMode()">Зберегти дисплей</button>
   </div>
 </div>
 
 <script>
-function showToast(text = 'Збережено') {
+let wifiLang = localStorage.getItem('aqua_lang') || 'uk';
+function wifiIsEn() { return wifiLang === 'en'; }
+function applyWiFiLanguage() {
+  const tabs = document.querySelectorAll('.bottom-tab span');
+  const sectionTitles = document.querySelectorAll('.section-title');
+  const sectionSubtitles = document.querySelectorAll('.section-subtitle');
+  const appSubtitle = document.querySelector('.app-subtitle');
+  if (appSubtitle) appSubtitle.textContent = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
+  if (sectionTitles[0]) sectionTitles[0].textContent = wifiIsEn() ? 'Connection status' : 'Статус підключення';
+  if (sectionSubtitles[0]) sectionSubtitles[0].textContent = wifiIsEn() ? 'Current WiFi mode' : 'Поточний режим роботи WiFi';
+  if (sectionTitles[1]) sectionTitles[1].textContent = wifiIsEn() ? 'Network settings' : 'Налаштування мережі';
+  if (sectionSubtitles[1]) sectionSubtitles[1].textContent = wifiIsEn() ? 'Enter SSID and password to connect' : 'Введіть SSID та пароль для підключення';
+  if (sectionTitles[2]) sectionTitles[2].textContent = wifiIsEn() ? 'Power settings' : 'Налаштування енергії';
+  if (sectionSubtitles[2]) sectionSubtitles[2].textContent = wifiIsEn() ? 'Optimize power consumption' : 'Оптимізуйте споживання живлення';
+  if (tabs[0]) tabs[0].textContent = wifiIsEn() ? 'Home' : 'Головна';
+  if (tabs[1]) tabs[1].textContent = wifiIsEn() ? 'Info' : 'Інформація';
+  if (tabs[2]) tabs[2].textContent = wifiIsEn() ? 'Settings' : 'Налаштування';
+  const ukBtn = document.getElementById('wifiLangUkBtn');
+  const enBtn = document.getElementById('wifiLangEnBtn');
+  if (ukBtn) ukBtn.classList.toggle('active', !wifiIsEn());
+  if (enBtn) enBtn.classList.toggle('active', wifiIsEn());
+}
+function setWiFiLanguage(lang) {
+  wifiLang = lang === 'en' ? 'en' : 'uk';
+  localStorage.setItem('aqua_lang', wifiLang);
+  applyWiFiLanguage();
+  updateStatus();
+}
+function showToast(text = (wifiIsEn() ? 'Saved' : 'Збережено')) {
   const toast = document.getElementById('toast');
   toast.innerText = text;
   toast.classList.add('show');
@@ -507,16 +652,16 @@ function showToast(text = 'Збережено') {
 }
 
 function reconnectWiFi(){
-  showToast('Перезапуск підключення...');
+  showToast(wifiIsEn() ? 'Restarting connection...' : 'Перезапуск підключення...');
   fetch('/api/reconnectWiFi')
     .then(()=>{
-      showToast('Підключення перезапущено');
+      showToast(wifiIsEn() ? 'Connection restarted' : 'Підключення перезапущено');
       setTimeout(()=>{
         updateStatus();
       }, 2000);
     })
     .catch(()=>{
-      showToast('Помилка перезапуску');
+      showToast(wifiIsEn() ? 'Restart error' : 'Помилка перезапуску');
     });
 }
 
@@ -524,38 +669,45 @@ function saveWiFi(){
   const ssid = document.getElementById('wifiSSID').value;
   const password = document.getElementById('wifiPassword').value;
   if(!ssid || ssid.trim() === '') {
-    showToast('Введіть назву WiFi мережі');
+    showToast(wifiIsEn() ? 'Enter WiFi network name' : 'Введіть назву WiFi мережі');
     return;
   }
   fetch('/api/setWiFi?ssid='+encodeURIComponent(ssid)+'&password='+encodeURIComponent(password))
     .then(()=>{
-      showToast('WiFi збережено, перезапуск підключення...');
+      showToast(wifiIsEn() ? 'WiFi saved, restarting connection...' : 'WiFi збережено, перезапуск підключення...');
       setTimeout(()=>{
         window.location.reload();
       }, 3000);
     })
     .catch(()=>{
-      showToast('Помилка збереження WiFi');
+      showToast(wifiIsEn() ? 'WiFi save error' : 'Помилка збереження WiFi');
     });
 }
 
 function forgetWiFi(){
-  showToast('Видаляю мережу...');
+  showToast(wifiIsEn() ? 'Removing network...' : 'Видаляю мережу...');
   fetch('/api/forgetWiFi')
     .then(()=>{
       document.getElementById('wifiSSID').value = '';
       document.getElementById('wifiPassword').value = '';
-      showToast('Мережу забуто. Підключіться до FishFeeder-Setup');
+      showToast(wifiIsEn() ? 'Network forgotten. Connect to FishFeeder-Setup' : 'Мережу забуто. Підключіться до FishFeeder-Setup');
       setTimeout(()=>{ window.location.reload(); }, 2000);
     })
-    .catch(()=> showToast('Помилка видалення WiFi'));
+    .catch(()=> showToast(wifiIsEn() ? 'WiFi remove error' : 'Помилка видалення WiFi'));
 }
 
 function savePowerMode(){
   const enabled = document.getElementById('powerSaveMode').checked;
   fetch('/api/setPowerMode?enabled='+enabled)
-    .then(()=>{ showToast('Збережено'); updateStatus(); })
-    .catch(()=> showToast('Помилка збереження'));
+    .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
+    .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
+}
+
+function saveDisplayMode(){
+  const enabled = document.getElementById('displayEnabled').checked;
+  fetch('/api/setDisplayMode?enabled='+enabled)
+    .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
+    .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
 }
 
 function updateStatus(){
@@ -580,19 +732,19 @@ function updateStatus(){
       passwordInput.value = '';
     }
     if(j.isAPMode) {
-      statusText.innerText = 'Режим точки доступу (AP) - ' + (j.wifiSSID || 'не налаштовано');
+      statusText.innerText = (wifiIsEn() ? 'Access Point mode (AP) - ' : 'Режим точки доступу (AP) - ') + (j.wifiSSID || (wifiIsEn() ? 'not set' : 'не налаштовано'));
       if (statusPill) statusPill.classList.add('warning');
       if (actionsRow) actionsRow.style.display = 'flex';
       if (actionsRow) actionsRow.classList.add('ap-mode');
     } else if(j.wifiIP) {
-      statusText.innerText = 'Підключено до: ' + (j.wifiSSID || 'невідомо') + ' (IP: ' + j.wifiIP + ')';
+      statusText.innerText = (wifiIsEn() ? 'Connected to: ' : 'Підключено до: ') + (j.wifiSSID || (wifiIsEn() ? 'unknown' : 'невідомо')) + ' (IP: ' + j.wifiIP + ')';
       if (statusPill) statusPill.classList.add('success');
       if (actionsRow) {
         actionsRow.style.display = 'flex';
         actionsRow.classList.remove('ap-mode');
       }
     } else {
-      statusText.innerText = 'Не підключено';
+      statusText.innerText = wifiIsEn() ? 'Not connected' : 'Не підключено';
       if (statusPill) statusPill.classList.add('error');
       if (actionsRow) actionsRow.style.display = 'flex';
       if (actionsRow) actionsRow.classList.add('ap-mode');
@@ -601,9 +753,20 @@ function updateStatus(){
     if (powerToggle) {
       powerToggle.checked = !!j.powerSaveMode;
     }
+    const displayToggle = document.getElementById('displayEnabled');
+    if (displayToggle) {
+      displayToggle.checked = !!j.displayEnabled;
+    }
   });
 }
-window.onload=updateStatus;
+window.onload=function() {
+  const ukBtn = document.getElementById('wifiLangUkBtn');
+  const enBtn = document.getElementById('wifiLangEnBtn');
+  if (ukBtn) ukBtn.addEventListener('click', () => setWiFiLanguage('uk'));
+  if (enBtn) enBtn.addEventListener('click', () => setWiFiLanguage('en'));
+  applyWiFiLanguage();
+  updateStatus();
+};
 
 // Встановлюємо активний таб
 document.addEventListener('DOMContentLoaded', function() {
@@ -625,6 +788,14 @@ document.addEventListener('DOMContentLoaded', function() {
       <path d="M10 20V14H14V20H19V12H22L12 3L2 12H5V20H10Z" fill="currentColor"/>
     </svg>
     <span>Головна</span>
+  </a>
+  <a href="/info" class="bottom-tab">
+    <svg class="bottom-tab-icon bottom-tab-icon-svg" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2"/>
+      <path d="M12 16v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="8" r="1" fill="currentColor"/>
+    </svg>
+    <span>Інформація</span>
   </a>
   <a href="/wifi" class="bottom-tab active">
     <svg class="bottom-tab-icon bottom-tab-icon-svg wifi-icon" viewBox="0 0 24 24">

@@ -35,7 +35,6 @@ button {
   letter-spacing: 0.2px;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
-  box-shadow: 0 10px 18px rgba(0,0,0,0.18);
 }
 button:hover {
   transform: translateY(-1px);
@@ -367,10 +366,10 @@ body {
 </style>
 </head>
 <body>
-<div id="toast" class="toast">Збережено</div>
+<div id="toast" class="toast">Saved</div>
 <div class="hero-header">
   <div class="app-illustration">
-    <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
+    <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stylized fish">
       <path d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
       <g fill="#8d9ba3">
         <path d="M48.1 60.5c-1.2 1.2-3.6 2.7-6.2 0s-5.4-7.5-4.2-8.7c1.2-1.2 5.8 1.7 8.4 4.4c2.6 2.6 3.2 3.1 2 4.3"/>
@@ -389,7 +388,7 @@ body {
   </div>
   <div class="app-heading">
     <div class="app-title">AquaFeed Control</div>
-    <div class="app-subtitle">Розумна годівниця</div>
+    <div class="app-subtitle">Smart feeder</div>
   </div>
 </div>
 
@@ -405,8 +404,8 @@ body {
         <text id="batteryPercent" x="130" y="90" text-anchor="middle" dominant-baseline="middle"
               font-size="34" font-weight="700" fill="#222">--%</text>
       </svg>
-      <div class="battery-title">Стан батареї</div>
-      <div class="battery-subtitle">Напруга: <span id="batteryVoltage">--</span> В</div>
+      <div class="battery-title">Battery status</div>
+      <div class="battery-subtitle">Voltage: <span id="batteryVoltage">--</span> V</div>
     </div>
     <div class="next-feed-card">
       <div class="next-feed-gauge">
@@ -417,10 +416,10 @@ body {
                 fill="none" stroke="#1976D2" stroke-width="14" stroke-linecap="round"
                 stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
           <text id="nextFeedPercent" x="130" y="90" text-anchor="middle" dominant-baseline="middle"
-                font-size="30" font-weight="600" fill="#1976D2">— год — хв</text>
+                font-size="30" font-weight="600" fill="#1976D2">— h — m</text>
         </svg>
       </div>
-      <div class="next-feed-title">До наступного годування</div>
+      <div class="next-feed-title">Until next feeding</div>
     </div>
   </div>
 </div>
@@ -436,19 +435,19 @@ body {
       </svg>
     </div>
     <div>
-      <div class="section-title">Ручне керування</div>
-      <div class="section-subtitle">Керуйте серво-приводом вручну</div>
+      <div class="section-title">Manual control</div>
+      <div class="section-subtitle">Control the servo manually</div>
     </div>
   </div>
   <div class="row">
-    <label>Кут серво: <span id="angleLabel">0</span>°</label>
+    <label>Servo angle: <span id="angleLabel">0</span>°</label>
     <input id="angleSlider" type="range" min="0" max="180" value="0">
   </div>
   <div class="row">
-    <label>Швидкість серво: <span id="speedValue">20</span></label>
+    <label>Servo speed: <span id="speedValue">20</span></label>
     <input id="speedSlider" type="range" min="1" max="20" step="0.1" value="20" oninput="updateSpeed(this.value)">
   </div>
-  <button onclick="saveSpeed()">Зберегти швидкість</button>
+  <button onclick="saveSpeed()">Save speed</button>
 </div>
 
 <div class="card">
@@ -462,16 +461,16 @@ body {
       </svg>
     </div>
     <div>
-      <div class="section-title">Ручне годування</div>
-      <div class="section-subtitle">Швидкий запуск циклу годування</div>
+      <div class="section-title">Manual feeding</div>
+      <div class="section-subtitle">Quick feed cycle start</div>
     </div>
   </div>
   <div class="flex-row">
-    <span>Кількість повторів</span>
+    <span>Repeats</span>
     <input id="feedRepeats" type="number" min="1" max="20" value="1">
   </div>
-  <button onclick="saveRepeats()" style="margin-top: 0;">Зберегти</button>
-  <button onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Годувати зараз</button>
+  <button onclick="saveRepeats()" style="margin-top: 0;">Save</button>
+  <button onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Feed now</button>
 </div>
 
 <div class="card">
@@ -486,15 +485,15 @@ body {
       </svg>
     </div>
     <div>
-      <div class="section-title">Автоматичне годування</div>
-      <div class="section-subtitle">Налаштуйте розклад годувань</div>
+      <div class="section-title">Automatic feeding</div>
+      <div class="section-subtitle">Set your feeding schedule</div>
     </div>
   </div>
   <div id="feedTimesContainer">
-    <!-- Блоки будуть додаватися динамічно -->
+    <!-- Blocks are added dynamically -->
   </div>
-  <button class="add-btn" onclick="addFeedTime()">+ Додати годування</button>
-  <button onclick="saveFeedTimes()" style="margin-top: 8px;">Зберегти всі часи</button>
+  <button class="add-btn" onclick="addFeedTime()">+ Add feeding</button>
+  <button onclick="saveFeedTimes()" style="margin-top: 8px;">Save all times</button>
 </div>
 
 <script>
@@ -521,7 +520,7 @@ document.getElementById('angleSlider').addEventListener('input', function(){
   console.log('Angle set to:', val + '°');
 });
 
-function showToast(text = 'Збережено') {
+function showToast(text = 'Saved') {
   const toast = document.getElementById('toast');
   toast.innerText = text;
   toast.classList.add('show');
@@ -532,12 +531,12 @@ function showToast(text = 'Збережено') {
 
 function feedNow(){ 
   console.log('Feed now clicked');
-  showToast('Годую');
+  showToast('Feeding');
 }
 function saveSpeed(){ 
   const s=document.getElementById('speedSlider').value; 
   console.log('Speed saved:', s);
-  showToast('Збережено');
+  showToast('Saved');
 }
 function saveRepeats(){ 
   const r=document.getElementById('feedRepeats').value; 
@@ -554,13 +553,13 @@ function addFeedTime(hour = 10, minute = 0, repeats = 1) {
   block.id = blockId;
   block.innerHTML = `
     <div class="flex-row">
-      <span>Час:</span>
+      <span>Time:</span>
       <input type="number" class="feed-hour" min="0" max="23" value="${hour}" style="width:35px; min-width:35px; padding: 4px;">
       <span>:</span>
       <input type="number" class="feed-minute" min="0" max="59" value="${minute}" style="width:35px; min-width:35px; padding: 4px;">
-      <span>Повторів:</span>
+      <span>Repeats:</span>
       <input type="number" class="feed-repeats" min="1" max="20" value="${repeats}" style="width:35px; min-width:35px; padding: 4px;">
-      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="Видалити">×</button>
+      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="Remove">×</button>
     </div>
   `;
   container.appendChild(block);
@@ -635,10 +634,10 @@ function formatTimeHM(hour, minute) {
 }
 
 function formatDurationMinutes(minutes) {
-  if (minutes <= 0) return '0 год 0 хв';
+  if (minutes <= 0) return '0 h 0 m';
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return `${hours} год ${mins} хв`;
+  return `${hours} h ${mins} m`;
 }
 
 function updateNextFeedingProgress(status) {
@@ -648,7 +647,7 @@ function updateNextFeedingProgress(status) {
 
   const schedule = normalizeFeedSchedule(status);
   if (!schedule.length) {
-    percentTextEl.innerText = '— год — хв';
+    percentTextEl.innerText = '— h — m';
     fillPath.style.strokeDasharray = 345.58;
     fillPath.style.strokeDashoffset = 345.58;
     return;
@@ -711,7 +710,7 @@ function statusUpdate(){
   const batteryPercent = Math.round(j.batteryPercent);
   const statusLabel = document.getElementById('status');
   if (statusLabel) {
-    statusLabel.innerText = 'Прев\'ю (без підключення до пристрою)';
+    statusLabel.innerText = 'Preview (without device connection)';
   }
   document.getElementById('batteryVoltage').innerText = j.batteryVoltage.toFixed(2);
   updateBatteryGauge(batteryPercent);
@@ -722,7 +721,7 @@ function statusUpdate(){
   updateSpeed(j.speed);
   document.getElementById('feedRepeats').value = j.feedRepeats;
   
-  // Завантажуємо динамічні годування
+  // Load dynamic feedings
   if (j.feedTimes) {
     loadFeedTimes(j.feedTimes);
   }
@@ -736,7 +735,7 @@ window.onload = statusUpdate;
     <svg class="bottom-tab-icon home-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M10 20V14H14V20H19V12H22L12 3L2 12H5V20H10Z" fill="currentColor"/>
     </svg>
-    <span>Головна</span>
+    <span>Home</span>
   </a>
   <a href="preview_wifi.html" class="bottom-tab">
     <svg class="bottom-tab-icon bottom-tab-icon-svg wifi-icon" viewBox="0 0 24 24">
@@ -745,7 +744,7 @@ window.onload = statusUpdate;
       <path d="M9.4 15.9C11.15 14.15 12.85 14.15 14.6 15.9" />
       <circle class="filled" cx="12" cy="19.2" r="1.2" />
     </svg>
-    <span>Налаштування</span>
+    <span>Settings</span>
   </a>
 </div>
 </body>
