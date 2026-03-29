@@ -1,6 +1,8 @@
 #ifndef API_HANDLERS_H
 #define API_HANDLERS_H
 
+#include <Arduino.h>
+#include <stdint.h>
 #include <WebServer.h>
 #include <Preferences.h>
 #include "servo_controller.h"
@@ -27,13 +29,24 @@ public:
   void handleSetFeedTimes();
   void handleSetPowerMode();
   void handleSetDisplayMode();
+  void handleSetDeepSleep();
   
   void setPowerSaveMode(bool enabled) { powerSaveMode = enabled; }
   bool getPowerSaveMode() const { return powerSaveMode; }
   void setDisplayEnabled(bool enabled) { displayEnabled = enabled; }
   bool getDisplayEnabled() const { return displayEnabled; }
+  void setDeepSleepIdleSec(uint16_t sec);
+  uint16_t getDeepSleepIdleSec() const { return deepSleepIdleSec; }
+  void setDeepSleepWakeButtonOnly(bool v) { deepSleepWakeButtonOnly = v; }
+  bool getDeepSleepWakeButtonOnly() const { return deepSleepWakeButtonOnly; }
   void setFeedRepeats(int repeats) { feedRepeats = repeats; }
   int getFeedRepeats() const { return feedRepeats; }
+  unsigned long getLastClientActivityMillis() const { return lastClientActivityMillis; }
+  void setSleepStatus(const String& reason, long countdownSeconds, bool displayAwake) {
+    sleepReason = reason;
+    sleepCountdownSeconds = countdownSeconds;
+    displayAwakeNow = displayAwake;
+  }
   
 private:
   WebServer& server;
@@ -44,16 +57,23 @@ private:
   
   bool powerSaveMode;
   bool displayEnabled;
+  uint16_t deepSleepIdleSec;
+  bool deepSleepWakeButtonOnly;
   int feedRepeats;
   
   String cachedStatusJson;
   unsigned long cachedStatusTime;
+  unsigned long lastClientActivityMillis;
+  String sleepReason;
+  long sleepCountdownSeconds;
+  bool displayAwakeNow;
   static const unsigned long STATUS_CACHE_TTL = 500;
   
   void invalidateCache() {
     cachedStatusJson = "";
     cachedStatusTime = 0;
   }
+  void noteClientActivity() { lastClientActivityMillis = millis(); }
   
   static int extractIntField(const String& obj, char fieldKey, int fallback);
   static bool isDigitChar(char c);

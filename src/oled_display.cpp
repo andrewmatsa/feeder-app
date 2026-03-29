@@ -7,7 +7,8 @@
 
 OledDisplay::OledDisplay(int sdaPin, int sclPin)
   : u8g2(U8G2_R0, /* clock=*/ sclPin, /* data=*/ sdaPin, /* reset=*/ U8X8_PIN_NONE),
-    sdaPin(sdaPin), sclPin(sclPin), lastUpdateTime(0), isInitialized(false), feedingStartTime(0) {
+    sdaPin(sdaPin), sclPin(sclPin), lastUpdateTime(0), isInitialized(false),
+    isPowerSaveEnabled(false), feedingStartTime(0) {
 }
 
 bool OledDisplay::checkDisplay() {
@@ -66,13 +67,50 @@ void OledDisplay::showSplash() {
   u8g2.sendBuffer();
 }
 
+void OledDisplay::showDeepSleepNotice(bool scheduleTimerWakeEnabled) {
+  if (!isInitialized) {
+    delay(100);
+    return;
+  }
+  u8g2.setPowerSave(0);
+  isPowerSaveEnabled = false;
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_helvR08_tr);
+  u8g2.drawStr(0, 12, "Deep sleep");
+  if (scheduleTimerWakeEnabled) {
+    u8g2.drawStr(0, 28, "Wake: btn/timer");
+  } else {
+    u8g2.drawStr(0, 28, "Wake: press btn");
+  }
+  u8g2.drawStr(0, 44, "Web off in sleep");
+  u8g2.sendBuffer();
+  delay(2000);
+}
+
 void OledDisplay::clear() {
+  if (!isInitialized) {
+    return;
+  }
   u8g2.clearBuffer();
   u8g2.sendBuffer();
 }
 
+void OledDisplay::setPowerSave(bool enabled) {
+  if (!isInitialized || isPowerSaveEnabled == enabled) {
+    return;
+  }
+
+  isPowerSaveEnabled = enabled;
+  u8g2.setPowerSave(enabled ? 1 : 0);
+  if (enabled) {
+    clear();
+  } else {
+    lastUpdateTime = 0;
+  }
+}
+
 void OledDisplay::update(const DisplayData& data) {
-  if (!isInitialized) {
+  if (!isInitialized || isPowerSaveEnabled) {
     return;
   }
   

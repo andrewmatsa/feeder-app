@@ -32,26 +32,123 @@ OledDisplay oled(OLED_SDA_PIN, OLED_SCL_PIN);
 
 // === State variables ===
 bool lastButtonState = HIGH;
-unsigned long lastAutoFeedMillis = 0;
-bool autoFeedSleepPending = false;
+unsigned long lastInteractionMillis = 0;
+bool powerSaveSleepArmed = false;
 
 // === Power Management ===
-const unsigned long SLEEP_INTERVAL = 60000;
+const unsigned long DISPLAY_WAKE_GRACE_MS = 5000;
 
-void enterLightSleep() {
-  Serial.println("Entering light sleep for power saving...");
-  esp_sleep_enable_timer_wakeup(SLEEP_INTERVAL * 1000);
-  if (esp_light_sleep_start() == ESP_OK) {
-    Serial.println("Woke up from sleep");
+static unsigned long powerSaveIdleMs() {
+  return static_cast<unsigned long>(apiHandlers.getDeepSleepIdleSec()) * 1000UL;
+}
+const uint64_t MIN_DEEP_SLEEP_US = 5000000ULL;
+const long FEED_WAKE_MARGIN_SECONDS = 15;
+
+void markInteraction() {
+  lastInteractionMillis = millis();
+  powerSaveSleepArmed = true;
+}
+
+long computePreciseSecondsUntilNextFeed(const NextFeedInfo& nextInfo) {
+  if (nextInfo.targetHour < 0 || nextInfo.targetMinute < 0) {
+    return -1;
   }
+
+  time_t now = time(nullptr);
+  struct tm localTime;
+  time_t adjusted = now + FeedingScheduler::KIEV_UTC_OFFSET_SECONDS;
+  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+    return static_cast<long>(nextInfo.minutesUntil) * 60L;
+  }
+
+  int currentTotalSeconds = localTime.tm_hour * 3600 + localTime.tm_min * 60 + localTime.tm_sec;
+  int nextTotalSeconds = nextInfo.targetHour * 3600 + nextInfo.targetMinute * 60;
+  int diffSeconds = nextTotalSeconds - currentTotalSeconds;
+  if (diffSeconds <= 0) {
+    diffSeconds += 24 * 3600;
+  }
+  return diffSeconds;
+}
+
+uint64_t computeDeepSleepWakeMicros() {
+  NextFeedInfo nextInfo = scheduler.computeNextFeed();
+  long secondsUntilNextFeed = computePreciseSecondsUntilNextFeed(nextInfo);
+  if (secondsUntilNextFeed <= 0) {
+    return 60000000ULL;
+  }
+
+  long wakeAfterSeconds = secondsUntilNextFeed - FEED_WAKE_MARGIN_SECONDS;
+  if (wakeAfterSeconds < 5) {
+    wakeAfterSeconds = 5;
+  }
+
+  return static_cast<uint64_t>(wakeAfterSeconds) * 1000000ULL;
+}
+
+void enterPowerSaveDeepSleep() {
+  const bool timerWake = !apiHandlers.getDeepSleepWakeButtonOnly();
+  if (apiHandlers.getDisplayEnabled()) {
+    oled.showDeepSleepNotice(timerWake);
+  } else {
+    delay(100);
+  }
+
+  oled.setPowerSave(true);
+  esp_deep_sleep_enable_gpio_wakeup(1ULL << BUTTON_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
+
+  if (timerWake) {
+    uint64_t wakeMicros = computeDeepSleepWakeMicros();
+    if (wakeMicros < MIN_DEEP_SLEEP_US) {
+      wakeMicros = MIN_DEEP_SLEEP_US;
+    }
+    esp_sleep_enable_timer_wakeup(wakeMicros);
+    Serial.printf("Power save: deep sleep, timer wake in %.1f s\n", wakeMicros / 1000000.0);
+  } else {
+    Serial.println("Power save: deep sleep, GPIO wake only (no schedule timer)");
+  }
+  Serial.flush();
+  delay(50);
+  esp_deep_sleep_start();
+}
+
+long computeSleepCountdownSeconds(bool recentlyActive, bool webClientActive) {
+  if (!apiHandlers.getPowerSaveMode() || isAPMode || servo.isMoving()) {
+    return -1;
+  }
+
+  const unsigned long idleMs = powerSaveIdleMs();
+  unsigned long nowMs = millis();
+  unsigned long idleRemainingMs =
+    (nowMs - lastInteractionMillis >= idleMs) ? 0 : (idleMs - (nowMs - lastInteractionMillis));
+  unsigned long webRemainingMs =
+    (nowMs - apiHandlers.getLastClientActivityMillis() >= idleMs) ? 0 : (idleMs - (nowMs - apiHandlers.getLastClientActivityMillis()));
+
+  if (recentlyActive && webClientActive) {
+    return static_cast<long>(max(idleRemainingMs, webRemainingMs) / 1000UL);
+  }
+  if (recentlyActive) {
+    return static_cast<long>(idleRemainingMs / 1000UL);
+  }
+  if (webClientActive) {
+    return static_cast<long>(webRemainingMs / 1000UL);
+  }
+
+  return 0;
+}
+
+String computeSleepReason(bool currentPowerSaveMode, bool displayShouldBeAwake, bool recentlyActive, bool webClientActive) {
+  if (!currentPowerSaveMode) return "power_save_off";
+  if (isAPMode) return "ap_mode";
+  if (servo.isMoving()) return "feeding";
+  if (webClientActive) return "web_active";
+  if (recentlyActive) return "recent_activity";
+  if (displayShouldBeAwake) return "display_awake";
+  return "ready";
 }
 
 void performAutoFeeding(int repeats) {
   servo.feedSequence(repeats);
-  if (apiHandlers.getPowerSaveMode()) {
-    lastAutoFeedMillis = millis();
-    autoFeedSleepPending = true;
-  }
+  markInteraction();
 }
 
 // ============================================================================
@@ -76,6 +173,8 @@ void setup(){
   Serial.println("\nSystem initialized successfully!\n");
   
   pinMode(BUTTON_PIN, INPUT_PULLUP);
+  lastButtonState = digitalRead(BUTTON_PIN);
+  esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
   
   Serial.println("Initializing battery monitor...");
   battery.begin();
@@ -92,11 +191,22 @@ void setup(){
   apiHandlers.setFeedRepeats(preferences.getInt("feedRepeats", 1));
   apiHandlers.setPowerSaveMode(preferences.getBool("powerSaveMode", true));
   apiHandlers.setDisplayEnabled(preferences.getBool("displayEnabled", true));
-  
+  {
+    uint32_t dsIdle = preferences.getUInt("dsIdleSec", 60);
+    if (dsIdle < 10) {
+      dsIdle = 10;
+    }
+    if (dsIdle > 3600) {
+      dsIdle = 3600;
+    }
+    apiHandlers.setDeepSleepIdleSec(static_cast<uint16_t>(dsIdle));
+    apiHandlers.setDeepSleepWakeButtonOnly(preferences.getBool("dsBtnOnly", false));
+  }
+
   scheduler.begin(preferences);
   
-  autoFeedSleepPending = false;
-  lastAutoFeedMillis = 0;
+  lastInteractionMillis = millis();
+  powerSaveSleepArmed = true;
   
   // ============================================================================
   // ============================================================================
@@ -104,6 +214,7 @@ void setup(){
   Serial.printf("CPU Frequency: %d MHz\n", getCpuFrequencyMhz());
   
   initWiFi(preferences);
+  WiFi.setSleep(apiHandlers.getPowerSaveMode() && !isAPMode);
 
   apiHandlers.setupRoutes();
   
@@ -134,6 +245,21 @@ void setup(){
   Serial.printf("Largest free block: %d bytes\n", ESP.getMaxAllocHeap());
   Serial.printf("Min free heap (ever): %d bytes\n", ESP.getMinFreeHeap());
   Serial.printf("====================\n");
+
+  if (wakeCause == ESP_SLEEP_WAKEUP_GPIO) {
+    Serial.println("Wake source: feed button");
+    if (digitalRead(BUTTON_PIN) == LOW) {
+      if (scheduler.canFeedNow()) {
+        servo.feedSequence(apiHandlers.getFeedRepeats());
+        scheduler.recordManualFeed();
+        markInteraction();
+      } else {
+        Serial.println("Wake-up button feed blocked: recently fed");
+      }
+    }
+  } else if (wakeCause == ESP_SLEEP_WAKEUP_TIMER) {
+    Serial.println("Wake source: schedule timer");
+  }
 }
 
 // === Loop ===
@@ -144,16 +270,32 @@ void loop(){
   
   bool buttonState = digitalRead(BUTTON_PIN);
   if(lastButtonState == HIGH && buttonState == LOW && !servo.isMoving()) {
-    if (apiHandlers.getDisplayEnabled()) {
-      DisplayData feedDisplayData = {};
-      feedDisplayData.isFeeding = true;
-      oled.update(feedDisplayData);
+    if (scheduler.canFeedNow()) {
+      if (apiHandlers.getDisplayEnabled()) {
+        DisplayData feedDisplayData = {};
+        feedDisplayData.isFeeding = true;
+        oled.setPowerSave(false);
+        oled.update(feedDisplayData);
+      }
+      
+      servo.feedSequence(apiHandlers.getFeedRepeats());
+      scheduler.recordManualFeed();
+      markInteraction();
+    } else {
+      Serial.println("Manual button feed blocked: recently fed");
     }
-    
-    servo.feedSequence(apiHandlers.getFeedRepeats());
-    scheduler.recordManualFeed();
   }
   lastButtonState = buttonState;
+
+  static bool appliedPowerSaveMode = false;
+  static bool initializedPowerSettings = false;
+  bool currentPowerSaveMode = apiHandlers.getPowerSaveMode();
+  if (!initializedPowerSettings || currentPowerSaveMode != appliedPowerSaveMode) {
+    WiFi.setSleep(currentPowerSaveMode && !isAPMode);
+    appliedPowerSaveMode = currentPowerSaveMode;
+    initializedPowerSettings = true;
+    markInteraction();
+  }
 
   scheduler.loop(performAutoFeeding);
 
@@ -183,38 +325,28 @@ void loop(){
   displayData.isFeeding = servo.isMoving();
   displayData.wifiSSID = savedSSID;
   
-  if (apiHandlers.getDisplayEnabled()) {
+  bool displayShouldBeAwake =
+    apiHandlers.getDisplayEnabled() &&
+    (!currentPowerSaveMode || servo.isMoving() || (millis() - lastInteractionMillis) < DISPLAY_WAKE_GRACE_MS);
+
+  oled.setPowerSave(!displayShouldBeAwake);
+  if (displayShouldBeAwake) {
     oled.update(displayData);
-  } else {
-    static unsigned long lastClearTime = 0;
-    unsigned long currentTime = millis();
-    if (currentTime - lastClearTime > 1000) {
-      oled.clear();
-      lastClearTime = currentTime;
-    }
   }
 
-  if (apiHandlers.getPowerSaveMode() && autoFeedSleepPending && !servo.isMoving() && !isAPMode) {
-    unsigned long elapsed = millis() - lastAutoFeedMillis;
-    if (elapsed >= 60000UL) {
-      NextFeedInfo nextInfo = scheduler.computeNextFeed();
-      if (nextInfo.minutesUntil > 0) {
-        long secondsUntil = static_cast<long>(nextInfo.minutesUntil) * 60L;
-        if (secondsUntil > 60) {
-          Serial.printf("Power save: entering light sleep for up to %ld seconds (next feed in %ld seconds)\n",
-                        secondsUntil - 30, secondsUntil);
-          autoFeedSleepPending = false;
-          uint64_t wakeMicros = (secondsUntil - 30) * 1000000ULL;
-          if (wakeMicros < 30000000ULL) wakeMicros = 30000000ULL;
-          esp_sleep_enable_timer_wakeup(wakeMicros);
-          enterLightSleep();
-        } else {
-          autoFeedSleepPending = false;
-        }
-      } else {
-        autoFeedSleepPending = false;
-      }
-    }
+  const unsigned long idleMsLoop = powerSaveIdleMs();
+  bool recentlyActive = (millis() - lastInteractionMillis) < idleMsLoop;
+  bool webClientActive = (millis() - apiHandlers.getLastClientActivityMillis()) < idleMsLoop;
+  long sleepCountdownSeconds = computeSleepCountdownSeconds(recentlyActive, webClientActive);
+  String sleepReason = computeSleepReason(currentPowerSaveMode, displayShouldBeAwake, recentlyActive, webClientActive);
+  apiHandlers.setSleepStatus(sleepReason, sleepCountdownSeconds, displayShouldBeAwake);
+  if (currentPowerSaveMode &&
+      powerSaveSleepArmed &&
+      !servo.isMoving() &&
+      !isAPMode &&
+      !recentlyActive &&
+      !webClientActive) {
+    enterPowerSaveDeepSleep();
   }
   
   yield();

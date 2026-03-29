@@ -8,14 +8,20 @@ FeedingScheduler::FeedingScheduler()
     feedHour2(20), feedMinute2(0), feedRepeats2(1),
     feed1Done(false), feed2Done(false),
     lastCheckedHour(-1), lastCheckedMinute(-1),
-    lastFedHour(-1), lastFedMinute(-1) {
+    lastFedHour(-1), lastFedMinute(-1),
+    lastFedEpochMinute(-1),
+    lastScheduledFeedEpochMinute(-1),
+    preferencesRef(nullptr) {
   for(int i = 0; i < MAX_FEED_TIMES; i++) {
     feedTimes[i] = {0, 0, 1, false};
   }
 }
 
 void FeedingScheduler::begin(Preferences& preferences) {
+  preferencesRef = &preferences;
   loadFromPreferences(preferences);
+  lastFedEpochMinute = preferences.getLong64("lastFeedEpochMin", -1);
+  lastScheduledFeedEpochMinute = preferences.getLong64("lastScheduledFeedEpochMin", -1);
 }
 
 void FeedingScheduler::loadFromPreferences(Preferences& preferences) {
@@ -168,6 +174,20 @@ NextFeedInfo FeedingScheduler::computeNextFeed() {
 }
 
 bool FeedingScheduler::wasRecentlyFed(int currentHour, int currentMinute) {
+  struct tm localTime;
+  long long currentEpochMinute = -1;
+  if (getCurrentLocalTime(localTime, &currentEpochMinute) &&
+      lastFedEpochMinute >= 0 &&
+      currentEpochMinute >= lastFedEpochMinute) {
+    long long diff = currentEpochMinute - lastFedEpochMinute;
+    if (diff < MIN_FEED_INTERVAL_MINUTES) {
+      Serial.printf("Feed blocked: only %lld minutes since last feed at %02d:%02d\n",
+                    diff, lastFedHour, lastFedMinute);
+      return true;
+    }
+    return false;
+  }
+
   if (lastFedHour < 0 || lastFedMinute < 0) {
     return false;
   }
@@ -188,6 +208,44 @@ bool FeedingScheduler::wasRecentlyFed(int currentHour, int currentMinute) {
   return false;
 }
 
+bool FeedingScheduler::getCurrentLocalTime(struct tm& localTime, long long* epochMinute) {
+  time_t now = time(nullptr);
+  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
+  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+    return false;
+  }
+
+  if (epochMinute) {
+    *epochMinute = static_cast<long long>(adjusted / 60);
+  }
+  return true;
+}
+
+void FeedingScheduler::updateLastFeedState(const struct tm& localTime, long long epochMinute) {
+  lastFedHour = localTime.tm_hour;
+  lastFedMinute = localTime.tm_min;
+  lastFedEpochMinute = epochMinute;
+  persistLastFeedState();
+}
+
+void FeedingScheduler::persistLastFeedState() {
+  if (!preferencesRef) {
+    return;
+  }
+  preferencesRef->putLong64("lastFeedEpochMin", lastFedEpochMinute);
+}
+
+bool FeedingScheduler::wasScheduleAlreadyExecuted(long long epochMinute) const {
+  return lastScheduledFeedEpochMinute >= 0 && lastScheduledFeedEpochMinute == epochMinute;
+}
+
+void FeedingScheduler::persistLastScheduledFeedState() {
+  if (!preferencesRef) {
+    return;
+  }
+  preferencesRef->putLong64("lastScheduledFeedEpochMin", lastScheduledFeedEpochMinute);
+}
+
 bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
   time_t now = time(nullptr);
   struct tm localTime;
@@ -198,8 +256,23 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
   
   int curHour = localTime.tm_hour;
   int curMinute = localTime.tm_min;
+  long long currentEpochMinute = static_cast<long long>(adjusted / 60);
   
-  if (wasRecentlyFed(curHour, curMinute)) {
+  if (wasScheduleAlreadyExecuted(currentEpochMinute)) {
+    for (int i = 0; i < feedTimesCount; i++) {
+      if (curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute) {
+        feedTimes[i].done = true;
+      }
+    }
+    if (feedTimesCount == 0) {
+      if (curHour == feedHour1 && curMinute == feedMinute1) {
+        feed1Done = true;
+      }
+      if (curHour == feedHour2 && curMinute == feedMinute2) {
+        feed2Done = true;
+      }
+    }
+    Serial.printf("Scheduled feed for %02d:%02d already executed, skipping duplicate\n", curHour, curMinute);
     return false;
   }
   
@@ -232,46 +305,49 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
   }
   
   bool fed = false;
+  int repeatsToRun = 0;
   
   for(int i = 0; i < feedTimesCount; i++) {
     if (curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
-      if (!wasRecentlyFed(curHour, curMinute)) {
-        Serial.printf("Auto feeding (slot %d) %02d:%02d, repeats: %d\n", i+1, curHour, curMinute, feedTimes[i].repeats);
-        if (feedCallback) {
-          feedCallback(feedTimes[i].repeats);
-        }
-        feedTimes[i].done = true;
-        lastFedHour = curHour;
-        lastFedMinute = curMinute;
-        fed = true;
-      }
+      repeatsToRun += max(1, feedTimes[i].repeats);
+      feedTimes[i].done = true;
+      Serial.printf("Auto feeding queued (slot %d) %02d:%02d, repeats: %d\n", i+1, curHour, curMinute, feedTimes[i].repeats);
     }
+  }
+
+  if (repeatsToRun > 0) {
+    Serial.printf("Auto feeding total %02d:%02d, combined repeats: %d\n", curHour, curMinute, repeatsToRun);
+    if (feedCallback) {
+      feedCallback(repeatsToRun);
+    }
+    lastScheduledFeedEpochMinute = currentEpochMinute;
+    persistLastScheduledFeedState();
+    updateLastFeedState(localTime, currentEpochMinute);
+    fed = true;
   }
   
   if (feedTimesCount == 0) {
+    int legacyRepeatsToRun = 0;
     if (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) {
-      if (!wasRecentlyFed(curHour, curMinute)) {
-        Serial.printf("Auto feeding (slot 1 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats1);
-        if (feedCallback) {
-          feedCallback(feedRepeats1);
-        }
-        feed1Done = true;
-        lastFedHour = curHour;
-        lastFedMinute = curMinute;
-        fed = true;
-      }
+      legacyRepeatsToRun += max(1, feedRepeats1);
+      feed1Done = true;
+      Serial.printf("Auto feeding queued (slot 1 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats1);
     }
     if (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done) {
-      if (!wasRecentlyFed(curHour, curMinute)) {
-        Serial.printf("Auto feeding (slot 2 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats2);
-        if (feedCallback) {
-          feedCallback(feedRepeats2);
-        }
-        feed2Done = true;
-        lastFedHour = curHour;
-        lastFedMinute = curMinute;
-        fed = true;
+      legacyRepeatsToRun += max(1, feedRepeats2);
+      feed2Done = true;
+      Serial.printf("Auto feeding queued (slot 2 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats2);
+    }
+
+    if (legacyRepeatsToRun > 0) {
+      Serial.printf("Auto feeding total legacy %02d:%02d, combined repeats: %d\n", curHour, curMinute, legacyRepeatsToRun);
+      if (feedCallback) {
+        feedCallback(legacyRepeatsToRun);
       }
+      lastScheduledFeedEpochMinute = currentEpochMinute;
+      persistLastScheduledFeedState();
+      updateLastFeedState(localTime, currentEpochMinute);
+      fed = true;
     }
   }
   
@@ -285,13 +361,43 @@ void FeedingScheduler::loop(void (*feedCallback)(int repeats)) {
   checkAndFeed(feedCallback);
 }
 
-void FeedingScheduler::recordManualFeed() {
-  time_t now = time(nullptr);
+bool FeedingScheduler::canFeedNow() {
   struct tm localTime;
+  long long epochMinute = -1;
+  if (!getCurrentLocalTime(localTime, &epochMinute)) {
+    return true;
+  }
+
+  return !wasRecentlyFed(localTime.tm_hour, localTime.tm_min);
+}
+
+int FeedingScheduler::getSecondsUntilManualFeedAllowed() const {
+  if (lastFedEpochMinute < 0) {
+    return 0;
+  }
+  time_t now = time(nullptr);
   time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
-  if (gmtime_r(&adjusted, &localTime) && localTime.tm_year + 1900 >= 2020) {
-    lastFedHour = localTime.tm_hour;
-    lastFedMinute = localTime.tm_min;
+  long long curEm = static_cast<long long>(adjusted / 60);
+  long long diffMin = curEm - lastFedEpochMinute;
+  if (diffMin >= MIN_FEED_INTERVAL_MINUTES) {
+    return 0;
+  }
+  long long endAdjusted = (lastFedEpochMinute + MIN_FEED_INTERVAL_MINUTES) * 60LL;
+  long long remain = endAdjusted - static_cast<long long>(adjusted);
+  if (remain <= 0) {
+    return 0;
+  }
+  if (remain > 86400) {
+    return 86400;
+  }
+  return static_cast<int>(remain);
+}
+
+void FeedingScheduler::recordManualFeed() {
+  struct tm localTime;
+  long long epochMinute = -1;
+  if (getCurrentLocalTime(localTime, &epochMinute)) {
+    updateLastFeedState(localTime, epochMinute);
     Serial.printf("Manual feed recorded at %02d:%02d\n", lastFedHour, lastFedMinute);
   }
 }

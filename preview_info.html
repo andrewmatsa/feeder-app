@@ -250,6 +250,13 @@ a:active {
 .bottom-tab.active .home-icon {
   color: #111827;
 }
+.preview-lang-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0 8px 12px;
+  line-height: 1.45;
+}
+.preview-lang-hint code { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -481,7 +488,39 @@ a:active {
 </div>
 
 <script>
-function showToast(text = 'Saved') {
+function infoIsEn() { return (localStorage.getItem('aqua_lang') || 'uk') === 'en'; }
+
+const INFO_SECTIONS_UK = ['WiFi інформація', 'Батарея', 'Налаштування', 'Система', 'Пам\'ять та кеш'];
+const INFO_SECTIONS_EN = ['WiFi information', 'Battery', 'Settings', 'System', 'Memory and cache'];
+const INFO_SUBS_UK = ['Поточні мережеві параметри', 'Стан акумулятора пристрою', 'Поточні параметри роботи', 'Інформація про пристрій', 'Використання ресурсів системи'];
+const INFO_SUBS_EN = ['Current network parameters', 'Device battery state', 'Current runtime parameters', 'Device information', 'System resource usage'];
+const INFO_LABELS_UK = ['SSID:', 'IP адреса:', 'Режим:', 'mDNS:', 'Напруга:', 'Відсоток:', 'Швидкість серво:', 'Повторів годування:', 'Режим економії:', 'Кількість розкладів:', 'Модель:', 'Версія прошивки:', 'Час роботи:', 'CPU частота:', 'Вільна пам\'ять:', 'Використано пам\'яті:', 'Загальна пам\'ять:', 'Макс. блок:', 'Мін. вільна (завжди):', 'Розмір кешу:', 'Вік кешу:', 'Статус кешу:'];
+const INFO_LABELS_EN = ['SSID:', 'IP address:', 'Mode:', 'mDNS:', 'Voltage:', 'Percent:', 'Servo speed:', 'Feed repeats:', 'Power saving mode:', 'Schedule count:', 'Model:', 'Firmware version:', 'Uptime:', 'CPU frequency:', 'Free memory:', 'Used memory:', 'Total memory:', 'Max block:', 'Min free (ever):', 'Cache size:', 'Cache age:', 'Cache status:'];
+
+function applyInfoLanguage() {
+  const appSubtitle = document.querySelector('.app-subtitle');
+  if (appSubtitle) appSubtitle.textContent = infoIsEn() ? 'System information' : 'Інформація про систему';
+  document.querySelectorAll('.section-title').forEach(function(el, i) {
+    if (infoIsEn()) el.textContent = INFO_SECTIONS_EN[i] || el.textContent;
+    else el.textContent = INFO_SECTIONS_UK[i] || el.textContent;
+  });
+  document.querySelectorAll('.section-subtitle').forEach(function(el, i) {
+    if (infoIsEn()) el.textContent = INFO_SUBS_EN[i] || el.textContent;
+    else el.textContent = INFO_SUBS_UK[i] || el.textContent;
+  });
+  document.querySelectorAll('.info-label').forEach(function(el, i) {
+    if (infoIsEn()) el.textContent = INFO_LABELS_EN[i] || el.textContent;
+    else el.textContent = INFO_LABELS_UK[i] || el.textContent;
+  });
+  document.querySelectorAll('.bottom-tab span').forEach(function(el, i) {
+    if (i === 0) el.textContent = infoIsEn() ? 'Home' : 'Головна';
+    if (i === 1) el.textContent = infoIsEn() ? 'Info' : 'Інформація';
+    if (i === 2) el.textContent = infoIsEn() ? 'Settings' : 'Налаштування';
+  });
+}
+
+function showToast(text) {
+  if (text === undefined || text === null) text = infoIsEn() ? 'Saved' : 'Збережено';
   const toast = document.getElementById('toast');
   if (toast) {
     toast.innerText = text;
@@ -493,7 +532,7 @@ function showToast(text = 'Saved') {
 }
 
 window.onload = function() {
-  // Page initialization
+  applyInfoLanguage();
 };
 </script>
 </body>

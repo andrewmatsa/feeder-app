@@ -28,7 +28,10 @@ public:
   void begin();
   void update(const DisplayData& data);
   void clear();
+  void setPowerSave(bool enabled);
   void showSplash();
+  /** Shown before deep sleep; ASCII only. */
+  void showDeepSleepNotice(bool scheduleTimerWakeEnabled);
   
 private:
   U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2;
@@ -36,6 +39,7 @@ private:
   int sclPin;
   unsigned long lastUpdateTime;
   bool isInitialized;
+  bool isPowerSaveEnabled;
   static const unsigned long UPDATE_INTERVAL_MS = 1000;
   unsigned long feedingStartTime;
   static const unsigned long FEEDING_DISPLAY_DURATION_MS = 3000;

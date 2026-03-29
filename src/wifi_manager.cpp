@@ -277,13 +277,12 @@ h2 {
   color: #6b7280;
   letter-spacing: 0.3px;
 }
-.lang-switcher {
-  position: fixed;
-  top: 10px;
-  right: 10px;
+.lang-section-row {
   display: flex;
-  gap: 6px;
-  z-index: 1100;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
 }
 .lang-btn {
   border: 1px solid rgba(0,0,0,0.15);
@@ -499,10 +498,6 @@ body {
 </head>
 <body>
 <div id="toast" class="toast">Збережено</div>
-<div class="lang-switcher">
-  <button type="button" id="wifiLangUkBtn" class="lang-btn">UK</button>
-  <button type="button" id="wifiLangEnBtn" class="lang-btn">EN</button>
-</div>
 <div class="hero-header">
   <div class="app-illustration">
     <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
@@ -525,6 +520,26 @@ body {
   <div class="app-heading">
     <div class="app-title">AquaFeed Control</div>
     <div class="app-subtitle">Налаштування WiFi</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M2 12h20"></path>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title">Мова інтерфейсу</div>
+      <div class="section-subtitle"></div>
+    </div>
+  </div>
+  <div class="lang-section-row">
+    <button type="button" id="wifiLangUkBtn" class="lang-btn">UK</button>
+    <button type="button" id="wifiLangEnBtn" class="lang-btn">EN</button>
   </div>
 </div>
 
@@ -600,7 +615,20 @@ body {
     <span class="power-toggle-box"></span>
     <span class="power-toggle-text">Режим економії енергії</span>
   </label>
-  <div class="note-text">Після автоматичного годування контролер переходить у легкий сон і прокидається за 30&nbsp;секунд до наступного, зменшуючи споживання.</div>
+  <div class="note-text" id="wifiNotePower">Після заданого часу без активності контролер переходить у глибокий сон. Відкритий веб-інтерфейс не дає пристрою заснути.</div>
+  <div class="row" style="margin-top: 12px;">
+    <label for="deepSleepIdleSec" id="labelDeepSleepIdle">Секунд бездіяльності до глибокого сну (10–3600):</label>
+    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60" style="width: 100px; margin-top: 6px;">
+  </div>
+  <label class="power-toggle" style="margin-top: 12px;">
+    <input type="checkbox" id="deepSleepWakeButtonOnly">
+    <span class="power-toggle-box"></span>
+    <span class="power-toggle-text" id="textDeepSleepBtnOnly">Лише кнопка для пробудження (без таймера до годування)</span>
+  </label>
+  <div class="note-text" id="wifiNoteDeepSleep" style="margin-top: 8px;"></div>
+  <div class="button-row" style="margin-top: 8px;">
+    <button type="button" onclick="saveDeepSleepSettings()" id="btnSaveDeepSleep">Зберегти параметри сну</button>
+  </div>
   <label class="power-toggle" style="margin-top: 16px;">
     <input type="checkbox" id="displayEnabled">
     <span class="power-toggle-box"></span>
@@ -622,12 +650,14 @@ function applyWiFiLanguage() {
   const sectionSubtitles = document.querySelectorAll('.section-subtitle');
   const appSubtitle = document.querySelector('.app-subtitle');
   if (appSubtitle) appSubtitle.textContent = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
-  if (sectionTitles[0]) sectionTitles[0].textContent = wifiIsEn() ? 'Connection status' : 'Статус підключення';
-  if (sectionSubtitles[0]) sectionSubtitles[0].textContent = wifiIsEn() ? 'Current WiFi mode' : 'Поточний режим роботи WiFi';
-  if (sectionTitles[1]) sectionTitles[1].textContent = wifiIsEn() ? 'Network settings' : 'Налаштування мережі';
-  if (sectionSubtitles[1]) sectionSubtitles[1].textContent = wifiIsEn() ? 'Enter SSID and password to connect' : 'Введіть SSID та пароль для підключення';
-  if (sectionTitles[2]) sectionTitles[2].textContent = wifiIsEn() ? 'Power settings' : 'Налаштування енергії';
-  if (sectionSubtitles[2]) sectionSubtitles[2].textContent = wifiIsEn() ? 'Optimize power consumption' : 'Оптимізуйте споживання живлення';
+  if (sectionTitles[0]) sectionTitles[0].textContent = wifiIsEn() ? 'Interface language' : 'Мова інтерфейсу';
+  if (sectionSubtitles[0]) sectionSubtitles[0].textContent = '';
+  if (sectionTitles[1]) sectionTitles[1].textContent = wifiIsEn() ? 'Connection status' : 'Статус підключення';
+  if (sectionSubtitles[1]) sectionSubtitles[1].textContent = wifiIsEn() ? 'Current WiFi mode' : 'Поточний режим роботи WiFi';
+  if (sectionTitles[2]) sectionTitles[2].textContent = wifiIsEn() ? 'Network settings' : 'Налаштування мережі';
+  if (sectionSubtitles[2]) sectionSubtitles[2].textContent = wifiIsEn() ? 'Enter SSID and password to connect' : 'Введіть SSID та пароль для підключення';
+  if (sectionTitles[3]) sectionTitles[3].textContent = wifiIsEn() ? 'Power settings' : 'Налаштування енергії';
+  if (sectionSubtitles[3]) sectionSubtitles[3].textContent = wifiIsEn() ? 'Optimize power consumption' : 'Оптимізуйте споживання живлення';
   if (tabs[0]) tabs[0].textContent = wifiIsEn() ? 'Home' : 'Головна';
   if (tabs[1]) tabs[1].textContent = wifiIsEn() ? 'Info' : 'Інформація';
   if (tabs[2]) tabs[2].textContent = wifiIsEn() ? 'Settings' : 'Налаштування';
@@ -635,6 +665,34 @@ function applyWiFiLanguage() {
   const enBtn = document.getElementById('wifiLangEnBtn');
   if (ukBtn) ukBtn.classList.toggle('active', !wifiIsEn());
   if (enBtn) enBtn.classList.toggle('active', wifiIsEn());
+  const notePower = document.getElementById('wifiNotePower');
+  if (notePower) {
+    notePower.innerHTML = wifiIsEn()
+      ? 'After the configured idle time without activity the controller enters <strong>deep sleep</strong>. An open web interface keeps the device awake.'
+      : 'Після заданого часу без активності контролер переходить у <strong>глибокий сон</strong>. Відкритий веб-інтерфейс не дає пристрою заснути.';
+  }
+  const labelIdle = document.getElementById('labelDeepSleepIdle');
+  if (labelIdle) {
+    labelIdle.textContent = wifiIsEn()
+      ? 'Idle seconds before deep sleep (10–3600):'
+      : 'Секунд бездіяльності до глибокого сну (10–3600):';
+  }
+  const textBtnOnly = document.getElementById('textDeepSleepBtnOnly');
+  if (textBtnOnly) {
+    textBtnOnly.textContent = wifiIsEn()
+      ? 'Wake with button only (no timer before scheduled feed)'
+      : 'Лише кнопка для пробудження (без таймера до годування)';
+  }
+  const noteDeep = document.getElementById('wifiNoteDeepSleep');
+  if (noteDeep) {
+    noteDeep.innerHTML = wifiIsEn()
+      ? '<strong>Button-only wake:</strong> scheduled automatic feeds will not wake the device — press the button or disable this option.'
+      : '<strong>Лише кнопка:</strong> розкладне автогодування не розбудить пристрій — натисніть кнопку або вимкніть цей режим.';
+  }
+  const btnDs = document.getElementById('btnSaveDeepSleep');
+  if (btnDs) {
+    btnDs.textContent = wifiIsEn() ? 'Save sleep settings' : 'Зберегти параметри сну';
+  }
 }
 function setWiFiLanguage(lang) {
   wifiLang = lang === 'en' ? 'en' : 'uk';
@@ -710,6 +768,17 @@ function saveDisplayMode(){
     .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
 }
 
+function saveDeepSleepSettings(){
+  const el = document.getElementById('deepSleepIdleSec');
+  let idleSec = el ? parseInt(el.value, 10) : 60;
+  if (!Number.isFinite(idleSec)) idleSec = 60;
+  idleSec = Math.max(10, Math.min(3600, idleSec));
+  const buttonOnly = document.getElementById('deepSleepWakeButtonOnly') && document.getElementById('deepSleepWakeButtonOnly').checked;
+  fetch('/api/setDeepSleep?idleSec='+encodeURIComponent(idleSec)+'&buttonOnly='+(buttonOnly ? 'true' : 'false'))
+    .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
+    .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
+}
+
 function updateStatus(){
   fetch('/api/status').then(r=>r.json()).then(j=>{
     const statusText = document.getElementById('wifiStatusText');
@@ -756,6 +825,14 @@ function updateStatus(){
     const displayToggle = document.getElementById('displayEnabled');
     if (displayToggle) {
       displayToggle.checked = !!j.displayEnabled;
+    }
+    const dsIdle = document.getElementById('deepSleepIdleSec');
+    if (dsIdle && typeof j.deepSleepIdleSec === 'number') {
+      dsIdle.value = j.deepSleepIdleSec;
+    }
+    const dsBtn = document.getElementById('deepSleepWakeButtonOnly');
+    if (dsBtn) {
+      dsBtn.checked = !!j.deepSleepWakeButtonOnly;
     }
   });
 }

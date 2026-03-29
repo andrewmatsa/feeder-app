@@ -170,9 +170,132 @@ button:hover {
 .bottom-tab.active .home-icon {
   color: #111827;
 }
+.lang-section-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.lang-btn {
+  border: 1px solid rgba(0,0,0,0.15);
+  background: #fff;
+  color: #111;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lang-btn.active {
+  background: #111;
+  color: #fff;
+}
+.preview-lang-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+.preview-lang-hint code { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; }
+.preview-section-sub {
+  font-size: 12px;
+  color: #9099A6;
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+.note-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+.power-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  margin: 12px 0;
+}
+.power-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.power-toggle-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #e6e9ef;
+  border: 1px solid #d5d9e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, border 0.2s ease, transform 0.2s ease;
+}
+.power-toggle-box::after {
+  content: '\2713';
+  font-size: 16px;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.power-toggle input:checked + .power-toggle-box {
+  background: linear-gradient(135deg, #40a4ff, #1c7dff);
+  border-color: transparent;
+  box-shadow: 0 6px 12px rgba(28, 125, 255, 0.35);
+}
+.power-toggle input:checked + .power-toggle-box::after {
+  opacity: 1;
+}
+.power-toggle-text {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+}
+.power-toggle:hover .power-toggle-box {
+  border-color: #b8c2d1;
+}
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.button-row button {
+  flex: 1 1 160px;
+  min-width: 140px;
+  width: auto;
+  margin-top: 0;
+}
+.preview-toast {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: #111;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 1100;
+  max-width: 90vw;
+  text-align: center;
+}
+.preview-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; font-size: 13px; }
 </style>
 </head>
 <body>
+<div id="previewToast" class="preview-toast" aria-live="polite"></div>
 <div class="hero-header">
   <div class="app-illustration">
     <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stylized fish">
@@ -194,24 +317,65 @@ button:hover {
   </div>
   <div class="app-heading">
     <div class="app-title">AquaFeed Control</div>
-    <div class="app-subtitle">Settings WiFi</div>
+    <div class="app-subtitle" id="wifiPageSubtitle">WiFi settings</div>
   </div>
 </div>
 
 <div class="card">
-  <h3>Connect to WiFi</h3>
-  <label>SSID:</label>
-  <input type="text" placeholder="Network name" value="MyWiFiNetwork">
-  <label>Password:</label>
-  <input type="password" placeholder="Password">
-  <button>Connect</button>
+  <h3 id="wifiH3Lang">Interface language</h3>
+  <div class="lang-section-row">
+    <button type="button" id="wifiLangUkBtn" class="lang-btn">UK</button>
+    <button type="button" id="wifiLangEnBtn" class="lang-btn">EN</button>
+  </div>
 </div>
 
 <div class="card">
-  <h3>Current connection</h3>
-  <p>SSID: MyWiFiNetwork</p>
-  <p>IP: 192.168.1.100</p>
-  <button>Forget network</button>
+  <h3 id="wifiH3Connect">Connect to WiFi</h3>
+  <label id="wifiLblSsid">SSID:</label>
+  <input type="text" id="wifiInSsid" placeholder="Network name" value="MyWiFiNetwork">
+  <label id="wifiLblPass">Password:</label>
+  <input type="password" id="wifiInPass" placeholder="Password">
+  <button type="button" id="wifiBtnConnect">Connect</button>
+</div>
+
+<div class="card">
+  <h3 id="wifiH3Current">Current connection</h3>
+  <p id="wifiPSsid">SSID: MyWiFiNetwork</p>
+  <p id="wifiPIp">IP: 192.168.1.100</p>
+  <button type="button" id="wifiBtnForget">Forget network</button>
+</div>
+
+<div class="card">
+  <h3 id="wifiH3Power">Power settings</h3>
+  <p class="preview-section-sub" id="wifiPowerSub">Optimize power consumption</p>
+  <label class="power-toggle">
+    <input type="checkbox" id="powerSaveMode">
+    <span class="power-toggle-box"></span>
+    <span class="power-toggle-text" id="wifiLblPowerSave">Power saving mode</span>
+  </label>
+  <div class="note-text" id="wifiNotePower">After the configured idle time without activity the controller enters deep sleep. An open web interface keeps the device awake.</div>
+  <label for="deepSleepIdleSec" id="labelDeepSleepIdle" style="display:block;margin-top:12px;">Idle seconds before deep sleep (10–3600):</label>
+  <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60" style="width: 100px; margin-top: 6px;">
+  <label class="power-toggle" style="margin-top: 12px;">
+    <input type="checkbox" id="deepSleepWakeButtonOnly">
+    <span class="power-toggle-box"></span>
+    <span class="power-toggle-text" id="textDeepSleepBtnOnly">Wake with button only (no timer before scheduled feed)</span>
+  </label>
+  <div class="note-text" id="wifiNoteDeepSleep" style="margin-top: 8px;"></div>
+  <div class="button-row" style="margin-top: 8px;">
+    <button type="button" id="btnSaveDeepSleep" onclick="previewSaveDeepSleep()">Save sleep settings</button>
+  </div>
+  <label class="power-toggle" style="margin-top: 16px;">
+    <input type="checkbox" id="displayEnabled">
+    <span class="power-toggle-box"></span>
+    <span class="power-toggle-text" id="wifiLblDisplay">Enable OLED display</span>
+  </label>
+  <div class="note-text" id="wifiNoteDisplay">Turn off the display to save power. All features remain available in the web UI.</div>
+  <div class="button-row">
+    <button type="button" id="wifiBtnSavePower" onclick="previewSavePowerMode()">Save power saving</button>
+    <button type="button" id="wifiBtnSaveDisplay" onclick="previewSaveDisplayMode()">Save display</button>
+  </div>
+  <p class="preview-lang-hint" style="margin-top:12px;margin-bottom:0;" id="wifiPreviewPowerHint">Preview only — not sent to the device. Values are stored in <code>localStorage</code> for this page.</p>
 </div>
 
 <div class="bottom-tabs">
@@ -239,5 +403,150 @@ button:hover {
     <span>Settings</span>
   </a>
 </div>
+<script>
+var wifiLang = localStorage.getItem('aqua_lang') || 'uk';
+function wifiIsEn() { return wifiLang === 'en'; }
+function applyWiFiLanguage() {
+  var sub = document.getElementById('wifiPageSubtitle');
+  if (sub) sub.textContent = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
+  var hLang = document.getElementById('wifiH3Lang');
+  if (hLang) hLang.textContent = wifiIsEn() ? 'Interface language' : 'Мова інтерфейсу';
+  var h1 = document.getElementById('wifiH3Connect');
+  if (h1) h1.textContent = wifiIsEn() ? 'Connect to WiFi' : 'Підключення до WiFi';
+  var h2 = document.getElementById('wifiH3Current');
+  if (h2) h2.textContent = wifiIsEn() ? 'Current connection' : 'Поточне підключення';
+  var ls = document.getElementById('wifiLblSsid');
+  if (ls) ls.textContent = 'SSID:';
+  var lp = document.getElementById('wifiLblPass');
+  if (lp) lp.textContent = wifiIsEn() ? 'Password:' : 'Пароль:';
+  var is = document.getElementById('wifiInSsid');
+  if (is) is.placeholder = wifiIsEn() ? 'Network name' : 'Назва мережі';
+  var ip = document.getElementById('wifiInPass');
+  if (ip) ip.placeholder = wifiIsEn() ? 'Password' : 'Пароль';
+  var bc = document.getElementById('wifiBtnConnect');
+  if (bc) bc.textContent = wifiIsEn() ? 'Connect' : 'Підключитися';
+  var bf = document.getElementById('wifiBtnForget');
+  if (bf) bf.textContent = wifiIsEn() ? 'Forget network' : 'Забути мережу';
+  var ps = document.getElementById('wifiPSsid');
+  if (ps) ps.textContent = wifiIsEn() ? 'SSID: MyWiFiNetwork' : 'SSID: MyWiFiNetwork';
+  var pip = document.getElementById('wifiPIp');
+  if (pip) pip.textContent = wifiIsEn() ? 'IP: 192.168.1.100' : 'IP: 192.168.1.100';
+  var hPow = document.getElementById('wifiH3Power');
+  if (hPow) hPow.textContent = wifiIsEn() ? 'Power settings' : 'Налаштування енергії';
+  var subPow = document.getElementById('wifiPowerSub');
+  if (subPow) subPow.textContent = wifiIsEn() ? 'Optimize power consumption' : 'Оптимізуйте споживання живлення';
+  var lblPower = document.getElementById('wifiLblPowerSave');
+  if (lblPower) lblPower.textContent = wifiIsEn() ? 'Power saving mode' : 'Режим економії енергії';
+  var ld = document.getElementById('wifiLblDisplay');
+  if (ld) ld.textContent = wifiIsEn() ? 'Enable OLED display' : 'Увімкнути OLED дисплей';
+  var np = document.getElementById('wifiNotePower');
+  if (np) np.innerHTML = wifiIsEn()
+    ? 'After the configured idle time without activity the controller enters <strong>deep sleep</strong>. An open web interface keeps the device awake.'
+    : 'Після заданого часу без активності контролер переходить у <strong>глибокий сон</strong>. Відкритий веб-інтерфейс не дає пристрою заснути.';
+  var li = document.getElementById('labelDeepSleepIdle');
+  if (li) li.textContent = wifiIsEn() ? 'Idle seconds before deep sleep (10–3600):' : 'Секунд бездіяльності до глибокого сну (10–3600):';
+  var tb = document.getElementById('textDeepSleepBtnOnly');
+  if (tb) tb.textContent = wifiIsEn() ? 'Wake with button only (no timer before scheduled feed)' : 'Лише кнопка для пробудження (без таймера до годування)';
+  var nd = document.getElementById('wifiNoteDeepSleep');
+  if (nd) nd.innerHTML = wifiIsEn()
+    ? '<strong>Button-only wake:</strong> scheduled automatic feeds will not wake the device.'
+    : '<strong>Лише кнопка:</strong> розкладне автогодування не розбудить пристрій — натисніть кнопку або вимкніть цей режим.';
+  var bds = document.getElementById('btnSaveDeepSleep');
+  if (bds) bds.textContent = wifiIsEn() ? 'Save sleep settings' : 'Зберегти параметри сну';
+  var ndDisp = document.getElementById('wifiNoteDisplay');
+  if (ndDisp) ndDisp.textContent = wifiIsEn()
+    ? 'Turn off the display to save power. All features remain available in the web UI.'
+    : 'Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.';
+  var bp = document.getElementById('wifiBtnSavePower');
+  if (bp) bp.textContent = wifiIsEn() ? 'Save power saving' : 'Зберегти енергозбереження';
+  var bd = document.getElementById('wifiBtnSaveDisplay');
+  if (bd) bd.textContent = wifiIsEn() ? 'Save display' : 'Зберегти дисплей';
+  var ph = document.getElementById('wifiPreviewPowerHint');
+  if (ph) ph.innerHTML = wifiIsEn()
+    ? 'Preview only — not sent to the device. Values are stored in <code>localStorage</code> for this section.'
+    : 'Лише прев’ю — на пристрій не надсилається. Значення зберігаються в <code>localStorage</code> для цієї секції.';
+  document.querySelectorAll('.bottom-tab span').forEach(function(el, i) {
+    if (i === 0) el.textContent = wifiIsEn() ? 'Home' : 'Головна';
+    if (i === 1) el.textContent = wifiIsEn() ? 'Info' : 'Інформація';
+    if (i === 2) el.textContent = wifiIsEn() ? 'Settings' : 'Налаштування';
+  });
+  var ukBtn = document.getElementById('wifiLangUkBtn');
+  var enBtn = document.getElementById('wifiLangEnBtn');
+  if (ukBtn) ukBtn.classList.toggle('active', !wifiIsEn());
+  if (enBtn) enBtn.classList.toggle('active', wifiIsEn());
+}
+function setWiFiLanguage(lang) {
+  wifiLang = lang === 'en' ? 'en' : 'uk';
+  localStorage.setItem('aqua_lang', wifiLang);
+  applyWiFiLanguage();
+}
+function showPreviewToast(msg) {
+  var t = document.getElementById('previewToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2200);
+}
+function previewSavePowerMode() {
+  var on = document.getElementById('powerSaveMode').checked;
+  try { localStorage.setItem('preview_powerSave', on ? '1' : '0'); } catch (e) {}
+  showPreviewToast(wifiIsEn()
+    ? 'Power saving preference saved (preview only)'
+    : 'Налаштування енергозбереження збережено (лише прев’ю)');
+}
+function previewSaveDisplayMode() {
+  var on = document.getElementById('displayEnabled').checked;
+  try { localStorage.setItem('preview_display', on ? '1' : '0'); } catch (e) {}
+  showPreviewToast(wifiIsEn()
+    ? 'Display preference saved (preview only)'
+    : 'Налаштування дисплею збережено (лише прев’ю)');
+}
+function previewSaveDeepSleep() {
+  var el = document.getElementById('deepSleepIdleSec');
+  var idle = el ? parseInt(el.value, 10) : 60;
+  if (!Number.isFinite(idle)) idle = 60;
+  idle = Math.max(10, Math.min(3600, idle));
+  if (el) el.value = idle;
+  var bo = document.getElementById('deepSleepWakeButtonOnly');
+  try {
+    localStorage.setItem('preview_dsIdle', String(idle));
+    localStorage.setItem('preview_dsBtnOnly', bo && bo.checked ? '1' : '0');
+  } catch (e) {}
+  showPreviewToast(wifiIsEn()
+    ? 'Sleep settings saved (preview only)'
+    : 'Параметри сну збережено (лише прев’ю)');
+}
+function loadPreviewPowerDisplay() {
+  try {
+    var p = localStorage.getItem('preview_powerSave');
+    var d = localStorage.getItem('preview_display');
+    var ps = document.getElementById('powerSaveMode');
+    var de = document.getElementById('displayEnabled');
+    if (ps && p !== null) ps.checked = p === '1';
+    else if (ps) ps.checked = true;
+    if (de && d !== null) de.checked = d === '1';
+    else if (de) de.checked = true;
+    var dsi = localStorage.getItem('preview_dsIdle');
+    var dsb = localStorage.getItem('preview_dsBtnOnly');
+    var dsEl = document.getElementById('deepSleepIdleSec');
+    var dsCh = document.getElementById('deepSleepWakeButtonOnly');
+    if (dsEl) {
+      if (dsi !== null) {
+        var v = parseInt(dsi, 10);
+        if (Number.isFinite(v)) dsEl.value = Math.max(10, Math.min(3600, v));
+      } else {
+        dsEl.value = 60;
+      }
+    }
+    if (dsCh && dsb !== null) dsCh.checked = dsb === '1';
+  } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('wifiLangUkBtn').addEventListener('click', function() { setWiFiLanguage('uk'); });
+  document.getElementById('wifiLangEnBtn').addEventListener('click', function() { setWiFiLanguage('en'); });
+  loadPreviewPowerDisplay();
+  applyWiFiLanguage();
+});
+</script>
 </body>
 </html>

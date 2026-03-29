@@ -363,9 +363,18 @@ body {
   color: #6b7280;
   letter-spacing: 0.3px;
 }
+.preview-lang-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0 8px 12px;
+  line-height: 1.45;
+}
+.preview-lang-hint code { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; }
+.preview-status-banner { font-size: 12px; color: #1976D2; margin: -4px 8px 12px; font-weight: 600; }
 </style>
 </head>
 <body>
+<p id="status" class="preview-status-banner">Preview (without device connection)</p>
 <div id="toast" class="toast">Saved</div>
 <div class="hero-header">
   <div class="app-illustration">
@@ -447,7 +456,7 @@ body {
     <label>Servo speed: <span id="speedValue">20</span></label>
     <input id="speedSlider" type="range" min="1" max="20" step="0.1" value="20" oninput="updateSpeed(this.value)">
   </div>
-  <button onclick="saveSpeed()">Save speed</button>
+  <button type="button" id="btnSaveSpeed" onclick="saveSpeed()">Save speed</button>
 </div>
 
 <div class="card">
@@ -469,8 +478,9 @@ body {
     <span>Repeats</span>
     <input id="feedRepeats" type="number" min="1" max="20" value="1">
   </div>
-  <button onclick="saveRepeats()" style="margin-top: 0;">Save</button>
-  <button onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Feed now</button>
+  <button type="button" id="btnSaveRepeats" onclick="saveRepeats()" style="margin-top: 0;">Save</button>
+  <div id="manualFeedHint" style="margin-top: 10px; line-height: 1.35; font-size: 13px;"></div>
+  <button type="button" id="btnFeedNow" onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Feed now</button>
 </div>
 
 <div class="card">
@@ -487,16 +497,256 @@ body {
     <div>
       <div class="section-title">Automatic feeding</div>
       <div class="section-subtitle">Set your feeding schedule</div>
+      <div class="section-subtitle" id="localTimeLabel">Час: --:--</div>
+      <div class="section-subtitle" id="sleepCountdownLabel">Сон: --</div>
+      <div class="section-subtitle" id="sleepReasonLabel">Причина: --</div>
     </div>
   </div>
   <div id="feedTimesContainer">
     <!-- Blocks are added dynamically -->
   </div>
-  <button class="add-btn" onclick="addFeedTime()">+ Add feeding</button>
-  <button onclick="saveFeedTimes()" style="margin-top: 8px;">Save all times</button>
+  <button type="button" class="add-btn" id="btnAddFeeding" onclick="addFeedTime()">+ Add feeding</button>
+  <button type="button" id="btnSaveAllTimes" onclick="saveFeedTimes()" style="margin-top: 8px;">Save all times</button>
 </div>
 
 <script>
+const I18N = {
+  uk: {
+    appSubtitle: 'Розумна годівниця',
+    batteryTitle: 'Стан батареї',
+    batteryVoltagePrefix: 'Напруга:',
+    nextFeedTitle: 'До наступного годування',
+    manualControlTitle: 'Ручне керування',
+    manualControlSubtitle: 'Керуйте серво-приводом вручну',
+    servoAngle: 'Кут серво:',
+    servoSpeed: 'Швидкість серво:',
+    saveSpeed: 'Зберегти швидкість',
+    manualFeedTitle: 'Ручне годування',
+    manualFeedSubtitle: 'Швидкий запуск циклу годування',
+    repeats: 'Кількість повторів',
+    save: 'Зберегти',
+    feedNow: 'Годувати зараз',
+    autoFeedTitle: 'Автоматичне годування',
+    autoFeedSubtitle: 'Налаштуйте розклад годувань',
+    timePrefix: 'Час:',
+    sleepPrefix: 'Сон через:',
+    sleepNow: 'зараз',
+    sleepPaused: 'пауза',
+    sleepReasonPrefix: 'Причина:',
+    sleepReasonReady: 'готово до сну',
+    sleepReasonPowerSaveOff: 'режим енергозбереження вимкнено',
+    sleepReasonApMode: 'увімкнено AP режим',
+    sleepReasonFeeding: 'триває годування',
+    sleepReasonWebActive: 'веб-інтерфейс активний',
+    sleepReasonRecentActivity: 'нещодавня активність',
+    sleepReasonDisplayAwake: 'дисплей ще активний',
+    sleepReasonUnknown: 'стан уточнюється',
+    addFeeding: '+ Додати годування',
+    saveAllTimes: 'Зберегти всі часи',
+    tabHome: 'Головна',
+    tabSettings: 'Налаштування',
+    feedTime: 'Час:',
+    feedRepeatsField: 'Повторів:',
+    removeTitle: 'Видалити',
+    toastSaved: 'Збережено',
+    toastFeeding: 'Годую',
+    toastSpeedSaved: 'Швидкість збережено',
+    durationH: 'год',
+    durationM: 'хв',
+    durationEmpty: '— год — хв',
+    previewBanner: 'Прев\'ю (без підключення до пристрою)',
+    manualFeedReadyHint: 'Можна запустити ручне годування.',
+    manualFeedCooldownHint: 'Мінімальний інтервал між годуваннями — 5 хв. Наступне ручне годування — через %s.',
+    toastFeedBlocked: 'Занадто рано: мінімальний інтервал між годуваннями.'
+  },
+  en: {
+    appSubtitle: 'Smart feeder',
+    batteryTitle: 'Battery status',
+    batteryVoltagePrefix: 'Voltage:',
+    nextFeedTitle: 'Until next feeding',
+    manualControlTitle: 'Manual control',
+    manualControlSubtitle: 'Control the servo manually',
+    servoAngle: 'Servo angle:',
+    servoSpeed: 'Servo speed:',
+    saveSpeed: 'Save speed',
+    manualFeedTitle: 'Manual feeding',
+    manualFeedSubtitle: 'Quick feed cycle start',
+    repeats: 'Repeats',
+    save: 'Save',
+    feedNow: 'Feed now',
+    autoFeedTitle: 'Automatic feeding',
+    autoFeedSubtitle: 'Set your feeding schedule',
+    timePrefix: 'Time:',
+    sleepPrefix: 'Sleep in:',
+    sleepNow: 'now',
+    sleepPaused: 'paused',
+    sleepReasonPrefix: 'Reason:',
+    sleepReasonReady: 'ready to sleep',
+    sleepReasonPowerSaveOff: 'power save is off',
+    sleepReasonApMode: 'AP mode is active',
+    sleepReasonFeeding: 'feeding in progress',
+    sleepReasonWebActive: 'web interface is active',
+    sleepReasonRecentActivity: 'recent activity',
+    sleepReasonDisplayAwake: 'display is still awake',
+    sleepReasonUnknown: 'checking status',
+    addFeeding: '+ Add feeding',
+    saveAllTimes: 'Save all times',
+    tabHome: 'Home',
+    tabSettings: 'Settings',
+    feedTime: 'Time:',
+    feedRepeatsField: 'Repeats:',
+    removeTitle: 'Remove',
+    toastSaved: 'Saved',
+    toastFeeding: 'Feeding',
+    toastSpeedSaved: 'Speed saved',
+    durationH: 'h',
+    durationM: 'm',
+    durationEmpty: '— h — m',
+    previewBanner: 'Preview (without device connection)',
+    manualFeedReadyHint: 'You can start a manual feed.',
+    manualFeedCooldownHint: 'Minimum 5 minutes between feeds. Next manual feed in %s.',
+    toastFeedBlocked: 'Too soon: minimum time between feeds.'
+  }
+};
+let currentLang = localStorage.getItem('aqua_lang') || 'uk';
+function t(key) {
+  return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.uk[key] || key);
+}
+
+function formatSleepCountdown(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return t('sleepPaused');
+  if (seconds <= 0) return t('sleepNow');
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function getSleepReasonText(reason) {
+  switch (reason) {
+    case 'ready': return t('sleepReasonReady');
+    case 'power_save_off': return t('sleepReasonPowerSaveOff');
+    case 'ap_mode': return t('sleepReasonApMode');
+    case 'feeding': return t('sleepReasonFeeding');
+    case 'web_active': return t('sleepReasonWebActive');
+    case 'recent_activity': return t('sleepReasonRecentActivity');
+    case 'display_awake': return t('sleepReasonDisplayAwake');
+    default: return t('sleepReasonUnknown');
+  }
+}
+
+let manualFeedCooldownLocal = 0;
+let manualFeedCooldownInterval = null;
+
+function formatManualFeedCountdown(totalSeconds) {
+  const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const mins = Math.floor(s / 60);
+  const secs = s % 60;
+  if (currentLang === 'en') {
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  }
+  if (mins > 0) return `${mins} хв ${secs} с`;
+  return `${secs} с`;
+}
+
+function renderManualFeedHint(seconds) {
+  const hint = document.getElementById('manualFeedHint');
+  const btn = document.getElementById('btnFeedNow');
+  if (!hint) return;
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  if (s <= 0) {
+    hint.textContent = t('manualFeedReadyHint');
+    hint.style.color = '';
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+    return;
+  }
+  hint.textContent = t('manualFeedCooldownHint').replace('%s', formatManualFeedCountdown(s));
+  hint.style.color = '#6b7280';
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; btn.style.cursor = 'not-allowed'; }
+}
+
+function syncManualFeedCooldownFromStatus(seconds) {
+  manualFeedCooldownLocal = Math.max(0, Math.floor(Number(seconds) || 0));
+  renderManualFeedHint(manualFeedCooldownLocal);
+  if (manualFeedCooldownInterval) {
+    clearInterval(manualFeedCooldownInterval);
+    manualFeedCooldownInterval = null;
+  }
+  if (manualFeedCooldownLocal > 0) {
+    manualFeedCooldownInterval = setInterval(() => {
+      manualFeedCooldownLocal = Math.max(0, manualFeedCooldownLocal - 1);
+      renderManualFeedHint(manualFeedCooldownLocal);
+      if (manualFeedCooldownLocal <= 0 && manualFeedCooldownInterval) {
+        clearInterval(manualFeedCooldownInterval);
+        manualFeedCooldownInterval = null;
+      }
+    }, 1000);
+  }
+}
+
+function applyLanguage() {
+  const sections = document.querySelectorAll('.section-title');
+  const subtitles = document.querySelectorAll('.section-subtitle');
+  const labels = document.querySelectorAll('label');
+  const tabs = document.querySelectorAll('.bottom-tab span');
+  const appSubtitle = document.querySelector('.app-subtitle');
+  const batteryTitle = document.querySelector('.battery-title');
+  const batterySubtitle = document.querySelector('.battery-subtitle');
+  const nextFeedTitle = document.querySelector('.next-feed-title');
+  if (appSubtitle) appSubtitle.textContent = t('appSubtitle');
+  if (batteryTitle) batteryTitle.textContent = t('batteryTitle');
+  if (batterySubtitle) {
+    const v = document.getElementById('batteryVoltage');
+    const vText = v ? v.innerText : '--';
+    batterySubtitle.innerHTML = `${t('batteryVoltagePrefix')} <span id="batteryVoltage">${vText}</span> V`;
+  }
+  if (nextFeedTitle) nextFeedTitle.textContent = t('nextFeedTitle');
+  if (sections[0]) sections[0].textContent = t('manualControlTitle');
+  if (subtitles[0]) subtitles[0].textContent = t('manualControlSubtitle');
+  if (sections[1]) sections[1].textContent = t('manualFeedTitle');
+  if (subtitles[1]) subtitles[1].textContent = t('manualFeedSubtitle');
+  if (sections[2]) sections[2].textContent = t('autoFeedTitle');
+  if (subtitles[2]) subtitles[2].textContent = t('autoFeedSubtitle');
+  const localTimeLabel = document.getElementById('localTimeLabel');
+  if (localTimeLabel) localTimeLabel.textContent = `${t('timePrefix')} 14:30`;
+  const sleepCountdownLabel = document.getElementById('sleepCountdownLabel');
+  const sleepReasonLabel = document.getElementById('sleepReasonLabel');
+  if (sleepCountdownLabel && !sleepCountdownLabel.dataset.dynamic) {
+    sleepCountdownLabel.textContent = `${t('sleepPrefix')} --`;
+  }
+  if (sleepReasonLabel && !sleepReasonLabel.dataset.dynamic) {
+    sleepReasonLabel.textContent = `${t('sleepReasonPrefix')} --`;
+  }
+  refreshPreviewSleepFromMock();
+  if (labels[0]) labels[0].innerHTML = `${t('servoAngle')} <span id="angleLabel">0</span>°`;
+  if (labels[1]) labels[1].innerHTML = `${t('servoSpeed')} <span id="speedValue">20</span>`;
+  var b1 = document.getElementById('btnSaveSpeed');
+  var b2 = document.getElementById('btnSaveRepeats');
+  var b3 = document.getElementById('btnFeedNow');
+  var b4 = document.getElementById('btnAddFeeding');
+  var b5 = document.getElementById('btnSaveAllTimes');
+  if (b1) b1.textContent = t('saveSpeed');
+  if (b2) b2.textContent = t('save');
+  if (b3) b3.textContent = t('feedNow');
+  if (b4) b4.textContent = t('addFeeding');
+  if (b5) b5.textContent = t('saveAllTimes');
+  renderManualFeedHint(manualFeedCooldownLocal);
+  const repeatsLabel = document.querySelector('.flex-row span');
+  if (repeatsLabel) repeatsLabel.textContent = t('repeats');
+  if (tabs[0]) tabs[0].textContent = t('tabHome');
+  if (tabs[1]) tabs[1].textContent = t('tabSettings');
+  document.querySelectorAll('.feed-block .flex-row').forEach(function(row) {
+    const spans = row.querySelectorAll('span');
+    if (spans.length >= 3) {
+      spans[0].textContent = t('feedTime');
+      spans[1].textContent = ':';
+      spans[2].textContent = t('feedRepeatsField');
+    }
+    const rm = row.querySelector('.remove-btn');
+    if (rm) rm.title = t('removeTitle');
+  });
+}
+
 // Mock data for preview
 const mockStatus = {
   status: "ok",
@@ -506,6 +756,9 @@ const mockStatus = {
   powerSaveMode: true,
   batteryVoltage: 8.20,
   batteryPercent: 92,
+  sleepCountdownSeconds: 12,
+  sleepReason: "recent_activity",
+  manualFeedCooldownSeconds: 150,
   feedTimes: [
     {h: 10, m: 0, r: 1}
   ]
@@ -520,7 +773,8 @@ document.getElementById('angleSlider').addEventListener('input', function(){
   console.log('Angle set to:', val + '°');
 });
 
-function showToast(text = 'Saved') {
+function showToast(text) {
+  if (text === undefined || text === null) text = t('toastSaved');
   const toast = document.getElementById('toast');
   toast.innerText = text;
   toast.classList.add('show');
@@ -529,14 +783,30 @@ function showToast(text = 'Saved') {
   }, 2000);
 }
 
-function feedNow(){ 
-  console.log('Feed now clicked');
-  showToast('Feeding');
+function feedNow() {
+  Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('feeding') })
+    .then(async (response) => {
+      if (response.ok) {
+        showToast(currentLang === 'en' ? 'Feeding now' : 'Годую');
+        mockStatus.manualFeedCooldownSeconds = 5 * 60;
+        syncManualFeedCooldownFromStatus(mockStatus.manualFeedCooldownSeconds);
+        return;
+      }
+      const message = await response.text();
+      if (response.status === 429) {
+        showToast(t('toastFeedBlocked'));
+      } else {
+        showToast(message || (currentLang === 'en' ? 'Feed error' : 'Помилка годування'));
+      }
+    })
+    .catch(() => {
+      showToast(currentLang === 'en' ? 'Feed error' : 'Помилка годування');
+    });
 }
 function saveSpeed(){ 
   const s=document.getElementById('speedSlider').value; 
   console.log('Speed saved:', s);
-  showToast('Saved');
+  showToast(t('toastSpeedSaved'));
 }
 function saveRepeats(){ 
   const r=document.getElementById('feedRepeats').value; 
@@ -553,13 +823,13 @@ function addFeedTime(hour = 10, minute = 0, repeats = 1) {
   block.id = blockId;
   block.innerHTML = `
     <div class="flex-row">
-      <span>Time:</span>
+      <span>${t('feedTime')}</span>
       <input type="number" class="feed-hour" min="0" max="23" value="${hour}" style="width:35px; min-width:35px; padding: 4px;">
       <span>:</span>
       <input type="number" class="feed-minute" min="0" max="59" value="${minute}" style="width:35px; min-width:35px; padding: 4px;">
-      <span>Repeats:</span>
+      <span>${t('feedRepeatsField')}</span>
       <input type="number" class="feed-repeats" min="1" max="20" value="${repeats}" style="width:35px; min-width:35px; padding: 4px;">
-      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="Remove">×</button>
+      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('removeTitle')}">×</button>
     </div>
   `;
   container.appendChild(block);
@@ -634,10 +904,10 @@ function formatTimeHM(hour, minute) {
 }
 
 function formatDurationMinutes(minutes) {
-  if (minutes <= 0) return '0 h 0 m';
+  if (minutes <= 0) return `0 ${t('durationH')} 0 ${t('durationM')}`;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return `${hours} h ${mins} m`;
+  return `${hours} ${t('durationH')} ${mins} ${t('durationM')}`;
 }
 
 function updateNextFeedingProgress(status) {
@@ -647,7 +917,7 @@ function updateNextFeedingProgress(status) {
 
   const schedule = normalizeFeedSchedule(status);
   if (!schedule.length) {
-    percentTextEl.innerText = '— h — m';
+    percentTextEl.innerText = t('durationEmpty');
     fillPath.style.strokeDasharray = 345.58;
     fillPath.style.strokeDashoffset = 345.58;
     return;
@@ -710,11 +980,13 @@ function statusUpdate(){
   const batteryPercent = Math.round(j.batteryPercent);
   const statusLabel = document.getElementById('status');
   if (statusLabel) {
-    statusLabel.innerText = 'Preview (without device connection)';
+    statusLabel.innerText = t('previewBanner');
   }
   document.getElementById('batteryVoltage').innerText = j.batteryVoltage.toFixed(2);
   updateBatteryGauge(batteryPercent);
   updateNextFeedingProgress(j);
+  refreshPreviewSleepFromMock();
+  syncManualFeedCooldownFromStatus(typeof j.manualFeedCooldownSeconds === 'number' ? j.manualFeedCooldownSeconds : 0);
   document.getElementById('angleSlider').value = j.currentAngle; 
   updateAngleLabel(j.currentAngle);
   document.getElementById('speedSlider').value = j.speed; 
@@ -727,7 +999,10 @@ function statusUpdate(){
   }
 }
 
-window.onload = statusUpdate;
+window.onload = function() {
+  applyLanguage();
+  statusUpdate();
+};
 </script>
 
 <div class="bottom-tabs">

@@ -35,6 +35,9 @@ public:
   void loop(void (*feedCallback)(int repeats) = nullptr);
   NextFeedInfo computeNextFeed();
   
+  bool canFeedNow();
+  /** Seconds until manual feed is allowed; 0 if allowed now or time unknown. */
+  int getSecondsUntilManualFeedAllowed() const;
   void recordManualFeed();
   
   void setLegacyFeedTimes(int h1, int m1, int r1, int h2, int m2, int r2);
@@ -53,11 +56,17 @@ private:
   
   int lastFedHour;
   int lastFedMinute;
+  long long lastFedEpochMinute;
+  long long lastScheduledFeedEpochMinute;
+  Preferences* preferencesRef;
   static const int MIN_FEED_INTERVAL_MINUTES = 5;
   
-  bool isTimeForFeeding(int hour, int minute, int feedHour, int feedMinute, bool& doneFlag);
-  void resetFlagsForPreviousTime();
   bool wasRecentlyFed(int currentHour, int currentMinute);
+  bool getCurrentLocalTime(struct tm& localTime, long long* epochMinute = nullptr);
+  void updateLastFeedState(const struct tm& localTime, long long epochMinute);
+  void persistLastFeedState();
+  bool wasScheduleAlreadyExecuted(long long epochMinute) const;
+  void persistLastScheduledFeedState();
 };
 
 #endif

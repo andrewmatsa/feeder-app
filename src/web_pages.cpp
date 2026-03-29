@@ -427,60 +427,12 @@ body {
   color: #6b7280;
   letter-spacing: 0.3px;
 }
-.lang-switcher {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  gap: 6px;
-  z-index: 1100;
-}
-.lang-btn {
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #fff;
-  color: #111;
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.lang-btn.active {
-  background: #111;
-  color: #fff;
-}
-.lang-switcher {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  gap: 6px;
-  z-index: 1100;
-}
-.lang-btn {
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #fff;
-  color: #111;
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.lang-btn.active {
-  background: #111;
-  color: #fff;
-}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.3.1"></script>
 </head>
 <body>
 <div id="toast" class="toast">Збережено</div>
-<div class="lang-switcher">
-  <button type="button" id="langUkBtn" class="lang-btn">UK</button>
-  <button type="button" id="langEnBtn" class="lang-btn">EN</button>
-</div>
 <div class="hero-header">
   <div class="app-illustration">
     <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
@@ -505,6 +457,8 @@ body {
     <div class="app-subtitle">Розумна годівниця</div>
   </div>
 </div>
+
+<div id="deepSleepHelpBanner" class="card" style="margin-top: 0; padding: 10px 14px; background: #f0f7ff; border: 1px solid #c5d9f0; font-size: 13px; color: #374151; line-height: 1.4;"></div>
 
 <div class="card battery-card" style="margin-top: 0;">
   <div class="battery-info-row">
@@ -561,7 +515,7 @@ body {
     <label>Швидкість серво: <span id="speedValue">20</span></label>
     <input id="speedSlider" type="range" min="1" max="20" step="0.1" value="20" oninput="updateSpeed(this.value)">
   </div>
-  <button onclick="saveSpeed()">Зберегти швидкість</button>
+  <button type="button" id="btnSaveSpeed" onclick="saveSpeed()">Зберегти швидкість</button>
 </div>
 
 <div class="card">
@@ -583,8 +537,9 @@ body {
     <span>Кількість повторів</span>
     <input id="feedRepeats" type="number" min="1" max="20" value="1">
   </div>
-  <button onclick="saveRepeats()" style="margin-top: 0;">Зберегти</button>
-  <button onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Годувати зараз</button>
+  <button type="button" id="btnSaveRepeats" onclick="saveRepeats()" style="margin-top: 0;">Зберегти</button>
+  <div id="manualFeedHint" style="margin-top: 10px; line-height: 1.35; font-size: 13px;"></div>
+  <button type="button" id="btnFeedNow" onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Годувати зараз</button>
 </div>
 
 <div class="card">
@@ -602,13 +557,15 @@ body {
       <div class="section-title">Автоматичне годування</div>
       <div class="section-subtitle">Налаштуйте розклад годувань</div>
       <div class="section-subtitle" id="localTimeLabel">Час: --:--</div>
+      <div class="section-subtitle" id="sleepCountdownLabel">Сон: --</div>
+      <div class="section-subtitle" id="sleepReasonLabel">Причина: --</div>
     </div>
   </div>
   <div id="feedTimesContainer">
     <!-- Блоки будуть додаватися динамічно -->
   </div>
-  <button class="add-btn" onclick="addFeedTime()">+ Додати годування</button>
-  <button onclick="saveFeedTimes()" style="margin-top: 8px;">Зберегти всі часи</button>
+  <button type="button" class="add-btn" id="btnAddFeeding" onclick="addFeedTime()">+ Додати годування</button>
+  <button type="button" id="btnSaveAllTimes" onclick="saveFeedTimes()" style="margin-top: 8px;">Зберегти всі часи</button>
 </div>
 
 <script>
@@ -631,8 +588,24 @@ const I18N = {
     autoFeedTitle: 'Автоматичне годування',
     autoFeedSubtitle: 'Налаштуйте розклад годувань',
     timePrefix: 'Час:',
+    sleepPrefix: 'Сон через:',
+    sleepNow: 'зараз',
+    sleepPaused: 'пауза',
+    sleepReasonPrefix: 'Причина:',
+    sleepReasonReady: 'готово до сну',
+    sleepReasonPowerSaveOff: 'режим енергозбереження вимкнено',
+    sleepReasonApMode: 'увімкнено AP режим',
+    sleepReasonFeeding: 'триває годування',
+    sleepReasonWebActive: 'веб-інтерфейс активний',
+    sleepReasonRecentActivity: 'нещодавня активність',
+    sleepReasonDisplayAwake: 'дисплей ще активний',
+    sleepReasonUnknown: 'стан уточнюється',
     addFeeding: '+ Додати годування',
     saveAllTimes: 'Зберегти всі часи',
+    manualFeedReadyHint: 'Можна запустити ручне годування.',
+    manualFeedCooldownHint: 'Мінімальний інтервал між годуваннями — 5 хв. Наступне ручне годування — через %s.',
+    toastFeedBlocked: 'Занадто рано: мінімальний інтервал між годуваннями.',
+    deepSleepHelpBanner: 'Якщо сторінка не відкривається — пристрій може бути в <strong>глибокому сні</strong>. Натисніть фізичну кнопку на корпусі, щоб прокинути та знову відкрити веб.',
     tabHome: 'Головна',
     tabInfo: 'Інформація',
     tabSettings: 'Налаштування'
@@ -655,8 +628,24 @@ const I18N = {
     autoFeedTitle: 'Automatic feeding',
     autoFeedSubtitle: 'Set your feeding schedule',
     timePrefix: 'Time:',
+    sleepPrefix: 'Sleep in:',
+    sleepNow: 'now',
+    sleepPaused: 'paused',
+    sleepReasonPrefix: 'Reason:',
+    sleepReasonReady: 'ready to sleep',
+    sleepReasonPowerSaveOff: 'power save is off',
+    sleepReasonApMode: 'AP mode is active',
+    sleepReasonFeeding: 'feeding in progress',
+    sleepReasonWebActive: 'web interface is active',
+    sleepReasonRecentActivity: 'recent activity',
+    sleepReasonDisplayAwake: 'display is still awake',
+    sleepReasonUnknown: 'checking status',
     addFeeding: '+ Add feeding',
     saveAllTimes: 'Save all times',
+    manualFeedReadyHint: 'You can start a manual feed.',
+    manualFeedCooldownHint: 'Minimum 5 minutes between feeds. Next manual feed in %s.',
+    toastFeedBlocked: 'Too soon: minimum time between feeds.',
+    deepSleepHelpBanner: 'If this page won\'t load, the device may be in <strong>deep sleep</strong>. Press the physical button on the unit to wake it and use the web UI again.',
     tabHome: 'Home',
     tabInfo: 'Info',
     tabSettings: 'Settings'
@@ -671,7 +660,6 @@ function applyLanguage() {
   const subtitles = document.querySelectorAll('.section-subtitle');
   const labels = document.querySelectorAll('label');
   const tabs = document.querySelectorAll('.bottom-tab span');
-  const buttons = document.querySelectorAll('button');
   const appSubtitle = document.querySelector('.app-subtitle');
   const batteryTitle = document.querySelector('.battery-title');
   const batterySubtitle = document.querySelector('.battery-subtitle');
@@ -680,6 +668,8 @@ function applyLanguage() {
   if (batteryTitle) batteryTitle.textContent = t('batteryTitle');
   if (batterySubtitle) batterySubtitle.innerHTML = `${t('batteryVoltagePrefix')} <span id="batteryVoltage">--</span> V`;
   if (nextFeedTitle) nextFeedTitle.textContent = t('nextFeedTitle');
+  const deepSleepBanner = document.getElementById('deepSleepHelpBanner');
+  if (deepSleepBanner) deepSleepBanner.innerHTML = t('deepSleepHelpBanner');
   if (sections[0]) sections[0].textContent = t('manualControlTitle');
   if (subtitles[0]) subtitles[0].textContent = t('manualControlSubtitle');
   if (sections[1]) sections[1].textContent = t('manualFeedTitle');
@@ -688,29 +678,108 @@ function applyLanguage() {
   if (subtitles[2]) subtitles[2].textContent = t('autoFeedSubtitle');
   if (labels[0]) labels[0].innerHTML = `${t('servoAngle')} <span id="angleLabel">0</span>°`;
   if (labels[1]) labels[1].innerHTML = `${t('servoSpeed')} <span id="speedValue">20</span>`;
-  if (buttons[2]) buttons[2].textContent = t('saveSpeed');
-  if (buttons[3]) buttons[3].textContent = t('save');
-  if (buttons[4]) buttons[4].textContent = t('feedNow');
-  if (buttons[5]) buttons[5].textContent = t('addFeeding');
-  if (buttons[6]) buttons[6].textContent = t('saveAllTimes');
+  const sleepCountdownLabel = document.getElementById('sleepCountdownLabel');
+  const sleepReasonLabel = document.getElementById('sleepReasonLabel');
+  if (sleepCountdownLabel && !sleepCountdownLabel.dataset.dynamic) sleepCountdownLabel.textContent = `${t('sleepPrefix')} --`;
+  if (sleepReasonLabel && !sleepReasonLabel.dataset.dynamic) sleepReasonLabel.textContent = `${t('sleepReasonPrefix')} --`;
+  const btnSaveSpeed = document.getElementById('btnSaveSpeed');
+  const btnSaveRepeats = document.getElementById('btnSaveRepeats');
+  const btnFeedNow = document.getElementById('btnFeedNow');
+  const btnAddFeeding = document.getElementById('btnAddFeeding');
+  const btnSaveAllTimes = document.getElementById('btnSaveAllTimes');
+  if (btnSaveSpeed) btnSaveSpeed.textContent = t('saveSpeed');
+  if (btnSaveRepeats) btnSaveRepeats.textContent = t('save');
+  if (btnFeedNow) btnFeedNow.textContent = t('feedNow');
+  if (btnAddFeeding) btnAddFeeding.textContent = t('addFeeding');
+  if (btnSaveAllTimes) btnSaveAllTimes.textContent = t('saveAllTimes');
+  renderManualFeedHint(manualFeedCooldownLocal);
   const repeatsLabel = document.querySelector('.flex-row span');
   if (repeatsLabel) repeatsLabel.textContent = t('repeats');
   if (tabs[0]) tabs[0].textContent = t('tabHome');
   if (tabs[1]) tabs[1].textContent = t('tabInfo');
   if (tabs[2]) tabs[2].textContent = t('tabSettings');
-  const ukBtn = document.getElementById('langUkBtn');
-  const enBtn = document.getElementById('langEnBtn');
-  if (ukBtn) ukBtn.classList.toggle('active', currentLang === 'uk');
-  if (enBtn) enBtn.classList.toggle('active', currentLang === 'en');
-}
-function setLanguage(lang) {
-  currentLang = lang === 'en' ? 'en' : 'uk';
-  localStorage.setItem('aqua_lang', currentLang);
-  applyLanguage();
-  statusUpdate();
 }
 function updateAngleLabel(v){ document.getElementById('angleLabel').innerText=v; }
 function updateSpeed(v){ document.getElementById('speedValue').innerText=v; }
+
+function formatSleepCountdown(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return t('sleepPaused');
+  }
+  if (seconds <= 0) {
+    return t('sleepNow');
+  }
+
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins > 0) {
+    return `${mins}m ${secs}s`;
+  }
+  return `${secs}s`;
+}
+
+function getSleepReasonText(reason) {
+  switch (reason) {
+    case 'ready': return t('sleepReasonReady');
+    case 'power_save_off': return t('sleepReasonPowerSaveOff');
+    case 'ap_mode': return t('sleepReasonApMode');
+    case 'feeding': return t('sleepReasonFeeding');
+    case 'web_active': return t('sleepReasonWebActive');
+    case 'recent_activity': return t('sleepReasonRecentActivity');
+    case 'display_awake': return t('sleepReasonDisplayAwake');
+    default: return t('sleepReasonUnknown');
+  }
+}
+
+function formatManualFeedCountdown(totalSeconds) {
+  const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const mins = Math.floor(s / 60);
+  const secs = s % 60;
+  if (currentLang === 'en') {
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  }
+  if (mins > 0) return `${mins} хв ${secs} с`;
+  return `${secs} с`;
+}
+
+let manualFeedCooldownLocal = 0;
+let manualFeedCooldownInterval = null;
+
+function renderManualFeedHint(seconds) {
+  const hint = document.getElementById('manualFeedHint');
+  const btn = document.getElementById('btnFeedNow');
+  if (!hint) return;
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  if (s <= 0) {
+    hint.textContent = t('manualFeedReadyHint');
+    hint.style.color = '';
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+    return;
+  }
+  hint.textContent = t('manualFeedCooldownHint').replace('%s', formatManualFeedCountdown(s));
+  hint.style.color = '#6b7280';
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; btn.style.cursor = 'not-allowed'; }
+}
+
+function syncManualFeedCooldownFromStatus(seconds) {
+  manualFeedCooldownLocal = Math.max(0, Math.floor(Number(seconds) || 0));
+  renderManualFeedHint(manualFeedCooldownLocal);
+  if (manualFeedCooldownInterval) {
+    clearInterval(manualFeedCooldownInterval);
+    manualFeedCooldownInterval = null;
+  }
+  if (manualFeedCooldownLocal > 0) {
+    manualFeedCooldownInterval = setInterval(() => {
+      manualFeedCooldownLocal = Math.max(0, manualFeedCooldownLocal - 1);
+      renderManualFeedHint(manualFeedCooldownLocal);
+      if (manualFeedCooldownLocal <= 0 && manualFeedCooldownInterval) {
+        clearInterval(manualFeedCooldownInterval);
+        manualFeedCooldownInterval = null;
+      }
+    }, 1000);
+  }
+}
 
 document.getElementById('angleSlider').addEventListener('input', function(){
   const val = this.value;
@@ -736,7 +805,27 @@ function showToast(text = (currentLang === 'en' ? 'Saved' : 'Збережено'
   }, 2000);
 }
 
-function feedNow(){ showToast(currentLang === 'en' ? 'Feeding now' : 'Годую'); fetch('/api/feedNow').then(()=>{statusUpdate();}); }
+function feedNow(){
+  fetch('/api/feedNow')
+    .then(async (response) => {
+      if (response.ok) {
+        showToast(currentLang === 'en' ? 'Feeding now' : 'Годую');
+        statusUpdate();
+        return;
+      }
+
+      const message = await response.text();
+      if (response.status === 429) {
+        showToast(t('toastFeedBlocked'));
+        statusUpdate();
+      } else {
+        showToast(message || (currentLang === 'en' ? 'Feed error' : 'Помилка годування'));
+      }
+    })
+    .catch(() => {
+      showToast(currentLang === 'en' ? 'Feed error' : 'Помилка годування');
+    });
+}
 function saveSpeed(){ const s=document.getElementById('speedSlider').value; fetch('/api/setSpeed?speed='+s).then(()=>{statusUpdate(); showToast(currentLang === 'en' ? 'Speed saved' : 'Швидкість збережено');}); }
 function saveRepeats(){ const r=document.getElementById('feedRepeats').value; fetch('/api/setRepeats?repeats='+r).then(()=>{statusUpdate(); showToast(currentLang === 'en' ? 'Saved' : 'Збережено');}); }
 function scanWiFi(){
@@ -1065,6 +1154,18 @@ function statusUpdate(){
       }
     }
 
+    const sleepCountdownLabel = document.getElementById('sleepCountdownLabel');
+    if (sleepCountdownLabel) {
+      sleepCountdownLabel.dataset.dynamic = 'true';
+      sleepCountdownLabel.innerText = `${t('sleepPrefix')} ${formatSleepCountdown(Number(j.sleepCountdownSeconds))}`;
+    }
+
+    const sleepReasonLabel = document.getElementById('sleepReasonLabel');
+    if (sleepReasonLabel) {
+      sleepReasonLabel.dataset.dynamic = 'true';
+      sleepReasonLabel.innerText = `${t('sleepReasonPrefix')} ${getSleepReasonText(j.sleepReason)}`;
+    }
+
     let batteryPercentValue = null;
     if (typeof j.batteryVoltage === 'number' || typeof j.batteryVoltage === 'string') {
       const computed = voltageToPercentClient(Number(j.batteryVoltage));
@@ -1084,6 +1185,7 @@ function statusUpdate(){
       updateBatteryGauge(null);
     }
     updateNextFeedingProgress(j);
+    syncManualFeedCooldownFromStatus(j.manualFeedCooldownSeconds);
     document.getElementById('angleSlider').value=j.currentAngle; updateAngleLabel(j.currentAngle);
     document.getElementById('speedSlider').value=j.speed; updateSpeed(j.speed);
     document.getElementById('feedRepeats').value=j.feedRepeats;
@@ -1123,10 +1225,6 @@ function statusUpdate(){
 }
 setInterval(statusUpdate,30000); // зменшено з 5 до 30 секунд
 window.onload=function(){
-  const ukBtn = document.getElementById('langUkBtn');
-  const enBtn = document.getElementById('langEnBtn');
-  if (ukBtn) ukBtn.addEventListener('click', () => setLanguage('uk'));
-  if (enBtn) enBtn.addEventListener('click', () => setLanguage('en'));
   applyLanguage();
   statusUpdate();
   // Встановлюємо активний таб
@@ -1440,10 +1538,6 @@ a:active {
 </head>
 <body>
 <div id="toast" class="toast">Збережено</div>
-<div class="lang-switcher">
-  <button type="button" id="infoLangUkBtn" class="lang-btn">UK</button>
-  <button type="button" id="infoLangEnBtn" class="lang-btn">EN</button>
-</div>
 <div class="hero-header">
   <div class="app-illustration">
     <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
@@ -1649,8 +1743,7 @@ a:active {
 </div>
 
 <script>
-let infoLang = localStorage.getItem('aqua_lang') || 'uk';
-function infoIsEn() { return infoLang === 'en'; }
+function infoIsEn() { return (localStorage.getItem('aqua_lang') || 'uk') === 'en'; }
 function applyInfoLanguage() {
   const tabs = document.querySelectorAll('.bottom-tab span');
   const subtitles = document.querySelectorAll('.section-subtitle');
@@ -1670,16 +1763,6 @@ function applyInfoLanguage() {
   if (subtitles[3]) subtitles[3].textContent = infoIsEn() ? 'Device information' : 'Інформація про пристрій';
   if (sections[4]) sections[4].textContent = infoIsEn() ? 'Memory and cache' : 'Пам\'ять та кеш';
   if (subtitles[4]) subtitles[4].textContent = infoIsEn() ? 'System resource usage' : 'Використання ресурсів системи';
-  const ukBtn = document.getElementById('infoLangUkBtn');
-  const enBtn = document.getElementById('infoLangEnBtn');
-  if (ukBtn) ukBtn.classList.toggle('active', !infoIsEn());
-  if (enBtn) enBtn.classList.toggle('active', infoIsEn());
-}
-function setInfoLanguage(lang) {
-  infoLang = lang === 'en' ? 'en' : 'uk';
-  localStorage.setItem('aqua_lang', infoLang);
-  applyInfoLanguage();
-  updateInfo();
 }
 function updateInfo(){
   fetch('/api/status').then(r=>r.json()).then(j=>{
@@ -1807,10 +1890,6 @@ function showToast(text = (infoIsEn() ? 'Saved' : 'Збережено')) {
 }
 
 window.onload = function() {
-  const ukBtn = document.getElementById('infoLangUkBtn');
-  const enBtn = document.getElementById('infoLangEnBtn');
-  if (ukBtn) ukBtn.addEventListener('click', () => setInfoLanguage('uk'));
-  if (enBtn) enBtn.addEventListener('click', () => setInfoLanguage('en'));
   applyInfoLanguage();
   updateInfo();
   setInterval(updateInfo, 10000);

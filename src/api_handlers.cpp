@@ -9,8 +9,21 @@ ApiHandlers::ApiHandlers(WebServer& server, Preferences& preferences,
                          FeedingScheduler& scheduler)
   : server(server), preferences(preferences),
     servo(servo), battery(battery), scheduler(scheduler),
-    powerSaveMode(true), displayEnabled(true), feedRepeats(1),
-    cachedStatusTime(0) {
+    powerSaveMode(true), displayEnabled(true),
+    deepSleepIdleSec(60), deepSleepWakeButtonOnly(false),
+    feedRepeats(1),
+    cachedStatusTime(0), lastClientActivityMillis(0),
+    sleepReason("unknown"), sleepCountdownSeconds(-1), displayAwakeNow(true) {
+}
+
+void ApiHandlers::setDeepSleepIdleSec(uint16_t sec) {
+  if (sec < 10) {
+    sec = 10;
+  }
+  if (sec > 3600) {
+    sec = 3600;
+  }
+  deepSleepIdleSec = sec;
 }
 
 void ApiHandlers::setupRoutes() {
@@ -24,9 +37,11 @@ void ApiHandlers::setupRoutes() {
   server.on("/api/setFeedTimes", [this]() { handleSetFeedTimes(); });
   server.on("/api/setPowerMode", [this]() { handleSetPowerMode(); });
   server.on("/api/setDisplayMode", [this]() { handleSetDisplayMode(); });
+  server.on("/api/setDeepSleep", [this]() { handleSetDeepSleep(); });
 }
 
 void ApiHandlers::handleRoot() {
+  noteClientActivity();
   if (isAPMode || WiFi.status() != WL_CONNECTED) {
     server.sendHeader("Location", "/wifi", true);
     server.send(302, "text/plain", "");
@@ -36,6 +51,7 @@ void ApiHandlers::handleRoot() {
 }
 
 void ApiHandlers::handleInfo() {
+  noteClientActivity();
   server.send(200, "text/html", pageInfo);
 }
 
@@ -46,7 +62,7 @@ String ApiHandlers::buildStatusJson() {
   // ============================================================================
   // ============================================================================
   String json;
-  json.reserve(500);
+  json.reserve(780);
   
   json = "{\"status\":\"ok\",";
   json += "\"currentAngle\":"; json += servo.getCurrentAngle(); json += ",";
@@ -54,6 +70,8 @@ String ApiHandlers::buildStatusJson() {
   json += "\"feedRepeats\":"; json += feedRepeats; json += ",";
   json += "\"powerSaveMode\":"; json += (powerSaveMode ? "true" : "false"); json += ",";
   json += "\"displayEnabled\":"; json += (displayEnabled ? "true" : "false"); json += ",";
+  json += "\"deepSleepIdleSec\":"; json += deepSleepIdleSec; json += ",";
+  json += "\"deepSleepWakeButtonOnly\":"; json += (deepSleepWakeButtonOnly ? "true" : "false"); json += ",";
   json += "\"batteryVoltage\":"; json += battery.getVoltage(); json += ",";
   json += "\"batteryPercent\":"; json += (int)battery.getPercent(); json += ",";
   
@@ -92,6 +110,10 @@ String ApiHandlers::buildStatusJson() {
   json += "\"currentTime\":\""; json += timeBuf; json += "\",";
   json += "\"wifiSSID\":\""; json += savedSSID; json += "\",";
   json += "\"isAPMode\":"; json += (isAPMode ? "true" : "false"); json += ",";
+  json += "\"sleepReason\":\""; json += sleepReason; json += "\",";
+  json += "\"sleepCountdownSeconds\":"; json += sleepCountdownSeconds; json += ",";
+  json += "\"displayAwake\":"; json += (displayAwakeNow ? "true" : "false"); json += ",";
+  json += "\"manualFeedCooldownSeconds\":"; json += scheduler.getSecondsUntilManualFeedAllowed(); json += ",";
   if(!isAPMode && WiFi.status() == WL_CONNECTED) {
     json += "\"wifiIP\":\""; json += WiFi.localIP().toString(); json += "\",";
   } else {
@@ -124,6 +146,7 @@ String ApiHandlers::buildStatusJson() {
 }
 
 void ApiHandlers::handleStatus() {
+  noteClientActivity();
   // ============================================================================
   // ============================================================================
   // ============================================================================
@@ -136,6 +159,7 @@ void ApiHandlers::handleStatus() {
 }
 
 void ApiHandlers::handleSetAngle() {
+  noteClientActivity();
   if(server.hasArg("angle") && !servo.isMoving()) {
     servo.setAngle(server.arg("angle").toInt(), false);
     invalidateCache();
@@ -144,16 +168,22 @@ void ApiHandlers::handleSetAngle() {
 }
 
 void ApiHandlers::handleFeedNow() {
+  noteClientActivity();
+  if (!scheduler.canFeedNow()) {
+    server.send(429, "text/plain", "feeding blocked: recently fed");
+    return;
+  }
+
   server.send(200, "text/plain", "feeding");
   delay(10);
-  
-  
+
   servo.feedSequence(feedRepeats);
   scheduler.recordManualFeed();
   invalidateCache();
 }
 
 void ApiHandlers::handleSetSpeed() {
+  noteClientActivity();
   if(server.hasArg("speed")) {
     float speed = server.arg("speed").toFloat();
     servo.setSpeed(speed);
@@ -164,6 +194,7 @@ void ApiHandlers::handleSetSpeed() {
 }
 
 void ApiHandlers::handleSetRepeats() {
+  noteClientActivity();
   if(server.hasArg("repeats")) {
     feedRepeats = server.arg("repeats").toInt();
     preferences.putInt("feedRepeats", feedRepeats);
@@ -173,6 +204,7 @@ void ApiHandlers::handleSetRepeats() {
 }
 
 void ApiHandlers::handleSetFeedTimes() {
+  noteClientActivity();
   if(server.hasArg("data")) {
     String jsonData = server.arg("data");
     jsonData.trim();
@@ -238,6 +270,7 @@ void ApiHandlers::handleSetFeedTimes() {
 }
 
 void ApiHandlers::handleSetPowerMode() {
+  noteClientActivity();
   if(server.hasArg("enabled")) {
     powerSaveMode = server.arg("enabled") == "true";
     preferences.putBool("powerSaveMode", powerSaveMode);
@@ -247,12 +280,29 @@ void ApiHandlers::handleSetPowerMode() {
 }
 
 void ApiHandlers::handleSetDisplayMode() {
+  noteClientActivity();
   if(server.hasArg("enabled")) {
     displayEnabled = server.arg("enabled") == "true";
     preferences.putBool("displayEnabled", displayEnabled);
     invalidateCache();
     Serial.printf("Display %s\n", displayEnabled ? "enabled" : "disabled");
   }
+  server.send(200, "text/plain", "ok");
+}
+
+void ApiHandlers::handleSetDeepSleep() {
+  noteClientActivity();
+  if (server.hasArg("idleSec")) {
+    int v = server.arg("idleSec").toInt();
+    setDeepSleepIdleSec(static_cast<uint16_t>(v));
+    preferences.putUInt("dsIdleSec", deepSleepIdleSec);
+  }
+  if (server.hasArg("buttonOnly")) {
+    deepSleepWakeButtonOnly = server.arg("buttonOnly") == "true";
+    preferences.putBool("dsBtnOnly", deepSleepWakeButtonOnly);
+  }
+  invalidateCache();
+  Serial.printf("Deep sleep: idle=%u s, buttonOnly=%d\n", deepSleepIdleSec, deepSleepWakeButtonOnly);
   server.send(200, "text/plain", "ok");
 }
 
