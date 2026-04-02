@@ -10,6 +10,7 @@ ApiHandlers::ApiHandlers(WebServer& server, Preferences& preferences,
   : server(server), preferences(preferences),
     servo(servo), battery(battery), scheduler(scheduler),
     powerSaveMode(true), displayEnabled(true),
+    displayOffAfterSec(20),
     deepSleepIdleSec(60),
     feedRepeats(1),
     cachedStatusTime(0), lastClientActivityMillis(0),
@@ -26,6 +27,16 @@ void ApiHandlers::setDeepSleepIdleSec(uint16_t sec) {
   deepSleepIdleSec = sec;
 }
 
+void ApiHandlers::setDisplayOffAfterSec(uint16_t sec) {
+  if (sec < 5) {
+    sec = 5;
+  }
+  if (sec > 600) {
+    sec = 600;
+  }
+  displayOffAfterSec = sec;
+}
+
 void ApiHandlers::setupRoutes() {
   server.on("/", [this]() { handleRoot(); });
   server.on("/info", [this]() { handleInfo(); });
@@ -37,6 +48,7 @@ void ApiHandlers::setupRoutes() {
   server.on("/api/setFeedTimes", [this]() { handleSetFeedTimes(); });
   server.on("/api/setPowerMode", [this]() { handleSetPowerMode(); });
   server.on("/api/setDisplayMode", [this]() { handleSetDisplayMode(); });
+  server.on("/api/setDisplayOff", [this]() { handleSetDisplayOff(); });
   server.on("/api/setDeepSleep", [this]() { handleSetDeepSleep(); });
 }
 
@@ -70,6 +82,7 @@ String ApiHandlers::buildStatusJson() {
   json += "\"feedRepeats\":"; json += feedRepeats; json += ",";
   json += "\"powerSaveMode\":"; json += (powerSaveMode ? "true" : "false"); json += ",";
   json += "\"displayEnabled\":"; json += (displayEnabled ? "true" : "false"); json += ",";
+  json += "\"displayOffAfterSec\":"; json += displayOffAfterSec; json += ",";
   json += "\"deepSleepIdleSec\":"; json += deepSleepIdleSec; json += ",";
   json += "\"deepSleepWakeButtonOnly\":false,";
   json += "\"batteryVoltage\":"; json += battery.getVoltage(); json += ",";
@@ -286,6 +299,18 @@ void ApiHandlers::handleSetDisplayMode() {
     preferences.putBool("displayEnabled", displayEnabled);
     invalidateCache();
     Serial.printf("Display %s\n", displayEnabled ? "enabled" : "disabled");
+  }
+  server.send(200, "text/plain", "ok");
+}
+
+void ApiHandlers::handleSetDisplayOff() {
+  noteClientActivity();
+  if (server.hasArg("sec")) {
+    int v = server.arg("sec").toInt();
+    setDisplayOffAfterSec(static_cast<uint16_t>(v));
+    preferences.putUInt("displayOffSec", displayOffAfterSec);
+    invalidateCache();
+    Serial.printf("Display off after %u s (power-save ON)\n", displayOffAfterSec);
   }
   server.send(200, "text/plain", "ok");
 }

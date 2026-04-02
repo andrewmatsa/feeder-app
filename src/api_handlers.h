@@ -29,12 +29,15 @@ public:
   void handleSetFeedTimes();
   void handleSetPowerMode();
   void handleSetDisplayMode();
+  void handleSetDisplayOff();
   void handleSetDeepSleep();
   
   void setPowerSaveMode(bool enabled) { powerSaveMode = enabled; }
   bool getPowerSaveMode() const { return powerSaveMode; }
   void setDisplayEnabled(bool enabled) { displayEnabled = enabled; }
   bool getDisplayEnabled() const { return displayEnabled; }
+  void setDisplayOffAfterSec(uint16_t sec);
+  uint16_t getDisplayOffAfterSec() const { return displayOffAfterSec; }
   void setDeepSleepIdleSec(uint16_t sec);
   uint16_t getDeepSleepIdleSec() const { return deepSleepIdleSec; }
   void setFeedRepeats(int repeats) { feedRepeats = repeats; }
@@ -55,6 +58,7 @@ private:
   
   bool powerSaveMode;
   bool displayEnabled;
+  uint16_t displayOffAfterSec;
   uint16_t deepSleepIdleSec;
   int feedRepeats;
   

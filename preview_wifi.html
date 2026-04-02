@@ -83,6 +83,34 @@ input[type=text], input[type=password] {
   background: #f9fafc;
   font-size: 13px;
   margin-bottom: 12px;
+  box-sizing: border-box;
+}
+input[type=number] {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d5d9e0;
+  background: #f9fafc;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+input[type=number]:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+#deepSleepIdleSec,
+#displayOffSec {
+  width: 100px;
+  max-width: 100%;
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+.field-num-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #2c3e50;
+  font-size: 13px;
 }
 button {
   display: inline-flex;
@@ -355,8 +383,8 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
   </label>
   <div class="note-text" id="wifiNotePower"></div>
   <div id="deepSleepIdleRow" style="margin-top:12px;">
-    <label for="deepSleepIdleSec" id="labelDeepSleepIdle" style="display:block;">Idle seconds before deep sleep (10–3600):</label>
-    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60" style="width: 100px; margin-top: 6px;">
+    <label for="deepSleepIdleSec" id="labelDeepSleepIdle" class="field-num-label">Idle seconds before deep sleep (10–3600):</label>
+    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60">
   </div>
   <div class="note-text" id="wifiNotePowerOff" style="margin-top:12px;"></div>
   <div class="button-row" style="margin-top: 8px;">
@@ -368,6 +396,11 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
     <span class="power-toggle-text" id="wifiLblDisplay">Enable OLED display</span>
   </label>
   <div class="note-text" id="wifiNoteDisplay">Turn off the display to save power. All features remain available in the web UI.</div>
+  <div id="displayOffRow" style="margin-top:12px;">
+    <label for="displayOffSec" id="lblDisplayOffSec" class="field-num-label">Seconds until OLED turns off (power save, 5–600):</label>
+    <input type="number" id="displayOffSec" min="5" max="600" value="20">
+  </div>
+  <div class="note-text" id="wifiNoteDisplayOff" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
   <div class="button-row">
     <button type="button" id="wifiBtnSaveDisplay" onclick="previewSaveDisplayMode()">Save display</button>
   </div>
@@ -403,6 +436,7 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
 var wifiLang = localStorage.getItem('aqua_lang') || 'uk';
 function wifiIsEn() { return wifiLang === 'en'; }
 function applyWiFiLanguage() {
+  document.title = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
   var sub = document.getElementById('wifiPageSubtitle');
   if (sub) sub.textContent = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
   var hLang = document.getElementById('wifiH3Lang');
@@ -449,6 +483,14 @@ function applyWiFiLanguage() {
   if (ndDisp) ndDisp.textContent = wifiIsEn()
     ? 'Turn off the display to save power. All features remain available in the web UI.'
     : 'Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.';
+  var lblDispOff = document.getElementById('lblDisplayOffSec');
+  if (lblDispOff) lblDispOff.textContent = wifiIsEn()
+    ? 'Seconds until OLED turns off (power save, 5–600):'
+    : 'Секунд до вимкнення OLED (режим економії, 5–600):';
+  var noteDispOff = document.getElementById('wifiNoteDisplayOff');
+  if (noteDispOff) noteDispOff.textContent = wifiIsEn()
+    ? 'With power saving on, the display stays on this long after a button press or web use, then blanks. Default 20 s.'
+    : 'У режимі економії дисплей лишається увімкненим стільки секунд після кнопки або вебу, потім гасне. За замовчуванням 20 с.';
   var bp = document.getElementById('wifiBtnSavePower');
   if (bp) bp.textContent = wifiIsEn() ? 'Save power mode' : 'Зберегти режим енергії';
   var bd = document.getElementById('wifiBtnSaveDisplay');
@@ -509,9 +551,17 @@ function previewSyncPowerEcoUi() {
 }
 function previewSaveDisplayMode() {
   var on = document.getElementById('displayEnabled').checked;
-  try { localStorage.setItem('preview_display', on ? '1' : '0'); } catch (e) {}
+  var secEl = document.getElementById('displayOffSec');
+  var sec = secEl ? parseInt(secEl.value, 10) : 20;
+  if (!Number.isFinite(sec)) sec = 20;
+  sec = Math.max(5, Math.min(600, sec));
+  if (secEl) secEl.value = sec;
+  try {
+    localStorage.setItem('preview_display', on ? '1' : '0');
+    localStorage.setItem('preview_displayOffSec', String(sec));
+  } catch (e) {}
   showPreviewToast(wifiIsEn()
-    ? 'Display preference saved (preview only)'
+    ? 'Display settings saved (preview only)'
     : 'Налаштування дисплею збережено (лише прев’ю)');
 }
 function loadPreviewPowerDisplay() {
@@ -532,6 +582,16 @@ function loadPreviewPowerDisplay() {
         if (Number.isFinite(v)) dsEl.value = Math.max(10, Math.min(3600, v));
       } else {
         dsEl.value = 60;
+      }
+    }
+    var dos = localStorage.getItem('preview_displayOffSec');
+    var displayOffEl = document.getElementById('displayOffSec');
+    if (displayOffEl) {
+      if (dos !== null) {
+        var dv = parseInt(dos, 10);
+        if (Number.isFinite(dv)) displayOffEl.value = Math.max(5, Math.min(600, dv));
+      } else {
+        displayOffEl.value = 20;
       }
     }
   } catch (e) {}

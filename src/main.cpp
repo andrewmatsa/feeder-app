@@ -36,8 +36,6 @@ unsigned long lastInteractionMillis = 0;
 bool powerSaveSleepArmed = false;
 
 // === Power Management ===
-const unsigned long DISPLAY_WAKE_GRACE_MS = 5000;
-
 static unsigned long powerSaveIdleMs() {
   return static_cast<unsigned long>(apiHandlers.getDeepSleepIdleSec()) * 1000UL;
 }
@@ -196,6 +194,16 @@ void setup(){
     }
     apiHandlers.setDeepSleepIdleSec(static_cast<uint16_t>(dsIdle));
   }
+  {
+    uint32_t dispOff = preferences.getUInt("displayOffSec", 20);
+    if (dispOff < 5) {
+      dispOff = 5;
+    }
+    if (dispOff > 600) {
+      dispOff = 600;
+    }
+    apiHandlers.setDisplayOffAfterSec(static_cast<uint16_t>(dispOff));
+  }
 
   scheduler.begin(preferences);
   
@@ -243,10 +251,10 @@ void setup(){
   if (wakeCause == ESP_SLEEP_WAKEUP_GPIO) {
     Serial.println("Wake source: feed button");
     if (digitalRead(BUTTON_PIN) == LOW) {
+      markInteraction();
       if (scheduler.canFeedNow()) {
         servo.feedSequence(apiHandlers.getFeedRepeats());
         scheduler.recordManualFeed();
-        markInteraction();
       } else {
         Serial.println("Wake-up button feed blocked: recently fed");
       }
@@ -264,6 +272,7 @@ void loop(){
   
   bool buttonState = digitalRead(BUTTON_PIN);
   if(lastButtonState == HIGH && buttonState == LOW && !servo.isMoving()) {
+    markInteraction();
     if (scheduler.canFeedNow()) {
       if (apiHandlers.getDisplayEnabled()) {
         DisplayData feedDisplayData = {};
@@ -274,7 +283,6 @@ void loop(){
       
       servo.feedSequence(apiHandlers.getFeedRepeats());
       scheduler.recordManualFeed();
-      markInteraction();
     } else {
       Serial.println("Manual button feed blocked: recently fed");
     }
@@ -319,9 +327,11 @@ void loop(){
   displayData.isFeeding = servo.isMoving();
   displayData.wifiSSID = savedSSID;
   
+  const unsigned long displayGraceMs =
+    static_cast<unsigned long>(apiHandlers.getDisplayOffAfterSec()) * 1000UL;
   bool displayShouldBeAwake =
     apiHandlers.getDisplayEnabled() &&
-    (!currentPowerSaveMode || servo.isMoving() || (millis() - lastInteractionMillis) < DISPLAY_WAKE_GRACE_MS);
+    (!currentPowerSaveMode || servo.isMoving() || (millis() - lastInteractionMillis) < displayGraceMs);
 
   oled.setPowerSave(!displayShouldBeAwake);
   if (displayShouldBeAwake) {

@@ -124,6 +124,27 @@ input[type=text]:focus, input[type=password]:focus {
   border-color: #1976D2;
   box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
 }
+input[type=number] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d5d9e0;
+  background: #f9fafc;
+  font-size: 13px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+input[type=number]:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+#deepSleepIdleSec,
+#displayOffSec {
+  width: 100px;
+  max-width: 100%;
+  margin-top: 6px;
+}
 button {
   display: inline-flex;
   align-items: center;
@@ -618,7 +639,7 @@ body {
   <div class="note-text" id="wifiNotePower"></div>
   <div class="row" id="deepSleepIdleRow" style="margin-top: 12px;">
     <label for="deepSleepIdleSec" id="labelDeepSleepIdle">Секунд бездіяльності до глибокого сну (10–3600):</label>
-    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60" style="width: 100px; margin-top: 6px;">
+    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60">
   </div>
   <div class="note-text" id="wifiNotePowerOff" style="margin-top: 12px;"></div>
   <div class="button-row" style="margin-top: 8px;">
@@ -630,6 +651,11 @@ body {
     <span class="power-toggle-text" id="wifiLblDisplayToggle">Увімкнути OLED дисплей</span>
   </label>
   <div class="note-text" id="wifiNoteOled">Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.</div>
+  <div class="row" id="displayOffRow" style="margin-top: 12px;">
+    <label for="displayOffSec" id="lblDisplayOffSec">Секунд до вимкнення OLED (режим економії, 5–600):</label>
+    <input type="number" id="displayOffSec" min="5" max="600" value="20">
+  </div>
+  <div class="note-text" id="wifiNoteDisplayOff" style="font-size: 12px; color: #6b7280;"></div>
   <div class="button-row">
     <button type="button" id="btnWifiSaveDisplay" onclick="saveDisplayMode()">Зберегти дисплей</button>
   </div>
@@ -672,6 +698,14 @@ function applyWiFiLanguage() {
     : 'Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.';
   const btnDisp = document.getElementById('btnWifiSaveDisplay');
   if (btnDisp) btnDisp.textContent = wifiIsEn() ? 'Save display' : 'Зберегти дисплей';
+  const lblDispOff = document.getElementById('lblDisplayOffSec');
+  if (lblDispOff) lblDispOff.textContent = wifiIsEn()
+    ? 'Seconds until OLED turns off (power save, 5–600):'
+    : 'Секунд до вимкнення OLED (режим економії, 5–600):';
+  const noteDispOff = document.getElementById('wifiNoteDisplayOff');
+  if (noteDispOff) noteDispOff.textContent = wifiIsEn()
+    ? 'With power saving on, the display stays on this long after a button press or web use, then blanks. Default 20 s.'
+    : 'У режимі економії дисплей лишається увімкненим стільки секунд після кнопки або вебу, потім гасне. За замовчуванням 20 с.';
   const heroFish = document.querySelector('.hero-svg-fish');
   if (heroFish) heroFish.setAttribute('aria-label', wifiIsEn() ? 'Stylized fish' : 'Стилізована рибка');
   const wifiStatusText = document.getElementById('wifiStatusText');
@@ -797,7 +831,13 @@ function savePowerMode(){
 
 function saveDisplayMode(){
   const enabled = document.getElementById('displayEnabled').checked;
+  const secEl = document.getElementById('displayOffSec');
+  let sec = secEl ? parseInt(secEl.value, 10) : 20;
+  if (!Number.isFinite(sec)) sec = 20;
+  sec = Math.max(5, Math.min(600, sec));
+  if (secEl) secEl.value = sec;
   fetch('/api/setDisplayMode?enabled='+enabled)
+    .then(()=> fetch('/api/setDisplayOff?sec='+encodeURIComponent(sec)))
     .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
     .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
 }
@@ -852,6 +892,10 @@ function updateStatus(){
     const dsIdle = document.getElementById('deepSleepIdleSec');
     if (dsIdle && typeof j.deepSleepIdleSec === 'number') {
       dsIdle.value = j.deepSleepIdleSec;
+    }
+    const displayOffEl = document.getElementById('displayOffSec');
+    if (displayOffEl && typeof j.displayOffAfterSec === 'number') {
+      displayOffEl.value = j.displayOffAfterSec;
     }
     syncPowerEcoUiFromCheckbox();
   });
