@@ -353,17 +353,14 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
     <span class="power-toggle-box"></span>
     <span class="power-toggle-text" id="wifiLblPowerSave">Power saving mode</span>
   </label>
-  <div class="note-text" id="wifiNotePower">After the configured idle time without activity the controller enters deep sleep. An open web interface keeps the device awake.</div>
-  <label for="deepSleepIdleSec" id="labelDeepSleepIdle" style="display:block;margin-top:12px;">Idle seconds before deep sleep (10–3600):</label>
-  <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60" style="width: 100px; margin-top: 6px;">
-  <label class="power-toggle" style="margin-top: 12px;">
-    <input type="checkbox" id="deepSleepWakeButtonOnly">
-    <span class="power-toggle-box"></span>
-    <span class="power-toggle-text" id="textDeepSleepBtnOnly">Wake with button only (no timer before scheduled feed)</span>
-  </label>
-  <div class="note-text" id="wifiNoteDeepSleep" style="margin-top: 8px;"></div>
+  <div class="note-text" id="wifiNotePower"></div>
+  <div id="deepSleepIdleRow" style="margin-top:12px;">
+    <label for="deepSleepIdleSec" id="labelDeepSleepIdle" style="display:block;">Idle seconds before deep sleep (10–3600):</label>
+    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60" style="width: 100px; margin-top: 6px;">
+  </div>
+  <div class="note-text" id="wifiNotePowerOff" style="margin-top:12px;"></div>
   <div class="button-row" style="margin-top: 8px;">
-    <button type="button" id="btnSaveDeepSleep" onclick="previewSaveDeepSleep()">Save sleep settings</button>
+    <button type="button" id="wifiBtnSavePower" onclick="previewSavePowerMode()">Save power mode</button>
   </div>
   <label class="power-toggle" style="margin-top: 16px;">
     <input type="checkbox" id="displayEnabled">
@@ -372,7 +369,6 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
   </label>
   <div class="note-text" id="wifiNoteDisplay">Turn off the display to save power. All features remain available in the web UI.</div>
   <div class="button-row">
-    <button type="button" id="wifiBtnSavePower" onclick="previewSavePowerMode()">Save power saving</button>
     <button type="button" id="wifiBtnSaveDisplay" onclick="previewSaveDisplayMode()">Save display</button>
   </div>
   <p class="preview-lang-hint" style="margin-top:12px;margin-bottom:0;" id="wifiPreviewPowerHint">Preview only — not sent to the device. Values are stored in <code>localStorage</code> for this page.</p>
@@ -441,24 +437,20 @@ function applyWiFiLanguage() {
   if (ld) ld.textContent = wifiIsEn() ? 'Enable OLED display' : 'Увімкнути OLED дисплей';
   var np = document.getElementById('wifiNotePower');
   if (np) np.innerHTML = wifiIsEn()
-    ? 'After the configured idle time without activity the controller enters <strong>deep sleep</strong>. An open web interface keeps the device awake.'
-    : 'Після заданого часу без активності контролер переходить у <strong>глибокий сон</strong>. Відкритий веб-інтерфейс не дає пристрою заснути.';
+    ? '<strong>Power saving on:</strong> after idle time, <strong>deep sleep</strong>. Wake for <strong>feed schedule</strong> (timer) or <strong>physical button</strong>. Web keeps it awake.'
+    : '<strong>Режим економії увімкнено:</strong> після бездіяльності — <strong>глибокий сон</strong>. Пробудження перед <strong>розкладом</strong> (таймер) або кнопкою. Веб не дає заснути.';
+  var npo = document.getElementById('wifiNotePowerOff');
+  if (npo) npo.innerHTML = wifiIsEn()
+    ? '<strong>Power saving off:</strong> no deep sleep. With OLED on, display stays on.'
+    : '<strong>Режим економії вимкнено:</strong> без глибокого сну. З увімкненим OLED — дисплей постійно.';
   var li = document.getElementById('labelDeepSleepIdle');
   if (li) li.textContent = wifiIsEn() ? 'Idle seconds before deep sleep (10–3600):' : 'Секунд бездіяльності до глибокого сну (10–3600):';
-  var tb = document.getElementById('textDeepSleepBtnOnly');
-  if (tb) tb.textContent = wifiIsEn() ? 'Wake with button only (no timer before scheduled feed)' : 'Лише кнопка для пробудження (без таймера до годування)';
-  var nd = document.getElementById('wifiNoteDeepSleep');
-  if (nd) nd.innerHTML = wifiIsEn()
-    ? '<strong>Button-only wake:</strong> scheduled automatic feeds will not wake the device.'
-    : '<strong>Лише кнопка:</strong> розкладне автогодування не розбудить пристрій — натисніть кнопку або вимкніть цей режим.';
-  var bds = document.getElementById('btnSaveDeepSleep');
-  if (bds) bds.textContent = wifiIsEn() ? 'Save sleep settings' : 'Зберегти параметри сну';
   var ndDisp = document.getElementById('wifiNoteDisplay');
   if (ndDisp) ndDisp.textContent = wifiIsEn()
     ? 'Turn off the display to save power. All features remain available in the web UI.'
     : 'Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.';
   var bp = document.getElementById('wifiBtnSavePower');
-  if (bp) bp.textContent = wifiIsEn() ? 'Save power saving' : 'Зберегти енергозбереження';
+  if (bp) bp.textContent = wifiIsEn() ? 'Save power mode' : 'Зберегти режим енергії';
   var bd = document.getElementById('wifiBtnSaveDisplay');
   if (bd) bd.textContent = wifiIsEn() ? 'Save display' : 'Зберегти дисплей';
   var ph = document.getElementById('wifiPreviewPowerHint');
@@ -474,6 +466,7 @@ function applyWiFiLanguage() {
   var enBtn = document.getElementById('wifiLangEnBtn');
   if (ukBtn) ukBtn.classList.toggle('active', !wifiIsEn());
   if (enBtn) enBtn.classList.toggle('active', wifiIsEn());
+  previewSyncPowerEcoUi();
 }
 function setWiFiLanguage(lang) {
   wifiLang = lang === 'en' ? 'en' : 'uk';
@@ -489,10 +482,30 @@ function showPreviewToast(msg) {
 }
 function previewSavePowerMode() {
   var on = document.getElementById('powerSaveMode').checked;
-  try { localStorage.setItem('preview_powerSave', on ? '1' : '0'); } catch (e) {}
+  var el = document.getElementById('deepSleepIdleSec');
+  var idle = el ? parseInt(el.value, 10) : 60;
+  if (!Number.isFinite(idle)) idle = 60;
+  idle = Math.max(10, Math.min(3600, idle));
+  if (el) el.value = idle;
+  try {
+    localStorage.setItem('preview_powerSave', on ? '1' : '0');
+    localStorage.setItem('preview_dsIdle', String(idle));
+  } catch (e) {}
+  previewSyncPowerEcoUi();
   showPreviewToast(wifiIsEn()
-    ? 'Power saving preference saved (preview only)'
-    : 'Налаштування енергозбереження збережено (лише прев’ю)');
+    ? 'Power mode saved (preview only)'
+    : 'Режим енергії збережено (лише прев’ю)');
+}
+function previewSyncPowerEcoUi() {
+  var on = document.getElementById('powerSaveMode') && document.getElementById('powerSaveMode').checked;
+  var row = document.getElementById('deepSleepIdleRow');
+  var ds = document.getElementById('deepSleepIdleSec');
+  var np = document.getElementById('wifiNotePower');
+  var npo = document.getElementById('wifiNotePowerOff');
+  if (row) row.style.display = on ? '' : 'none';
+  if (ds) ds.disabled = !on;
+  if (np) np.style.display = on ? 'block' : 'none';
+  if (npo) npo.style.display = on ? 'none' : 'block';
 }
 function previewSaveDisplayMode() {
   var on = document.getElementById('displayEnabled').checked;
@@ -500,21 +513,6 @@ function previewSaveDisplayMode() {
   showPreviewToast(wifiIsEn()
     ? 'Display preference saved (preview only)'
     : 'Налаштування дисплею збережено (лише прев’ю)');
-}
-function previewSaveDeepSleep() {
-  var el = document.getElementById('deepSleepIdleSec');
-  var idle = el ? parseInt(el.value, 10) : 60;
-  if (!Number.isFinite(idle)) idle = 60;
-  idle = Math.max(10, Math.min(3600, idle));
-  if (el) el.value = idle;
-  var bo = document.getElementById('deepSleepWakeButtonOnly');
-  try {
-    localStorage.setItem('preview_dsIdle', String(idle));
-    localStorage.setItem('preview_dsBtnOnly', bo && bo.checked ? '1' : '0');
-  } catch (e) {}
-  showPreviewToast(wifiIsEn()
-    ? 'Sleep settings saved (preview only)'
-    : 'Параметри сну збережено (лише прев’ю)');
 }
 function loadPreviewPowerDisplay() {
   try {
@@ -527,9 +525,7 @@ function loadPreviewPowerDisplay() {
     if (de && d !== null) de.checked = d === '1';
     else if (de) de.checked = true;
     var dsi = localStorage.getItem('preview_dsIdle');
-    var dsb = localStorage.getItem('preview_dsBtnOnly');
     var dsEl = document.getElementById('deepSleepIdleSec');
-    var dsCh = document.getElementById('deepSleepWakeButtonOnly');
     if (dsEl) {
       if (dsi !== null) {
         var v = parseInt(dsi, 10);
@@ -538,8 +534,10 @@ function loadPreviewPowerDisplay() {
         dsEl.value = 60;
       }
     }
-    if (dsCh && dsb !== null) dsCh.checked = dsb === '1';
   } catch (e) {}
+  previewSyncPowerEcoUi();
+  var psCh = document.getElementById('powerSaveMode');
+  if (psCh) psCh.addEventListener('change', previewSyncPowerEcoUi);
 }
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('wifiLangUkBtn').addEventListener('click', function() { setWiFiLanguage('uk'); });

@@ -37,8 +37,6 @@ public:
   bool getDisplayEnabled() const { return displayEnabled; }
   void setDeepSleepIdleSec(uint16_t sec);
   uint16_t getDeepSleepIdleSec() const { return deepSleepIdleSec; }
-  void setDeepSleepWakeButtonOnly(bool v) { deepSleepWakeButtonOnly = v; }
-  bool getDeepSleepWakeButtonOnly() const { return deepSleepWakeButtonOnly; }
   void setFeedRepeats(int repeats) { feedRepeats = repeats; }
   int getFeedRepeats() const { return feedRepeats; }
   unsigned long getLastClientActivityMillis() const { return lastClientActivityMillis; }
@@ -58,7 +56,6 @@ private:
   bool powerSaveMode;
   bool displayEnabled;
   uint16_t deepSleepIdleSec;
-  bool deepSleepWakeButtonOnly;
   int feedRepeats;
   
   String cachedStatusJson;

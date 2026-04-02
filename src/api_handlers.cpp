@@ -10,7 +10,7 @@ ApiHandlers::ApiHandlers(WebServer& server, Preferences& preferences,
   : server(server), preferences(preferences),
     servo(servo), battery(battery), scheduler(scheduler),
     powerSaveMode(true), displayEnabled(true),
-    deepSleepIdleSec(60), deepSleepWakeButtonOnly(false),
+    deepSleepIdleSec(60),
     feedRepeats(1),
     cachedStatusTime(0), lastClientActivityMillis(0),
     sleepReason("unknown"), sleepCountdownSeconds(-1), displayAwakeNow(true) {
@@ -71,7 +71,7 @@ String ApiHandlers::buildStatusJson() {
   json += "\"powerSaveMode\":"; json += (powerSaveMode ? "true" : "false"); json += ",";
   json += "\"displayEnabled\":"; json += (displayEnabled ? "true" : "false"); json += ",";
   json += "\"deepSleepIdleSec\":"; json += deepSleepIdleSec; json += ",";
-  json += "\"deepSleepWakeButtonOnly\":"; json += (deepSleepWakeButtonOnly ? "true" : "false"); json += ",";
+  json += "\"deepSleepWakeButtonOnly\":false,";
   json += "\"batteryVoltage\":"; json += battery.getVoltage(); json += ",";
   json += "\"batteryPercent\":"; json += (int)battery.getPercent(); json += ",";
   
@@ -297,12 +297,8 @@ void ApiHandlers::handleSetDeepSleep() {
     setDeepSleepIdleSec(static_cast<uint16_t>(v));
     preferences.putUInt("dsIdleSec", deepSleepIdleSec);
   }
-  if (server.hasArg("buttonOnly")) {
-    deepSleepWakeButtonOnly = server.arg("buttonOnly") == "true";
-    preferences.putBool("dsBtnOnly", deepSleepWakeButtonOnly);
-  }
   invalidateCache();
-  Serial.printf("Deep sleep: idle=%u s, buttonOnly=%d\n", deepSleepIdleSec, deepSleepWakeButtonOnly);
+  Serial.printf("Deep sleep idle: %u s (wake: button + timer before feed)\n", deepSleepIdleSec);
   server.send(200, "text/plain", "ok");
 }
 

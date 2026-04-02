@@ -86,9 +86,8 @@ uint64_t computeDeepSleepWakeMicros() {
 }
 
 void enterPowerSaveDeepSleep() {
-  const bool timerWake = !apiHandlers.getDeepSleepWakeButtonOnly();
   if (apiHandlers.getDisplayEnabled()) {
-    oled.showDeepSleepNotice(timerWake);
+    oled.showDeepSleepNotice(true);
   } else {
     delay(100);
   }
@@ -96,16 +95,12 @@ void enterPowerSaveDeepSleep() {
   oled.setPowerSave(true);
   esp_deep_sleep_enable_gpio_wakeup(1ULL << BUTTON_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
 
-  if (timerWake) {
-    uint64_t wakeMicros = computeDeepSleepWakeMicros();
-    if (wakeMicros < MIN_DEEP_SLEEP_US) {
-      wakeMicros = MIN_DEEP_SLEEP_US;
-    }
-    esp_sleep_enable_timer_wakeup(wakeMicros);
-    Serial.printf("Power save: deep sleep, timer wake in %.1f s\n", wakeMicros / 1000000.0);
-  } else {
-    Serial.println("Power save: deep sleep, GPIO wake only (no schedule timer)");
+  uint64_t wakeMicros = computeDeepSleepWakeMicros();
+  if (wakeMicros < MIN_DEEP_SLEEP_US) {
+    wakeMicros = MIN_DEEP_SLEEP_US;
   }
+  esp_sleep_enable_timer_wakeup(wakeMicros);
+  Serial.printf("Power save: deep sleep, GPIO + timer wake in %.1f s (scheduled feed)\n", wakeMicros / 1000000.0);
   Serial.flush();
   delay(50);
   esp_deep_sleep_start();
@@ -200,7 +195,6 @@ void setup(){
       dsIdle = 3600;
     }
     apiHandlers.setDeepSleepIdleSec(static_cast<uint16_t>(dsIdle));
-    apiHandlers.setDeepSleepWakeButtonOnly(preferences.getBool("dsBtnOnly", false));
   }
 
   scheduler.begin(preferences);

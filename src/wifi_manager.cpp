@@ -562,7 +562,7 @@ body {
     <span id="wifiStatusText">завантаження...</span>
   </div>
   <div class="button-row">
-    <button onclick="reconnectWiFi()" style="background: linear-gradient(45deg, #FF9800, #F57C00);">Перезапустити підключення</button>
+    <button type="button" id="btnWifiReconnect" onclick="reconnectWiFi()" style="background: linear-gradient(45deg, #FF9800, #F57C00);">Перезапустити підключення</button>
   </div>
 </div>
 
@@ -581,18 +581,18 @@ body {
     </div>
   </div>
   <div class="row">
-    <label>SSID (назва мережі):</label>
+    <label id="wifiLblSsid">SSID (назва мережі):</label>
     <input type="text" id="wifiSSID" placeholder="Введіть назву WiFi або виберіть зі списку" style="width: 100%;">
   </div>
   <div class="row">
-    <label>Пароль:</label>
+    <label id="wifiLblPass">Пароль:</label>
     <input type="password" id="wifiPassword" placeholder="Введіть пароль" style="width: 100%;">
   </div>
   <div class="button-row" id="wifiActions">
-    <button onclick="saveWiFi()">Зберегти WiFi</button>
-    <button class="secondary" onclick="forgetWiFi()">Забути мережу</button>
+    <button type="button" id="btnWifiSave" onclick="saveWiFi()">Зберегти WiFi</button>
+    <button type="button" class="secondary" id="btnWifiForget" onclick="forgetWiFi()">Забути мережу</button>
   </div>
-  <div class="note-text">
+  <div class="note-text" id="wifiNoteNetwork">
     <strong>Примітка:</strong> Після збереження пристрій перезапустить підключення. Якщо підключення не вдасться, пристрій створить точку доступу "FishFeeder-Setup" з паролем "12345678". Кнопка «Забути» видаляє збережені креденшіали та одразу повертає пристрій у режим точки доступу, який доступний за адресами <code>http://192.168.4.1</code> або <code>http://fish.local</code>.
   </div>
 </div>
@@ -613,31 +613,25 @@ body {
   <label class="power-toggle">
     <input type="checkbox" id="powerSaveMode">
     <span class="power-toggle-box"></span>
-    <span class="power-toggle-text">Режим економії енергії</span>
+    <span class="power-toggle-text" id="wifiLblPowerEco">Режим економії енергії</span>
   </label>
-  <div class="note-text" id="wifiNotePower">Після заданого часу без активності контролер переходить у глибокий сон. Відкритий веб-інтерфейс не дає пристрою заснути.</div>
-  <div class="row" style="margin-top: 12px;">
+  <div class="note-text" id="wifiNotePower"></div>
+  <div class="row" id="deepSleepIdleRow" style="margin-top: 12px;">
     <label for="deepSleepIdleSec" id="labelDeepSleepIdle">Секунд бездіяльності до глибокого сну (10–3600):</label>
     <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60" style="width: 100px; margin-top: 6px;">
   </div>
-  <label class="power-toggle" style="margin-top: 12px;">
-    <input type="checkbox" id="deepSleepWakeButtonOnly">
-    <span class="power-toggle-box"></span>
-    <span class="power-toggle-text" id="textDeepSleepBtnOnly">Лише кнопка для пробудження (без таймера до годування)</span>
-  </label>
-  <div class="note-text" id="wifiNoteDeepSleep" style="margin-top: 8px;"></div>
+  <div class="note-text" id="wifiNotePowerOff" style="margin-top: 12px;"></div>
   <div class="button-row" style="margin-top: 8px;">
-    <button type="button" onclick="saveDeepSleepSettings()" id="btnSaveDeepSleep">Зберегти параметри сну</button>
+    <button type="button" onclick="savePowerMode()" id="btnSavePowerEco">Зберегти режим енергії</button>
   </div>
   <label class="power-toggle" style="margin-top: 16px;">
     <input type="checkbox" id="displayEnabled">
     <span class="power-toggle-box"></span>
-    <span class="power-toggle-text">Увімкнути OLED дисплей</span>
+    <span class="power-toggle-text" id="wifiLblDisplayToggle">Увімкнути OLED дисплей</span>
   </label>
-  <div class="note-text">Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.</div>
+  <div class="note-text" id="wifiNoteOled">Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.</div>
   <div class="button-row">
-    <button onclick="savePowerMode()">Зберегти енергозбереження</button>
-    <button onclick="saveDisplayMode()">Зберегти дисплей</button>
+    <button type="button" id="btnWifiSaveDisplay" onclick="saveDisplayMode()">Зберегти дисплей</button>
   </div>
 </div>
 
@@ -645,6 +639,46 @@ body {
 let wifiLang = localStorage.getItem('aqua_lang') || 'uk';
 function wifiIsEn() { return wifiLang === 'en'; }
 function applyWiFiLanguage() {
+  document.title = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
+  const toastEl = document.getElementById('toast');
+  if (toastEl) toastEl.textContent = wifiIsEn() ? 'Saved' : 'Збережено';
+  const lblSsid = document.getElementById('wifiLblSsid');
+  if (lblSsid) lblSsid.textContent = wifiIsEn() ? 'SSID (network name):' : 'SSID (назва мережі):';
+  const lblPass = document.getElementById('wifiLblPass');
+  if (lblPass) lblPass.textContent = wifiIsEn() ? 'Password:' : 'Пароль:';
+  const inpSsid = document.getElementById('wifiSSID');
+  if (inpSsid) inpSsid.placeholder = wifiIsEn() ? 'Enter WiFi name or pick from list' : 'Введіть назву WiFi або виберіть зі списку';
+  const inpPass = document.getElementById('wifiPassword');
+  if (inpPass) inpPass.placeholder = wifiIsEn() ? 'Enter password' : 'Введіть пароль';
+  const btnRec = document.getElementById('btnWifiReconnect');
+  if (btnRec) btnRec.textContent = wifiIsEn() ? 'Restart connection' : 'Перезапустити підключення';
+  const btnSave = document.getElementById('btnWifiSave');
+  if (btnSave) btnSave.textContent = wifiIsEn() ? 'Save WiFi' : 'Зберегти WiFi';
+  const btnForget = document.getElementById('btnWifiForget');
+  if (btnForget) btnForget.textContent = wifiIsEn() ? 'Forget network' : 'Забути мережу';
+  const noteNet = document.getElementById('wifiNoteNetwork');
+  if (noteNet) {
+    noteNet.innerHTML = wifiIsEn()
+      ? '<strong>Note:</strong> After saving, the device reconnects. If it fails, it opens an access point &quot;FishFeeder-Setup&quot; with password &quot;12345678&quot;. <strong>Forget</strong> clears saved credentials and returns AP mode at <code>http://192.168.4.1</code> or <code>http://fish.local</code>.'
+      : '<strong>Примітка:</strong> Після збереження пристрій перезапустить підключення. Якщо підключення не вдасться, пристрій створить точку доступу &quot;FishFeeder-Setup&quot; з паролем &quot;12345678&quot;. Кнопка «Забути» видаляє збережені креденшіали та одразу повертає пристрій у режим точки доступу, який доступний за адресами <code>http://192.168.4.1</code> або <code>http://fish.local</code>.';
+  }
+  const lblPowerEco = document.getElementById('wifiLblPowerEco');
+  if (lblPowerEco) lblPowerEco.textContent = wifiIsEn() ? 'Power saving mode' : 'Режим економії енергії';
+  const lblDisp = document.getElementById('wifiLblDisplayToggle');
+  if (lblDisp) lblDisp.textContent = wifiIsEn() ? 'Enable OLED display' : 'Увімкнути OLED дисплей';
+  const noteOled = document.getElementById('wifiNoteOled');
+  if (noteOled) noteOled.textContent = wifiIsEn()
+    ? 'Turn off the display to save power. All features remain available in the web interface.'
+    : 'Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.';
+  const btnDisp = document.getElementById('btnWifiSaveDisplay');
+  if (btnDisp) btnDisp.textContent = wifiIsEn() ? 'Save display' : 'Зберегти дисплей';
+  const heroFish = document.querySelector('.hero-svg-fish');
+  if (heroFish) heroFish.setAttribute('aria-label', wifiIsEn() ? 'Stylized fish' : 'Стилізована рибка');
+  const wifiStatusText = document.getElementById('wifiStatusText');
+  if (wifiStatusText) {
+    const st = wifiStatusText.textContent.trim();
+    if (st === 'завантаження...' || st === 'loading...') wifiStatusText.textContent = wifiIsEn() ? 'loading...' : 'завантаження...';
+  }
   const tabs = document.querySelectorAll('.bottom-tab span');
   const sectionTitles = document.querySelectorAll('.section-title');
   const sectionSubtitles = document.querySelectorAll('.section-subtitle');
@@ -668,8 +702,14 @@ function applyWiFiLanguage() {
   const notePower = document.getElementById('wifiNotePower');
   if (notePower) {
     notePower.innerHTML = wifiIsEn()
-      ? 'After the configured idle time without activity the controller enters <strong>deep sleep</strong>. An open web interface keeps the device awake.'
-      : 'Після заданого часу без активності контролер переходить у <strong>глибокий сон</strong>. Відкритий веб-інтерфейс не дає пристрою заснути.';
+      ? '<strong>Power saving on:</strong> after the idle time below, the device enters <strong>deep sleep</strong>. It wakes for the <strong>feed schedule</strong> (timer shortly before the next slot) or when you press the <strong>physical button</strong>. An open web page keeps it awake.'
+      : '<strong>Режим економії увімкнено:</strong> після вказаного часу бездіяльності — <strong>глибокий сон</strong>. Пробудження перед <strong>розкладом годування</strong> (таймер) або кнопкою на корпусі. Відкритий веб не дає заснути.';
+  }
+  const notePowerOff = document.getElementById('wifiNotePowerOff');
+  if (notePowerOff) {
+    notePowerOff.innerHTML = wifiIsEn()
+      ? '<strong>Power saving off:</strong> no deep sleep — device stays active. If the OLED is enabled below, the display stays on.'
+      : '<strong>Режим економії вимкнено:</strong> глибокого сну немає — пристрій завжди активний. Якщо нижче увімкнено OLED — дисплей світиться постійно.';
   }
   const labelIdle = document.getElementById('labelDeepSleepIdle');
   if (labelIdle) {
@@ -677,22 +717,11 @@ function applyWiFiLanguage() {
       ? 'Idle seconds before deep sleep (10–3600):'
       : 'Секунд бездіяльності до глибокого сну (10–3600):';
   }
-  const textBtnOnly = document.getElementById('textDeepSleepBtnOnly');
-  if (textBtnOnly) {
-    textBtnOnly.textContent = wifiIsEn()
-      ? 'Wake with button only (no timer before scheduled feed)'
-      : 'Лише кнопка для пробудження (без таймера до годування)';
+  const btnEco = document.getElementById('btnSavePowerEco');
+  if (btnEco) {
+    btnEco.textContent = wifiIsEn() ? 'Save power mode' : 'Зберегти режим енергії';
   }
-  const noteDeep = document.getElementById('wifiNoteDeepSleep');
-  if (noteDeep) {
-    noteDeep.innerHTML = wifiIsEn()
-      ? '<strong>Button-only wake:</strong> scheduled automatic feeds will not wake the device — press the button or disable this option.'
-      : '<strong>Лише кнопка:</strong> розкладне автогодування не розбудить пристрій — натисніть кнопку або вимкніть цей режим.';
-  }
-  const btnDs = document.getElementById('btnSaveDeepSleep');
-  if (btnDs) {
-    btnDs.textContent = wifiIsEn() ? 'Save sleep settings' : 'Зберегти параметри сну';
-  }
+  syncPowerEcoUiFromCheckbox();
 }
 function setWiFiLanguage(lang) {
   wifiLang = lang === 'en' ? 'en' : 'uk';
@@ -756,7 +785,12 @@ function forgetWiFi(){
 
 function savePowerMode(){
   const enabled = document.getElementById('powerSaveMode').checked;
-  fetch('/api/setPowerMode?enabled='+enabled)
+  const el = document.getElementById('deepSleepIdleSec');
+  let idleSec = el ? parseInt(el.value, 10) : 60;
+  if (!Number.isFinite(idleSec)) idleSec = 60;
+  idleSec = Math.max(10, Math.min(3600, idleSec));
+  fetch('/api/setPowerMode?enabled='+(enabled ? 'true' : 'false'))
+    .then(() => fetch('/api/setDeepSleep?idleSec='+encodeURIComponent(idleSec)))
     .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
     .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
 }
@@ -764,17 +798,6 @@ function savePowerMode(){
 function saveDisplayMode(){
   const enabled = document.getElementById('displayEnabled').checked;
   fetch('/api/setDisplayMode?enabled='+enabled)
-    .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
-    .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
-}
-
-function saveDeepSleepSettings(){
-  const el = document.getElementById('deepSleepIdleSec');
-  let idleSec = el ? parseInt(el.value, 10) : 60;
-  if (!Number.isFinite(idleSec)) idleSec = 60;
-  idleSec = Math.max(10, Math.min(3600, idleSec));
-  const buttonOnly = document.getElementById('deepSleepWakeButtonOnly') && document.getElementById('deepSleepWakeButtonOnly').checked;
-  fetch('/api/setDeepSleep?idleSec='+encodeURIComponent(idleSec)+'&buttonOnly='+(buttonOnly ? 'true' : 'false'))
     .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
     .catch(()=> showToast(wifiIsEn() ? 'Save error' : 'Помилка збереження'));
 }
@@ -830,17 +853,28 @@ function updateStatus(){
     if (dsIdle && typeof j.deepSleepIdleSec === 'number') {
       dsIdle.value = j.deepSleepIdleSec;
     }
-    const dsBtn = document.getElementById('deepSleepWakeButtonOnly');
-    if (dsBtn) {
-      dsBtn.checked = !!j.deepSleepWakeButtonOnly;
-    }
+    syncPowerEcoUiFromCheckbox();
   });
+}
+function syncPowerEcoUiFromCheckbox() {
+  const ps = document.getElementById('powerSaveMode');
+  const ecoOn = ps && ps.checked;
+  const idleRow = document.getElementById('deepSleepIdleRow');
+  const dsIdle = document.getElementById('deepSleepIdleSec');
+  if (idleRow) idleRow.style.display = ecoOn ? '' : 'none';
+  if (dsIdle) dsIdle.disabled = !ecoOn;
+  const np = document.getElementById('wifiNotePower');
+  const npo = document.getElementById('wifiNotePowerOff');
+  if (np) np.style.display = ecoOn ? 'block' : 'none';
+  if (npo) npo.style.display = ecoOn ? 'none' : 'block';
 }
 window.onload=function() {
   const ukBtn = document.getElementById('wifiLangUkBtn');
   const enBtn = document.getElementById('wifiLangEnBtn');
   if (ukBtn) ukBtn.addEventListener('click', () => setWiFiLanguage('uk'));
   if (enBtn) enBtn.addEventListener('click', () => setWiFiLanguage('en'));
+  const ps = document.getElementById('powerSaveMode');
+  if (ps) ps.addEventListener('change', syncPowerEcoUiFromCheckbox);
   applyWiFiLanguage();
   updateStatus();
 };

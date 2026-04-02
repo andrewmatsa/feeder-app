@@ -608,7 +608,36 @@ const I18N = {
     deepSleepHelpBanner: 'Якщо сторінка не відкривається — пристрій може бути в <strong>глибокому сні</strong>. Натисніть фізичну кнопку на корпусі, щоб прокинути та знову відкрити веб.',
     tabHome: 'Головна',
     tabInfo: 'Інформація',
-    tabSettings: 'Налаштування'
+    tabSettings: 'Налаштування',
+    toastDefault: 'Збережено',
+    wifiScanning: 'Сканування мереж...',
+    wifiNoNetworks: 'Мережі не знайдено',
+    wifiSelect: 'Обрати',
+    wifiScanDone: 'Сканування завершено',
+    wifiScanError: 'Помилка сканування',
+    wifiReconnecting: 'Перезапуск підключення...',
+    wifiReconnectDone: 'Підключення перезапущено',
+    wifiReconnectError: 'Помилка перезапуску',
+    wifiEnterSsid: 'Введіть назву WiFi мережі',
+    wifiSavedRestarting: 'WiFi збережено, перезапуск підключення...',
+    wifiSaveError: 'Помилка збереження WiFi',
+    feedBlockTime: 'Час:',
+    feedBlockRepeats: 'Повторів:',
+    feedRemoveTitle: 'Видалити',
+    feedAdded: 'Годування додано',
+    feedRemoved: 'Годування видалено',
+    feedTimesSaved: 'Часи збережено',
+    nextFeedDash: '— год — хв',
+    toastAngleUpdated: 'Кут змінено',
+    toastSpeedSaved: 'Швидкість збережено',
+    toastFeedingNow: 'Годую',
+    toastFeedError: 'Помилка годування',
+    wifiStatusAp: 'Режим точки доступу (AP) - ',
+    wifiStatusConnected: 'Підключено до: ',
+    wifiNotConnected: 'Не підключено',
+    wifiUnknown: 'невідомо',
+    wifiNotSet: 'не налаштовано',
+    heroFishAria: 'Стилізована рибка'
   },
   en: {
     appSubtitle: 'Smart feeder',
@@ -648,7 +677,36 @@ const I18N = {
     deepSleepHelpBanner: 'If this page won\'t load, the device may be in <strong>deep sleep</strong>. Press the physical button on the unit to wake it and use the web UI again.',
     tabHome: 'Home',
     tabInfo: 'Info',
-    tabSettings: 'Settings'
+    tabSettings: 'Settings',
+    toastDefault: 'Saved',
+    wifiScanning: 'Scanning networks...',
+    wifiNoNetworks: 'No networks found',
+    wifiSelect: 'Select',
+    wifiScanDone: 'Scan complete',
+    wifiScanError: 'Scan failed',
+    wifiReconnecting: 'Restarting connection...',
+    wifiReconnectDone: 'Connection restarted',
+    wifiReconnectError: 'Restart error',
+    wifiEnterSsid: 'Enter WiFi network name',
+    wifiSavedRestarting: 'WiFi saved, restarting connection...',
+    wifiSaveError: 'WiFi save error',
+    feedBlockTime: 'Time:',
+    feedBlockRepeats: 'Repeats:',
+    feedRemoveTitle: 'Remove',
+    feedAdded: 'Feeding slot added',
+    feedRemoved: 'Feeding slot removed',
+    feedTimesSaved: 'Schedule saved',
+    nextFeedDash: '— h — m',
+    toastAngleUpdated: 'Angle updated',
+    toastSpeedSaved: 'Speed saved',
+    toastFeedingNow: 'Feeding now',
+    toastFeedError: 'Feed error',
+    wifiStatusAp: 'Access Point mode (AP) - ',
+    wifiStatusConnected: 'Connected to: ',
+    wifiNotConnected: 'Not connected',
+    wifiUnknown: 'unknown',
+    wifiNotSet: 'not set',
+    heroFishAria: 'Stylized fish'
   }
 };
 let currentLang = localStorage.getItem('aqua_lang') || 'uk';
@@ -698,6 +756,12 @@ function applyLanguage() {
   if (tabs[0]) tabs[0].textContent = t('tabHome');
   if (tabs[1]) tabs[1].textContent = t('tabInfo');
   if (tabs[2]) tabs[2].textContent = t('tabSettings');
+  const toastEl = document.getElementById('toast');
+  if (toastEl) toastEl.textContent = t('toastDefault');
+  const nextFeedPct = document.getElementById('nextFeedPercent');
+  if (nextFeedPct) nextFeedPct.textContent = t('nextFeedDash');
+  const heroFish = document.querySelector('.hero-svg-fish');
+  if (heroFish) heroFish.setAttribute('aria-label', t('heroFishAria'));
 }
 function updateAngleLabel(v){ document.getElementById('angleLabel').innerText=v; }
 function updateSpeed(v){ document.getElementById('speedValue').innerText=v; }
@@ -784,7 +848,7 @@ function syncManualFeedCooldownFromStatus(seconds) {
 document.getElementById('angleSlider').addEventListener('input', function(){
   const val = this.value;
   updateAngleLabel(val);
-  fetch('/api/setAngle?angle='+val).then(()=>{showToast(currentLang === 'en' ? 'Angle updated' : 'Кут змінено');});
+  fetch('/api/setAngle?angle='+val).then(()=>{showToast(t('toastAngleUpdated'));});
 });
 
 function voltageToPercentClient(v) {
@@ -796,7 +860,7 @@ function voltageToPercentClient(v) {
   return Math.round(((v - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE)) * 100);
 }
 
-function showToast(text = (currentLang === 'en' ? 'Saved' : 'Збережено')) {
+function showToast(text = t('toastDefault')) {
   const toast = document.getElementById('toast');
   toast.innerText = text;
   toast.classList.add('show');
@@ -809,7 +873,7 @@ function feedNow(){
   fetch('/api/feedNow')
     .then(async (response) => {
       if (response.ok) {
-        showToast(currentLang === 'en' ? 'Feeding now' : 'Годую');
+        showToast(t('toastFeedingNow'));
         statusUpdate();
         return;
       }
@@ -819,33 +883,36 @@ function feedNow(){
         showToast(t('toastFeedBlocked'));
         statusUpdate();
       } else {
-        showToast(message || (currentLang === 'en' ? 'Feed error' : 'Помилка годування'));
+        showToast(message || t('toastFeedError'));
       }
     })
     .catch(() => {
-      showToast(currentLang === 'en' ? 'Feed error' : 'Помилка годування');
+      showToast(t('toastFeedError'));
     });
 }
-function saveSpeed(){ const s=document.getElementById('speedSlider').value; fetch('/api/setSpeed?speed='+s).then(()=>{statusUpdate(); showToast(currentLang === 'en' ? 'Speed saved' : 'Швидкість збережено');}); }
-function saveRepeats(){ const r=document.getElementById('feedRepeats').value; fetch('/api/setRepeats?repeats='+r).then(()=>{statusUpdate(); showToast(currentLang === 'en' ? 'Saved' : 'Збережено');}); }
+function saveSpeed(){ const s=document.getElementById('speedSlider').value; fetch('/api/setSpeed?speed='+s).then(()=>{statusUpdate(); showToast(t('toastSpeedSaved'));}); }
+function saveRepeats(){ const r=document.getElementById('feedRepeats').value; fetch('/api/setRepeats?repeats='+r).then(()=>{statusUpdate(); showToast(t('toastDefault'));}); }
 function scanWiFi(){
-  showToast('Сканування мереж...');
+  showToast(t('wifiScanning'));
   fetch('/api/scanWiFi')
     .then(r=>r.json())
     .then(networks=>{
       const listDiv = document.getElementById('wifiList');
       const networksDiv = document.getElementById('wifiNetworks');
+      if (!networksDiv || !listDiv) return;
       networksDiv.innerHTML = '';
       
       if(networks.length === 0) {
-        networksDiv.innerHTML = '<div class="networks-empty">Мережі не знайдено</div>';
+        networksDiv.innerHTML = '<div class="networks-empty">' + t('wifiNoNetworks') + '</div>';
       } else {
         networks.forEach(net => {
           const netDiv = document.createElement('div');
           netDiv.className = 'network-item';
           netDiv.onclick = function() {
-            document.getElementById('wifiSSID').value = net.ssid;
-            document.getElementById('wifiPassword').focus();
+            const ssidEl = document.getElementById('wifiSSID');
+            if (ssidEl) ssidEl.value = net.ssid;
+            const passEl = document.getElementById('wifiPassword');
+            if (passEl) passEl.focus();
           };
           netDiv.innerHTML = `
             <div>
@@ -853,49 +920,50 @@ function scanWiFi(){
               <span class="network-signal">${net.rssi} dBm</span>
               ${net.encrypted ? '<span class="network-lock">🔒</span>' : ''}
             </div>
-            <span class="network-action">Обрати</span>
+            <span class="network-action">${t('wifiSelect')}</span>
           `;
           networksDiv.appendChild(netDiv);
         });
       }
       listDiv.style.display = 'block';
-      showToast('Сканування завершено');
+      showToast(t('wifiScanDone'));
     })
     .catch(()=>{
-      showToast('Помилка сканування');
+      showToast(t('wifiScanError'));
     });
 }
 
 function reconnectWiFi(){
-  showToast('Перезапуск підключення...');
+  showToast(t('wifiReconnecting'));
   fetch('/api/reconnectWiFi')
     .then(()=>{
-      showToast('Підключення перезапущено');
+      showToast(t('wifiReconnectDone'));
       setTimeout(()=>{
         statusUpdate();
       }, 2000);
     })
     .catch(()=>{
-      showToast('Помилка перезапуску');
+      showToast(t('wifiReconnectError'));
     });
 }
 
 function saveWiFi(){ 
-  const ssid = document.getElementById('wifiSSID').value;
-  const password = document.getElementById('wifiPassword').value;
-  if(!ssid || ssid.trim() === '') {
-    showToast('Введіть назву WiFi мережі');
+  const ssid = document.getElementById('wifiSSID');
+  const password = document.getElementById('wifiPassword');
+  if (!ssid || !password) return;
+  if(!ssid.value || ssid.value.trim() === '') {
+    showToast(t('wifiEnterSsid'));
     return;
   }
-  fetch('/api/setWiFi?ssid='+encodeURIComponent(ssid)+'&password='+encodeURIComponent(password))
+  fetch('/api/setWiFi?ssid='+encodeURIComponent(ssid.value)+'&password='+encodeURIComponent(password.value))
     .then(()=>{
-      showToast('WiFi збережено, перезапуск підключення...');
+      showToast(t('wifiSavedRestarting'));
       setTimeout(()=>{
         window.location.reload();
       }, 3000);
     })
     .catch(()=>{
-      showToast('Помилка збереження WiFi');
+      showToast(t('wifiSaveError'));
     });
 }
 let feedTimeCounter = 0;
@@ -912,18 +980,18 @@ function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true
   block.id = blockId;
   block.innerHTML = `
     <div class="flex-row">
-      <span>Час:</span>
+      <span>${t('feedBlockTime')}</span>
       <input type="number" class="feed-hour" min="0" max="23" value="${hour}" style="width:30px; min-width:20px; padding: 4px;">
       <span>:</span>
       <input type="number" class="feed-minute" min="0" max="59" value="${minute}" style="width:30px; min-width:20px; padding: 4px;">
-      <span>Повторів:</span>
+      <span>${t('feedBlockRepeats')}</span>
       <input type="number" class="feed-repeats" min="1" max="20" value="${repeats}" style="width:30px; min-width:20px; padding: 4px;">
-      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="Видалити">×</button>
+      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('feedRemoveTitle')}">×</button>
     </div>
   `;
   container.appendChild(block);
   if (showNotification) {
-    showToast('Годування додано');
+    showToast(t('feedAdded'));
   }
 }
 
@@ -931,7 +999,7 @@ function removeFeedTime(blockId) {
   const block = document.getElementById(blockId);
   if (block) {
     block.remove();
-    showToast('Годування видалено');
+    showToast(t('feedRemoved'));
   }
 }
 
@@ -945,7 +1013,7 @@ function saveFeedTimes(){
     feedTimes.push({h: hour, m: minute, r: repeats});
   });
   const data = JSON.stringify(feedTimes);
-  fetch('/api/setFeedTimes?data=' + encodeURIComponent(data)).then(()=>{statusUpdate(); showToast('Часи збережено');});
+  fetch('/api/setFeedTimes?data=' + encodeURIComponent(data)).then(()=>{statusUpdate(); showToast(t('feedTimesSaved'));});
 }
 
 
@@ -1044,7 +1112,7 @@ function updateNextFeedingProgress(status) {
     if (minutesUntilNext !== null) {
       percentTextEl.textContent = formatDurationMinutes(minutesUntilNext);
     } else {
-      percentTextEl.textContent = '— год — хв';
+      percentTextEl.textContent = t('nextFeedDash');
     }
     fillPath.style.strokeDasharray = 345.58;
     fillPath.style.strokeDashoffset = 345.58;
@@ -1197,13 +1265,13 @@ function statusUpdate(){
     const statusText = document.getElementById('wifiStatusText');
     if (statusText) {
       if(j.isAPMode) {
-        statusText.innerText = (currentLang === 'en' ? 'Access Point mode (AP) - ' : 'Режим точки доступу (AP) - ') + (j.wifiSSID || (currentLang === 'en' ? 'not set' : 'не налаштовано'));
+        statusText.innerText = t('wifiStatusAp') + (j.wifiSSID || t('wifiNotSet'));
         statusText.style.color = '#FF9800';
       } else if(j.wifiIP) {
-        statusText.innerText = (currentLang === 'en' ? 'Connected to: ' : 'Підключено до: ') + (j.wifiSSID || (currentLang === 'en' ? 'unknown' : 'невідомо')) + ' (IP: ' + j.wifiIP + ')';
+        statusText.innerText = t('wifiStatusConnected') + (j.wifiSSID || t('wifiUnknown')) + ' (IP: ' + j.wifiIP + ')';
         statusText.style.color = '#4CAF50';
       } else {
-        statusText.innerText = currentLang === 'en' ? 'Not connected' : 'Не підключено';
+        statusText.innerText = t('wifiNotConnected');
         statusText.style.color = '#f44336';
       }
     }
@@ -1745,6 +1813,19 @@ a:active {
 <script>
 function infoIsEn() { return (localStorage.getItem('aqua_lang') || 'uk') === 'en'; }
 function applyInfoLanguage() {
+  document.title = infoIsEn() ? 'System information' : 'Інформація про систему';
+  const infoLblUk = ['SSID:', 'IP адреса:', 'Режим:', 'mDNS:', 'Напруга:', 'Відсоток:', 'Швидкість серво:', 'Повторів годування:', 'Режим економії:', 'OLED дисплей:', 'Кількість розкладів:', 'Модель:', 'Версія прошивки:', 'Час роботи:', 'CPU частота:', 'Вільна пам\'ять:', 'Використано пам\'яті:', 'Загальна пам\'ять:', 'Макс. блок:', 'Мін. вільна (завжди):', 'Розмір кешу:', 'Вік кешу:', 'Статус кешу:'];
+  const infoLblEn = ['SSID:', 'IP address:', 'Mode:', 'mDNS:', 'Voltage:', 'Percent:', 'Servo speed:', 'Feeding repeats:', 'Power save:', 'OLED display:', 'Schedules:', 'Model:', 'Firmware:', 'Uptime:', 'CPU frequency:', 'Free memory:', 'Used memory:', 'Total memory:', 'Max block:', 'Min free (always):', 'Cache size:', 'Cache age:', 'Cache status:'];
+  document.querySelectorAll('.info-label').forEach((el, i) => {
+    if (i < infoLblUk.length) el.textContent = infoIsEn() ? infoLblEn[i] : infoLblUk[i];
+  });
+  const loadTxt = infoIsEn() ? 'loading...' : 'завантаження...';
+  document.querySelectorAll('.info-value').forEach((el) => {
+    const tx = el.textContent.trim();
+    if (tx === 'завантаження...' || tx === 'loading...') el.textContent = loadTxt;
+  });
+  const toastInfo = document.getElementById('toast');
+  if (toastInfo) toastInfo.textContent = infoIsEn() ? 'Saved' : 'Збережено';
   const tabs = document.querySelectorAll('.bottom-tab span');
   const subtitles = document.querySelectorAll('.section-subtitle');
   const sections = document.querySelectorAll('.section-title');
@@ -1763,6 +1844,8 @@ function applyInfoLanguage() {
   if (subtitles[3]) subtitles[3].textContent = infoIsEn() ? 'Device information' : 'Інформація про пристрій';
   if (sections[4]) sections[4].textContent = infoIsEn() ? 'Memory and cache' : 'Пам\'ять та кеш';
   if (subtitles[4]) subtitles[4].textContent = infoIsEn() ? 'System resource usage' : 'Використання ресурсів системи';
+  const heroFishInfo = document.querySelector('.hero-svg-fish');
+  if (heroFishInfo) heroFishInfo.setAttribute('aria-label', infoIsEn() ? 'Stylized fish' : 'Стилізована рибка');
 }
 function updateInfo(){
   fetch('/api/status').then(r=>r.json()).then(j=>{
@@ -1770,7 +1853,7 @@ function updateInfo(){
     document.getElementById('infoIP').innerText = j.wifiIP || (infoIsEn() ? 'not connected' : 'не підключено');
     document.getElementById('infoMode').innerText = j.isAPMode ? (infoIsEn() ? 'Access Point (AP)' : 'Точка доступу (AP)') : (infoIsEn() ? 'Station (STA)' : 'Станція (STA)');
     if (typeof j.batteryVoltage === 'number' && Number.isFinite(j.batteryVoltage)) {
-      document.getElementById('infoVoltage').innerText = j.batteryVoltage.toFixed(2) + ' В';
+      document.getElementById('infoVoltage').innerText = j.batteryVoltage.toFixed(2) + (infoIsEn() ? ' V' : ' В');
     } else {
       document.getElementById('infoVoltage').innerText = '-- В';
     }
