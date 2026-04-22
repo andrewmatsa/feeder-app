@@ -1,12 +1,32 @@
+export interface FeedTime {
+  hour: number
+  minute: number
+  repeats: number
+}
+
 export interface StatusResponse {
   angle: number
   speed: number
   feedRepeats: number
   powerSaveMode: boolean
+  displayEnabled: boolean
+  displayOffAfterSec: number
+  deepSleepIdleSec: number
   batteryVoltage: number
   batteryPercent: number
-  feedTimes: string[]
-  timestamp?: string
+  feedTimes: FeedTime[]
+  nextFeedMinutes?: number | null
+  nextFeedHour?: number | null
+  nextFeedMinute?: number | null
+  currentTime?: string | null
+  manualFeedCooldownSeconds: number
+  wifiSSID: string
+  wifiIP: string
+  isAPMode: boolean
+  sleepReason: string
+  sleepCountdownSeconds: number
+  displayAwake: boolean
+  timestamp: string
 }
 
 export interface FeedRequest {
@@ -18,7 +38,7 @@ export interface SpeedRequest {
 }
 
 export interface ScheduleRequest {
-  times: string[]
+  times: FeedTime[]
 }
 
 export interface AngleRequest {

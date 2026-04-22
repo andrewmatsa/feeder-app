@@ -1,5 +1,6 @@
 #include "api_handlers.h"
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include "wifi_manager.h"
 #include "web_pages.h"
@@ -67,52 +68,29 @@ void ApiHandlers::handleInfo() {
   server.send(200, "text/html", pageInfo);
 }
 
-String ApiHandlers::buildStatusJson() {
-  battery.update();
-  
-  // ============================================================================
-  // ============================================================================
-  // ============================================================================
-  String json;
-  json.reserve(780);
-  
-  json = "{\"status\":\"ok\",";
-  json += "\"currentAngle\":"; json += servo.getCurrentAngle(); json += ",";
-  json += "\"speed\":"; json += servo.getSpeed(); json += ",";
-  json += "\"feedRepeats\":"; json += feedRepeats; json += ",";
-  json += "\"powerSaveMode\":"; json += (powerSaveMode ? "true" : "false"); json += ",";
-  json += "\"displayEnabled\":"; json += (displayEnabled ? "true" : "false"); json += ",";
-  json += "\"displayOffAfterSec\":"; json += displayOffAfterSec; json += ",";
-  json += "\"deepSleepIdleSec\":"; json += deepSleepIdleSec; json += ",";
-  json += "\"deepSleepWakeButtonOnly\":false,";
-  json += "\"batteryVoltage\":"; json += battery.getVoltage(); json += ",";
-  json += "\"batteryPercent\":"; json += (int)battery.getPercent(); json += ",";
-  
-  NextFeedInfo nextFeed = scheduler.computeNextFeed();
-  json += "\"nextFeedMinutes\":"; json += nextFeed.minutesUntil; json += ",";
-  json += "\"nextFeedHour\":"; json += nextFeed.targetHour; json += ",";
-  json += "\"nextFeedMinute\":"; json += nextFeed.targetMinute; json += ",";
-  
-  json += "\"feedTimes\":[";
+void ApiHandlers::appendFeedTimes(JsonArray feedTimesArray) const {
   const FeedTime* feedTimes = scheduler.getFeedTimes();
   int feedTimesCount = scheduler.getFeedTimesCount();
-  for(int i = 0; i < feedTimesCount; i++) {
-    if(i > 0) json += ",";
-    json += "{\"h\":"; json += feedTimes[i].hour;
-    json += ",\"m\":"; json += feedTimes[i].minute;
-    json += ",\"r\":"; json += feedTimes[i].repeats; json += "}";
+  for (int i = 0; i < feedTimesCount; i++) {
+    JsonObject feedTime = feedTimesArray.add<JsonObject>();
+    feedTime["h"] = feedTimes[i].hour;
+    feedTime["m"] = feedTimes[i].minute;
+    feedTime["r"] = feedTimes[i].repeats;
   }
-  json += "],";
-  
+}
+
+void ApiHandlers::appendLegacyFeedTimes(JsonDocument& doc) const {
   int h1, m1, r1, h2, m2, r2;
   scheduler.getLegacyFeedTimes(h1, m1, r1, h2, m2, r2);
-  json += "\"feedHour1\":"; json += h1; json += ",";
-  json += "\"feedMinute1\":"; json += m1; json += ",";
-  json += "\"feedHour2\":"; json += h2; json += ",";
-  json += "\"feedMinute2\":"; json += m2; json += ",";
-  json += "\"feedRepeats1\":"; json += r1; json += ",";
-  json += "\"feedRepeats2\":"; json += r2; json += ",";
-  
+  doc["feedHour1"] = h1;
+  doc["feedMinute1"] = m1;
+  doc["feedHour2"] = h2;
+  doc["feedMinute2"] = m2;
+  doc["feedRepeats1"] = r1;
+  doc["feedRepeats2"] = r2;
+}
+
+String ApiHandlers::getCurrentTimeString() const {
   time_t now = time(nullptr);
   struct tm localTime;
   char timeBuf[6] = "--:--";
@@ -120,41 +98,84 @@ String ApiHandlers::buildStatusJson() {
   if (gmtime_r(&adjusted, &localTime) && localTime.tm_year + 1900 >= 2020) {
     snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", localTime.tm_hour, localTime.tm_min);
   }
-  json += "\"currentTime\":\""; json += timeBuf; json += "\",";
-  json += "\"wifiSSID\":\""; json += savedSSID; json += "\",";
-  json += "\"isAPMode\":"; json += (isAPMode ? "true" : "false"); json += ",";
-  json += "\"sleepReason\":\""; json += sleepReason; json += "\",";
-  json += "\"sleepCountdownSeconds\":"; json += sleepCountdownSeconds; json += ",";
-  json += "\"displayAwake\":"; json += (displayAwakeNow ? "true" : "false"); json += ",";
-  json += "\"manualFeedCooldownSeconds\":"; json += scheduler.getSecondsUntilManualFeedAllowed(); json += ",";
-  if(!isAPMode && WiFi.status() == WL_CONNECTED) {
-    json += "\"wifiIP\":\""; json += WiFi.localIP().toString(); json += "\",";
-  } else {
-    json += "\"wifiIP\":\"\",";
+  return String(timeBuf);
+}
+
+String ApiHandlers::getWifiIp() const {
+  if (!isAPMode && WiFi.status() == WL_CONNECTED) {
+    return WiFi.localIP().toString();
   }
-  
-  // ============================================================================
-  // ============================================================================
+  return String("");
+}
+
+unsigned long ApiHandlers::computeCacheAge(bool hasCachedStatus) const {
+  if (!hasCachedStatus || cachedStatusTime == 0) {
+    return 0;
+  }
+  return millis() - cachedStatusTime;
+}
+
+void ApiHandlers::appendRuntimeStatus(JsonDocument& doc, const NextFeedInfo& nextFeed) const {
+  const bool hasCachedStatus = cachedStatusJson.length() > 0;
+  doc["nextFeedMinutes"] = nextFeed.minutesUntil;
+  doc["nextFeedHour"] = nextFeed.targetHour;
+  doc["nextFeedMinute"] = nextFeed.targetMinute;
+  doc["currentTime"] = getCurrentTimeString();
+  doc["wifiSSID"] = savedSSID;
+  doc["isAPMode"] = isAPMode;
+  doc["sleepReason"] = sleepReason;
+  doc["sleepCountdownSeconds"] = sleepCountdownSeconds;
+  doc["displayAwake"] = displayAwakeNow;
+  doc["manualFeedCooldownSeconds"] = scheduler.getSecondsUntilManualFeedAllowed();
+  doc["wifiIP"] = getWifiIp();
+  doc["cacheSize"] = cachedStatusJson.length();
+  doc["cacheAge"] = computeCacheAge(hasCachedStatus);
+  doc["cacheValid"] = hasCachedStatus;
+}
+
+void ApiHandlers::appendMemoryStatus(JsonDocument& doc) const {
   unsigned long freeHeap = ESP.getFreeHeap();
   unsigned long maxAllocHeap = ESP.getMaxAllocHeap();
   unsigned long minFreeHeap = ESP.getMinFreeHeap();
   unsigned long totalHeap = ESP.getHeapSize();
-  
-  json += "\"memoryFreeHeap\":"; json += freeHeap; json += ",";
-  json += "\"memoryMaxAllocHeap\":"; json += maxAllocHeap; json += ",";
-  json += "\"memoryMinFreeHeap\":"; json += minFreeHeap; json += ",";
-  json += "\"memoryTotalHeap\":"; json += totalHeap; json += ",";
-  json += "\"memoryUsedHeap\":"; json += (totalHeap - freeHeap); json += ",";
-  
-  unsigned long cacheAge = (cachedStatusJson.length() > 0 && cachedStatusTime > 0) 
-    ? (millis() - cachedStatusTime) : 0;
-  json += "\"cacheSize\":"; json += cachedStatusJson.length(); json += ",";
-  json += "\"cacheAge\":"; json += cacheAge; json += ",";
-  json += "\"cacheValid\":"; json += (cachedStatusJson.length() > 0 ? "true" : "false"); json += ",";
-  
-  json += "\"cpuFrequency\":"; json += getCpuFrequencyMhz();
-  json += "}";
-  
+
+  doc["memoryFreeHeap"] = freeHeap;
+  doc["memoryMaxAllocHeap"] = maxAllocHeap;
+  doc["memoryMinFreeHeap"] = minFreeHeap;
+  doc["memoryTotalHeap"] = totalHeap;
+  doc["memoryUsedHeap"] = (totalHeap - freeHeap);
+  doc["cpuFrequency"] = getCpuFrequencyMhz();
+}
+
+void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
+  battery.update();
+
+  NextFeedInfo nextFeed = scheduler.computeNextFeed();
+  doc["status"] = "ok";
+  doc["currentAngle"] = servo.getCurrentAngle();
+  doc["speed"] = servo.getSpeed();
+  doc["feedRepeats"] = feedRepeats;
+  doc["powerSaveMode"] = powerSaveMode;
+  doc["displayEnabled"] = displayEnabled;
+  doc["displayOffAfterSec"] = displayOffAfterSec;
+  doc["deepSleepIdleSec"] = deepSleepIdleSec;
+  doc["deepSleepWakeButtonOnly"] = false;
+  doc["batteryVoltage"] = battery.getVoltage();
+  doc["batteryPercent"] = static_cast<int>(battery.getPercent());
+
+  appendFeedTimes(doc["feedTimes"].to<JsonArray>());
+  appendLegacyFeedTimes(doc);
+  appendRuntimeStatus(doc, nextFeed);
+  appendMemoryStatus(doc);
+}
+
+String ApiHandlers::buildStatusJson() {
+  JsonDocument doc;
+  populateStatusDocument(doc);
+
+  String json;
+  json.reserve(900);
+  serializeJson(doc, json);
   return json;
 }
 
@@ -216,56 +237,56 @@ void ApiHandlers::handleSetRepeats() {
   server.send(200, "text/plain", "ok");
 }
 
+int ApiHandlers::parseFeedTimesJson(const String& jsonData, FeedTime* target, int maxCount) const {
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, jsonData);
+  if (error || !doc.is<JsonArray>()) {
+    return 0;
+  }
+
+  JsonArray feedTimes = doc.as<JsonArray>();
+  int count = 0;
+  for (JsonObjectConst item : feedTimes) {
+    if (count >= maxCount) {
+      break;
+    }
+    int h = constrain(item["h"] | item["hour"] | 10, 0, 23);
+    int m = constrain(item["m"] | item["minute"] | 0, 0, 59);
+    int r = max(1, static_cast<int>(item["r"] | item["repeats"] | 1));
+    target[count++] = {h, m, r, false};
+  }
+  return count;
+}
+
+void ApiHandlers::saveFeedTimes(const FeedTime* newFeedTimes, int count) {
+  scheduler.setFeedTimes(newFeedTimes, count);
+  scheduler.saveToPreferences(preferences);
+  invalidateCache();
+  Serial.printf("Feed times saved: count=%d\n", count);
+  for (int i = 0; i < count; i++) {
+    Serial.printf("  [%d] %02d:%02d (repeats=%d)\n",
+                  i,
+                  newFeedTimes[i].hour,
+                  newFeedTimes[i].minute,
+                  newFeedTimes[i].repeats);
+  }
+}
+
 void ApiHandlers::handleSetFeedTimes() {
   noteClientActivity();
   if(server.hasArg("data")) {
     String jsonData = server.arg("data");
     jsonData.trim();
-    
+
     FeedTime newFeedTimes[FeedingScheduler::MAX_FEED_TIMES];
-    int count = 0;
-    
-    int depth = 0;
-    int objStart = -1;
-    const int len = jsonData.length();
-    for(int idx = 0; idx < len && count < FeedingScheduler::MAX_FEED_TIMES; idx++) {
-      char c = jsonData.charAt(idx);
-      if(c == '{') {
-        if(depth == 0) {
-          objStart = idx;
-        }
-        depth++;
-      } else if(c == '}') {
-        depth--;
-        if(depth == 0 && objStart != -1) {
-          String obj = jsonData.substring(objStart + 1, idx);
-          int h = extractIntField(obj, 'h', 10);
-          int m = extractIntField(obj, 'm', 0);
-          int r = extractIntField(obj, 'r', 1);
-          
-          h = constrain(h, 0, 23);
-          m = constrain(m, 0, 59);
-          r = max(1, r);
-          
-          newFeedTimes[count] = {h, m, r, false};
-          count++;
-          objStart = -1;
-        }
-      }
-    }
-    
-    if(count == 0) {
+    int count = parseFeedTimesJson(jsonData, newFeedTimes, FeedingScheduler::MAX_FEED_TIMES);
+
+    if (count == 0) {
       newFeedTimes[0] = {10, 0, 1, false};
       count = 1;
     }
-    
-    scheduler.setFeedTimes(newFeedTimes, count);
-    scheduler.saveToPreferences(preferences);
-    invalidateCache();
-    Serial.printf("Feed times saved: count=%d\n", count);
-    for(int i = 0; i < count; i++) {
-      Serial.printf("  [%d] %02d:%02d (repeats=%d)\n", i, newFeedTimes[i].hour, newFeedTimes[i].minute, newFeedTimes[i].repeats);
-    }
+
+    saveFeedTimes(newFeedTimes, count);
   } else {
     int h1 = server.arg("h1").toInt();
     int m1 = server.arg("m1").toInt();
@@ -325,53 +346,5 @@ void ApiHandlers::handleSetDeepSleep() {
   invalidateCache();
   Serial.printf("Deep sleep idle: %u s (wake: button + timer before feed)\n", deepSleepIdleSec);
   server.send(200, "text/plain", "ok");
-}
-
-bool ApiHandlers::isDigitChar(char c) {
-  return c >= '0' && c <= '9';
-}
-
-int ApiHandlers::extractIntField(const String& obj, char fieldKey, int fallback) {
-  String pattern = "\"";
-  pattern += fieldKey;
-  pattern += "\":";
-  int pos = obj.indexOf(pattern);
-  if (pos == -1) {
-    String shortPattern = "";
-    shortPattern += fieldKey;
-    shortPattern += ":";
-    pos = obj.indexOf(shortPattern);
-    if (pos == -1) return fallback;
-  }
-  
-  int colon = obj.indexOf(':', pos);
-  if (colon == -1) return fallback;
-  
-  int valueStart = colon + 1;
-  while (valueStart < obj.length()) {
-    char c = obj.charAt(valueStart);
-    if (c == ' ' || c == '\t' || c == '"' || c == '\'') {
-      valueStart++;
-      continue;
-    }
-    break;
-  }
-  if (valueStart >= obj.length()) return fallback;
-  
-  bool negative = false;
-  if (obj.charAt(valueStart) == '-') {
-    negative = true;
-    valueStart++;
-  }
-  
-  int valueEnd = valueStart;
-  while (valueEnd < obj.length() && isDigitChar(obj.charAt(valueEnd))) {
-    valueEnd++;
-  }
-  
-  if (valueEnd == valueStart) return fallback;
-  
-  int value = obj.substring(negative ? valueStart - 1 : valueStart, valueEnd).toInt();
-  return value;
 }
 

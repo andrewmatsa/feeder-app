@@ -1,127 +1,182 @@
 # 🐟 AquaFeed - Automatic Fish Feeder
 
-An ESP32-C3 based automatic aquarium feeder with a built-in web interface for control and monitoring.
+AquaFeed is an ESP32-C3 based automatic fish feeder with firmware control, a Python backend adapter, and a React frontend.
 
-## ✨ Features
+## Stack
 
-- 🤖 Scheduled automatic feeding
-- 📱 Web interface for device control
-- 🔋 Battery monitoring
-- ⚡ Power saving mode
-- 🔘 Manual feeding with a button
-- 📊 Status and runtime monitoring
+- Firmware: ESP32-C3, C++, Arduino framework, PlatformIO
+- Backend: Python, FastAPI, httpx, Pydantic
+- Frontend: React, TypeScript, Vite, Axios
 
-## 🔧 Hardware
+## Features
 
-- ESP32-C3 Super Mini
-- Servo motor (for example SG90)
-- MH Electronic battery voltage sensor
-- Button for manual feeding
+- Scheduled automatic feeding
+- Manual feeding from hardware button or API
+- Servo speed and angle control
+- Battery monitoring
+- Power-saving and deep-sleep controls
+- Embedded device web UI plus a separate SPA frontend
 
-## 📦 Project Structure
+## Project Structure
 
-```
-fish_eat/
-├── src/                    # ESP32-C3 firmware source
-│   ├── main.cpp           # Main entry point
-│   ├── api_handlers.*     # API endpoints
-│   ├── servo_controller.* # Servo control
-│   ├── battery_monitor.*  # Battery monitoring
-│   ├── feeding_scheduler.*# Feeding schedule logic
-│   └── wifi_manager.*     # WiFi management
-├── platformio.ini         # PlatformIO configuration
-└── README.md              # This file
+```text
+feeder-app/
+├── src/                    # ESP32 firmware
+├── backend/                # FastAPI adapter for frontend -> firmware
+├── frontend/               # React SPA
+├── versions.json           # Single source of truth for app/firmware version
+├── platformio.ini          # PlatformIO configuration
+└── README.md
 ```
 
-## 🚀 Quick Start
+## Architecture
 
-### 1. Installation
+The project currently has three active layers:
+
+1. `src/` firmware exposes the device API and controls hardware.
+2. `backend/` exposes a stable API contract and maps requests to the firmware routes.
+3. `frontend/` consumes the backend API instead of talking directly to the ESP32.
+
+Recommended request flow:
+
+`Frontend -> FastAPI backend -> ESP32 firmware API`
+
+## Versioning
+
+Runtime version values are centralized in `versions.json`.
+
+- `appVersion` is used by the backend API metadata and the React frontend.
+- `firmwareVersion` is injected into the ESP32 firmware build and shown in device-facing UI.
+
+If you need to bump a release, update `versions.json` first and treat it as the authoritative source.
+
+## Firmware Setup
 
 1. Install [PlatformIO](https://platformio.org/).
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/fish_eat.git
-   cd fish_eat
-   ```
+2. Open the project.
+3. Build and upload the firmware to the ESP32-C3.
+4. On first boot the device creates an access point for WiFi provisioning.
 
-### 2. Build and Upload
+After the device joins WiFi, note its hostname or IP from the serial monitor and use that value for the backend `ESP32_BASE_URL`.
 
-1. Connect ESP32-C3 to your computer.
-2. Open the project in PlatformIO.
-3. Upload the firmware:
-   ```
-   PlatformIO: Upload
-   ```
+## Backend Setup
 
-### 3. WiFi Setup
+From the `backend/` directory:
 
-1. On first boot, ESP32 starts the `AquaFeed-Setup` access point.
-2. Connect to it (password: `12345678`).
-3. Open `192.168.4.1` in your browser.
-4. Select your WiFi network and enter the password.
+```bash
+pip install -r requirements.txt
+```
 
-### 4. Access the Interface
+Create a `.env` file from `env.example` and set:
 
-After connecting to WiFi, open:
-- `http://fish-eat.local` (via mDNS)
-- or `http://192.168.1.XXX` (check the exact IP in Serial Monitor)
+```env
+ESP32_BASE_URL=http://<device-host-or-ip>
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+PORT=8000
+```
 
-## 🌐 API Endpoints
+Run the API:
 
-### GET `/api/status`
-Get current device status:
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+## Frontend Setup
+
+From the `frontend/` directory:
+
+```bash
+npm install
+npm run dev
+```
+
+By default the frontend expects the backend on `http://localhost:8000`.
+
+## Test Pages
+
+The repository also includes dedicated offline preview pages so UI changes can be checked without flashing the ESP32 every time.
+
+- `preview.html` is the hub for the preview/test harness.
+- `preview_index.html` covers the main control screen.
+- `preview_info.html` covers the diagnostics and system info screen.
+- `preview_wifi.html` covers WiFi and power/display settings.
+
+Use these pages for layout, copy, and interaction checks with mocked data before moving on to backend integration or hardware validation.
+
+## Canonical Backend API
+
+The backend is the public API surface for clients. It normalizes the current firmware payloads and routes.
+
+### `GET /api/status`
+
 ```json
 {
   "angle": 90,
   "speed": 20,
   "feedRepeats": 1,
   "powerSaveMode": true,
+  "displayEnabled": true,
+  "displayOffAfterSec": 20,
+  "deepSleepIdleSec": 60,
   "batteryVoltage": 3.7,
   "batteryPercent": 75,
-  "feedTimes": ["08:00", "20:00"]
+  "feedTimes": [
+    { "hour": 8, "minute": 0, "repeats": 1 },
+    { "hour": 20, "minute": 0, "repeats": 2 }
+  ],
+  "nextFeedMinutes": 120,
+  "nextFeedHour": 20,
+  "nextFeedMinute": 0,
+  "currentTime": "18:00",
+  "manualFeedCooldownSeconds": 0,
+  "wifiSSID": "AquariumWiFi",
+  "wifiIP": "192.168.1.50",
+  "isAPMode": false,
+  "sleepReason": "ready",
+  "sleepCountdownSeconds": 15,
+  "displayAwake": true,
+  "timestamp": "2026-04-22T12:00:00"
 }
 ```
 
-### POST `/api/feed`
-Manual feed:
-```
-POST /api/feed
-Body: {"repeats": 1}
-```
+### `POST /api/feed`
 
-### POST `/api/speed`
-Set servo speed:
-```
-POST /api/speed
-Body: {"speed": 20}
+```json
+{ "repeats": 1 }
 ```
 
-### POST `/api/schedule`
-Set feeding schedule:
+### `POST /api/speed`
+
+```json
+{ "speed": 20 }
 ```
-POST /api/schedule
-Body: {"times": ["08:00", "20:00"]}
+
+### `POST /api/angle`
+
+```json
+{ "angle": 90 }
 ```
 
-## 🔄 Development Path
+### `POST /api/power-mode`
 
-### Option 1: All on ESP32 (current version)
-- Firmware and API run on the microcontroller.
-- Web interface is embedded into firmware.
+```json
+{ "enabled": true }
+```
 
-### Option 2: Cloud frontend (recommended for scaling)
-- Backend (API) stays on ESP32.
-- Frontend is deployed to GitHub Pages / Netlify / Vercel.
+### `POST /api/schedule`
 
-## 📝 License
+```json
+{
+  "times": [
+    { "hour": 8, "minute": 0, "repeats": 1 },
+    { "hour": 20, "minute": 0, "repeats": 2 }
+  ]
+}
+```
 
-MIT License
+## Notes
 
-## 🤝 Contributing
-
-Pull requests and issues are welcome.
-
-## 📧 Contacts
-
-Built with ❤️ for your fish.
+- The firmware still has its own embedded UI and internal route naming.
+- The backend adapter exists to shield the frontend from those firmware-specific details.
+- If you expand the project further, prefer adding new client features against the backend contract, not directly against the firmware API.
 

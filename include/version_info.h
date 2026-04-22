@@ -1,0 +1,12 @@
+#ifndef VERSION_INFO_H
+#define VERSION_INFO_H
+
+#ifndef AQUAFEED_APP_VERSION
+#define AQUAFEED_APP_VERSION "dev"
+#endif
+
+#ifndef AQUAFEED_FIRMWARE_VERSION
+#define AQUAFEED_FIRMWARE_VERSION "dev"
+#endif
+
+#endif

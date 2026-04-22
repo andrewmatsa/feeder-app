@@ -1,165 +1,111 @@
-"""
-FastAPI backend for AquaFeed - Automatic Fish Feeder
-"""
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from datetime import datetime
-import httpx
-import os
-from dotenv import load_dotenv
+"""FastAPI entrypoint for the AquaFeed backend adapter."""
 
-load_dotenv()
+from datetime import datetime
+import os
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+try:
+    from .config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION
+    from .device_client import close_http_client, request_firmware
+    from .mappers import encode_schedule, map_firmware_status
+    from .models import (
+        AngleRequest,
+        CommandResponse,
+        FeedRequest,
+        PowerModeRequest,
+        ScheduleRequest,
+        SpeedRequest,
+        StatusResponse,
+    )
+except ImportError:
+    from config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION
+    from device_client import close_http_client, request_firmware
+    from mappers import encode_schedule, map_firmware_status
+    from models import (
+        AngleRequest,
+        CommandResponse,
+        FeedRequest,
+        PowerModeRequest,
+        ScheduleRequest,
+        SpeedRequest,
+        StatusResponse,
+    )
 
 app = FastAPI(
     title="AquaFeed API",
     description="API for controlling the automatic fish feeder",
-    version="1.0.0"
+    version=APP_VERSION,
 )
 
 # CORS settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(","),
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ESP32 URL (can be configured via environment variables)
-ESP32_BASE_URL = os.getenv("ESP32_BASE_URL", "http://fish-eat.local")
-
-# Data models
-class FeedRequest(BaseModel):
-    repeats: int = Field(default=1, ge=1, le=10, description="Number of feeding repeats")
-
-class SpeedRequest(BaseModel):
-    speed: int = Field(ge=1, le=100, description="Servo speed")
-
-class ScheduleRequest(BaseModel):
-    times: List[str] = Field(description="List of feeding times in HH:MM format")
-
-class AngleRequest(BaseModel):
-    angle: int = Field(ge=0, le=180, description="Servo angle")
-
-class PowerModeRequest(BaseModel):
-    enabled: bool = Field(description="Enable/disable power saving mode")
-
-class StatusResponse(BaseModel):
-    angle: int
-    speed: int
-    feedRepeats: int
-    powerSaveMode: bool
-    batteryVoltage: float
-    batteryPercent: int
-    feedTimes: List[str]
-    timestamp: Optional[str] = None
-
-# HTTP client for ESP32 requests
-http_client = httpx.AsyncClient(timeout=5.0)
-
 @app.on_event("shutdown")
 async def shutdown_event():
-    await http_client.aclose()
+    await close_http_client()
 
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
         "message": "AquaFeed API",
-        "version": "1.0.0",
-        "status": "running"
+        "version": APP_VERSION,
+        "firmwareVersion": FIRMWARE_VERSION,
+        "status": "running",
     }
 
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
-    """
-    Get current system status.
-    Can work as an ESP32 proxy or return local fallback data.
-    """
-    try:
-        # Try to fetch data from ESP32
-        response = await http_client.get(f"{ESP32_BASE_URL}/api/status")
-        if response.status_code == 200:
-            data = response.json()
-            data["timestamp"] = datetime.now().isoformat()
-            return StatusResponse(**data)
-    except (httpx.RequestError, httpx.TimeoutException):
-        # If ESP32 is unavailable, return an error or default values
-        pass
-    
-    # Return an error if ESP32 is unavailable
-    raise HTTPException(
-        status_code=503,
-        detail="ESP32 device is not available. Please check connection."
+    response = await request_firmware("/api/status")
+    return map_firmware_status(response.json())
+
+
+@app.post("/api/feed", response_model=CommandResponse)
+async def feed_now(request: FeedRequest):
+    await request_firmware("/api/setRepeats", params={"repeats": request.repeats})
+    await request_firmware("/api/feedNow")
+    return CommandResponse(
+        success=True,
+        message=f"Feeding started with {request.repeats} repeats",
     )
 
-@app.post("/api/feed")
-async def feed_now(request: FeedRequest):
-    """Manual feeding"""
-    try:
-        response = await http_client.post(
-            f"{ESP32_BASE_URL}/api/feed",
-            json={"repeats": request.repeats}
-        )
-        response.raise_for_status()
-        return {"success": True, "message": f"Feeding started with {request.repeats} repeats"}
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=503, detail=f"Failed to communicate with ESP32: {str(e)}")
 
-@app.post("/api/speed")
+@app.post("/api/speed", response_model=CommandResponse)
 async def set_speed(request: SpeedRequest):
-    """Set servo speed"""
-    try:
-        response = await http_client.post(
-            f"{ESP32_BASE_URL}/api/speed",
-            json={"speed": request.speed}
-        )
-        response.raise_for_status()
-        return {"success": True, "speed": request.speed}
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=503, detail=f"Failed to communicate with ESP32: {str(e)}")
+    await request_firmware("/api/setSpeed", params={"speed": request.speed})
+    return CommandResponse(success=True, message=f"Speed set to {request.speed}")
 
-@app.post("/api/schedule")
+
+@app.post("/api/schedule", response_model=CommandResponse)
 async def set_schedule(request: ScheduleRequest):
-    """Set feeding schedule"""
-    try:
-        response = await http_client.post(
-            f"{ESP32_BASE_URL}/api/schedule",
-            json={"times": request.times}
-        )
-        response.raise_for_status()
-        return {"success": True, "times": request.times}
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=503, detail=f"Failed to communicate with ESP32: {str(e)}")
+    await request_firmware("/api/setFeedTimes", params={"data": encode_schedule(request.times)})
+    return CommandResponse(success=True, message="Schedule updated")
 
-@app.post("/api/angle")
+
+@app.post("/api/angle", response_model=CommandResponse)
 async def set_angle(request: AngleRequest):
-    """Set servo angle"""
-    try:
-        response = await http_client.post(
-            f"{ESP32_BASE_URL}/api/angle",
-            json={"angle": request.angle}
-        )
-        response.raise_for_status()
-        return {"success": True, "angle": request.angle}
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=503, detail=f"Failed to communicate with ESP32: {str(e)}")
+    await request_firmware("/api/setAngle", params={"angle": request.angle})
+    return CommandResponse(success=True, message=f"Angle set to {request.angle}")
 
-@app.post("/api/power-mode")
+
+@app.post("/api/power-mode", response_model=CommandResponse)
 async def set_power_mode(request: PowerModeRequest):
-    """Set power saving mode"""
-    try:
-        response = await http_client.post(
-            f"{ESP32_BASE_URL}/api/power-mode",
-            json={"enabled": request.enabled}
-        )
-        response.raise_for_status()
-        return {"success": True, "powerSaveMode": request.enabled}
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=503, detail=f"Failed to communicate with ESP32: {str(e)}")
+    await request_firmware(
+        "/api/setPowerMode",
+        params={"enabled": str(request.enabled).lower()},
+    )
+    return CommandResponse(
+        success=True,
+        message=f"Power save mode {'enabled' if request.enabled else 'disabled'}",
+    )
 
 @app.get("/health")
 async def health_check():
@@ -168,5 +114,6 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
 

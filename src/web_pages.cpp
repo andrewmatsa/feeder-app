@@ -1,4 +1,5 @@
 #include "web_pages.h"
+#include "version_info.h"
 
 // ============================================================================
 // FRONTEND - Веб-сторінки (HTML/CSS/JavaScript)
@@ -1750,7 +1751,7 @@ a:active {
   </div>
   <div class="info-row">
     <span class="info-label">Версія прошивки:</span>
-    <span class="info-value">1.0</span>
+    <span class="info-value">)rawliteral" AQUAFEED_FIRMWARE_VERSION R"rawliteral(</span>
   </div>
   <div class="info-row">
     <span class="info-label">Час роботи:</span>

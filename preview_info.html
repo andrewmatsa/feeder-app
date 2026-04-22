@@ -401,7 +401,7 @@ a:active {
   </div>
   <div class="info-row">
     <span class="info-label">Firmware version:</span>
-    <span class="info-value">1.0</span>
+    <span class="info-value" id="infoFirmwareVersion">loading...</span>
   </div>
   <div class="info-row">
     <span class="info-label">Uptime:</span>
@@ -531,8 +531,22 @@ function showToast(text) {
   }
 }
 
+function loadPreviewVersion() {
+  var target = document.getElementById('infoFirmwareVersion');
+  if (!target) return;
+  fetch('versions.json')
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      target.textContent = data.firmwareVersion || 'mock';
+    })
+    .catch(function() {
+      target.textContent = 'mock';
+    });
+}
+
 window.onload = function() {
   applyInfoLanguage();
+  loadPreviewVersion();
 };
 </script>
 </body>

@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include "feeding_scheduler.h"
 #include "time.h"
+#include "version_info.h"
 #include <math.h>
 
 OledDisplay::OledDisplay(int sdaPin, int sclPin)
@@ -63,7 +64,7 @@ void OledDisplay::showSplash() {
   u8g2.setFont(u8g2_font_ncenB14_tr);
   u8g2.drawStr(10, 30, "AquaFeed");
   u8g2.setFont(u8g2_font_ncenR08_tr);
-  u8g2.drawStr(20, 50, "Fish Feeder v1.0");
+  u8g2.drawStr(20, 50, "Fish Feeder v" AQUAFEED_FIRMWARE_VERSION);
   u8g2.sendBuffer();
 }
 

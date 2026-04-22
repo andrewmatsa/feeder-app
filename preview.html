@@ -2,1026 +2,172 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>AquaFeed Control - Preview</title>
+<title>AquaFeed Preview Lab</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  padding: 8px;
-  max-width: 100%;
-  margin: auto;
-  background: #F5F5F5;
-  min-height: 100vh;
-  color: #333;
-  font-size: 14px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  background: #f5f7fb;
+  color: #1f2937;
 }
-.row {margin-bottom: 8px;}
-label {display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; font-size: 13px;}
-input[type=range], input[type=number], select {width: 95%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px;}
-input[type=checkbox] {transform: scale(1.1); margin-right: 6px;}
-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  font-size: 13px;
-  margin-top: 4px;
-  width: 100%;
-  border: none;
-  border-radius: 999px;
-  background: #111;
+.shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+}
+.hero {
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
   color: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+}
+.eyebrow {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.16);
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2px;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
 }
-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 22px rgba(0,0,0,0.2);
+h1 {
+  margin: 12px 0 8px;
+  font-size: 32px;
 }
-button:active {
-  transform: translateY(0);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.16);
+.hero p {
+  margin: 0;
+  max-width: 720px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.88);
 }
-button.add-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  color: #333;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  box-shadow: none;
-  width: auto;
-  padding: 10px 22px;
-  margin: 8px 0;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-button.add-btn:hover {
-  background: rgba(15, 23, 42, 0.08);
-  color: #111;
-}
-button.remove-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  margin-left: auto;
-  font-size: 18px;
-  line-height: 1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f03d3d;
-  box-shadow: 0 8px 16px rgba(240,61,61,0.2);
-}
-button.remove-btn:hover {
-  background: #d83232;
-  box-shadow: 0 10px 20px rgba(240,61,61,0.24);
-}
-button.remove-btn:active {
-  background: #c62828;
-  box-shadow: 0 6px 14px rgba(240,61,61,0.18);
-}
-.feed-block {
-  margin-bottom: 8px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 6px;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
 }
 .card {
-  padding: 16px;
-  border-radius: 12px;
-  background: #FFFFFF;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
-h2 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 12px;
-  font-size: 1.4em;
-  font-weight: 600;
+.card h2,
+.card h3 {
+  margin-top: 0;
 }
-.flex-row {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-.flex-row span {font-weight: 500; color: #555; font-size: 12px;}
-.flex-row input, .flex-row select {width: auto; min-width: 60px; font-size: 12px;}
-.toast {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #111;
-  color: #fff;
-  padding: 14px 26px;
-  border-radius: 999px;
-  box-shadow: 0 18px 34px rgba(0,0,0,0.22);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.3px;
-  z-index: 1000;
-  opacity: 0;
-  transform-origin: center;
-  transform: translate(-50%, -10px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  pointer-events: none;
-}
-.toast.show {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-.battery-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  padding: 20px;
-}
-.battery-gauge-wrapper {
-  position: relative;
-  flex: 0 0 150px;
-  max-width: 150px;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-.battery-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #222;
-}
-.battery-subtitle {
-  font-size: 12px;
-  color: #888;
-}
-.battery-info-row {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 20px;
-  width: 100%;
-}
-.battery-gauge-svg {
-  width: 100%;
-  height: auto;
-}
-.battery-gauge-percent {
-  font-size: 32px;
-  font-weight: 700;
-  color: #222;
-}
-.battery-gauge-note {
-  font-size: 12px;
-  color: #9E9E9E;
-}
-.next-feed-card {
-  flex: 0 0 150px;
-  display: grid;
-  justify-items: center;
-  row-gap: 6px;
-  text-align: center;
-  border: none;
-  outline: none;
-  background: transparent;
-}
-.next-feed-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-}
-.next-feed-label {
-  font-size: 12px;
-  color: #666;
-}
-.next-feed-gauge {
-  width: 100%;
-}
-.next-feed-gauge svg {
-  width: 100%;
-  height: auto;
-}
-.section-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.section-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: #EEF1F6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4A5568;
-}
-.section-icon svg {
-  width: 20px;
-  height: 20px;
-  stroke: #4A5568;
-  stroke-width: 1.8;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #222;
-}
-.section-subtitle {
-  font-size: 12px;
-  color: #9099A6;
-  margin-top: 2px;
-}
-.bottom-tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  background: #ffffff;
-  box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08);
-  z-index: 1000;
-  border-top: 1px solid rgba(15, 23, 42, 0.05);
-  padding: 12px 6px;
-  border-radius: 20px 20px 0 0;
-}
-.bottom-tab {
-  flex: 1;
-  padding: 10px 6px;
-  text-align: center;
-  text-decoration: none;
-  color: #a6adb8;
-  font-size: 12px;
-  font-weight: 500;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  border-radius: 14px;
-}
-.bottom-tab:hover {
-  background: rgba(166, 173, 184, 0.12);
-}
-.bottom-tab-icon {
-  font-size: 22px;
-  line-height: 1;
-  color: inherit;
-  display: inline-flex;
-}
-.bottom-tab-icon-svg {
-  width: 22px;
-  height: 22px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.bottom-tab-icon-svg .filled {
-  fill: currentColor;
-  stroke: none;
-}
-.bottom-tab.active {
-  color: #323845;
-  background: rgba(50, 56, 69, 0.12);
-}
-.bottom-tab.active .bottom-tab-icon {
-  color: #323845;
-}
-.bottom-tab.active .home-icon {
-  color: #666;
-}
-body {
-  padding-bottom: 75px;
-}
-@media (max-width: 420px) {
-  .battery-info-row {
-    flex-wrap: wrap;
-  }
-  .battery-gauge-wrapper,
-  .next-feed-card {
-    flex: 0 1 140px;
-  }
-}
-.hero-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-.app-illustration svg {
-  width: 65px;
-  height: auto;
+.page-link {
   display: block;
-  transform: translateY(-6px);
-  filter: drop-shadow(0 16px 28px rgba(17, 24, 39, 0.2));
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #e5e7eb;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
-.hero-bubble {
-  animation: hero-bubble-rise 2.4s ease-in-out infinite;
-  transform-box: fill-box;
+.page-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  border-color: #93c5fd;
 }
-.hero-bubble-1 { animation-delay: 0s; }
-.hero-bubble-2 { animation-delay: 0.4s; }
-.hero-bubble-3 { animation-delay: 0.8s; }
-
-@keyframes hero-bubble-rise {
-  0% { transform: translateY(0px); opacity: 0.9; }
-  50% { transform: translateY(-6px); opacity: 0.55; }
-  100% { transform: translateY(0px); opacity: 0.9; }
+.tag {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
-.app-heading {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
 }
-.app-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1f2937;
-  letter-spacing: 0.4px;
+code {
+  background: #eef2ff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
 }
-.app-subtitle {
+.steps li + li,
+.checks li + li {
+  margin-top: 6px;
+}
+.footer-note {
+  margin-top: 20px;
   font-size: 13px;
   color: #6b7280;
-  letter-spacing: 0.3px;
 }
-.preview-lang-hint {
-  font-size: 11px;
-  color: #6b7280;
-  margin: 0 8px 12px;
-  line-height: 1.45;
-}
-.preview-lang-hint code { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; }
-.preview-status-banner { font-size: 12px; color: #1976D2; margin: -4px 8px 12px; font-weight: 600; }
 </style>
 </head>
 <body>
-<p id="status" class="preview-status-banner">Preview (without device connection)</p>
-<div id="toast" class="toast">Saved</div>
-<div class="hero-header">
-  <div class="app-illustration">
-    <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stylized fish">
-      <path d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
-      <g fill="#8d9ba3">
-        <path d="M48.1 60.5c-1.2 1.2-3.6 2.7-6.2 0s-5.4-7.5-4.2-8.7c1.2-1.2 5.8 1.7 8.4 4.4c2.6 2.6 3.2 3.1 2 4.3"/>
-        <ellipse cx="33.4" cy="35.3" rx="2.2" ry="3.2"/>
-        <ellipse cx="37.6" cy="39.2" rx="1.2" ry="2.5"/>
-        <ellipse cx="39.9" cy="36" rx=".6" ry="1.7"/>
-      </g>
-      <g fill="#75d6ff">
-        <ellipse class="hero-bubble hero-bubble-1" cx="5.3" cy="44" rx="1.7" ry="1.8"/>
-        <ellipse class="hero-bubble hero-bubble-2" cx="6.3" cy="23.4" rx="4.3" ry="4.5"/>
-        <ellipse class="hero-bubble hero-bubble-3" cx="12.8" cy="10.3" rx="8" ry="8.3"/>
-      </g>
-      <ellipse cx="18.7" cy="38.5" rx="7.1" ry="7.4" fill="#fcfcfa"/>
-      <ellipse cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
-    </svg>
-  </div>
-  <div class="app-heading">
-    <div class="app-title">AquaFeed Control</div>
-    <div class="app-subtitle">Smart feeder</div>
-  </div>
-</div>
+  <div class="shell">
+    <section class="hero">
+      <span class="eyebrow">Offline UI Test Harness</span>
+      <h1>AquaFeed Preview Lab</h1>
+      <p>
+        These pages exist so you can validate layouts, texts, controls, and mocked device states
+        without flashing new firmware to the ESP32. Treat them as the first stop before testing on hardware.
+      </p>
+    </section>
 
-<div class="card battery-card" style="margin-top: 0;">
-  <div class="battery-info-row">
-    <div class="battery-gauge-wrapper">
-      <svg id="batteryGauge" class="battery-gauge-svg" viewBox="0 0 260 160">
-        <path id="gaugeBg" d="M 20 140 A 110 110 0 0 1 240 140"
-              fill="none" stroke="#E6E9EF" stroke-width="14" stroke-linecap="round"/>
-        <path id="gaugeFill" d="M 20 140 A 110 110 0 0 1 240 140"
-              fill="none" stroke="#FF5E5E" stroke-width="14" stroke-linecap="round"
-              stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
-        <text id="batteryPercent" x="130" y="90" text-anchor="middle" dominant-baseline="middle"
-              font-size="34" font-weight="700" fill="#222">--%</text>
-      </svg>
-      <div class="battery-title">Battery status</div>
-      <div class="battery-subtitle">Voltage: <span id="batteryVoltage">--</span> V</div>
-    </div>
-    <div class="next-feed-card">
-      <div class="next-feed-gauge">
-        <svg id="nextFeedGauge" viewBox="0 0 260 160">
-          <path id="nextFeedBg" d="M 20 140 A 110 110 0 0 1 240 140"
-                fill="none" stroke="#E6E9EF" stroke-width="14" stroke-linecap="round"/>
-          <path id="nextFeedFill" d="M 20 140 A 110 110 0 0 1 240 140"
-                fill="none" stroke="#1976D2" stroke-width="14" stroke-linecap="round"
-                stroke-dasharray="345.58" stroke-dashoffset="345.58" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
-          <text id="nextFeedPercent" x="130" y="90" text-anchor="middle" dominant-baseline="middle"
-                font-size="30" font-weight="600" fill="#1976D2">— h — m</text>
-        </svg>
+    <section class="grid">
+      <a class="card page-link" href="preview_index.html">
+        <h2>Home Preview</h2>
+        <p>Manual controls, feeding schedule, next feed gauge, cooldown behavior, and mocked runtime state.</p>
+        <span class="tag">Main interaction page</span>
+      </a>
+
+      <a class="card page-link" href="preview_info.html">
+        <h2>Info Preview</h2>
+        <p>System information, battery metrics, memory/cache values, and general read-only status blocks.</p>
+        <span class="tag">Read-only diagnostics</span>
+      </a>
+
+      <a class="card page-link" href="preview_wifi.html">
+        <h2>WiFi Preview</h2>
+        <p>WiFi configuration, power-saving options, display settings, and localStorage-backed mock controls.</p>
+        <span class="tag">Setup and settings</span>
+      </a>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h3>How to Use</h3>
+        <ul class="steps">
+          <li>Open `preview.html` first as the hub for test pages.</li>
+          <li>Use `preview_index.html` to check interaction-heavy flows before flashing the device.</li>
+          <li>Use `preview_wifi.html` to validate settings UX and state persistence.</li>
+          <li>Use `preview_info.html` to verify diagnostics layout and localization.</li>
+        </ul>
       </div>
-      <div class="next-feed-title">Until next feeding</div>
-    </div>
+
+      <div class="card">
+        <h3>What to Verify</h3>
+        <ul class="checks">
+          <li>Normal state: battery healthy, one or more feed times, active controls.</li>
+          <li>Edge state: empty schedule, blocked manual feed, low battery, sleep countdown.</li>
+          <li>AP/setup state: WiFi settings, reconnect copy, display/power-save controls.</li>
+          <li>Localization: `localStorage.setItem('aqua_lang', 'uk')` or `'en'` and reload.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Developer Notes</h3>
+        <ul>
+          <li>These pages are intentionally device-free and rely on mocked values.</li>
+          <li>They should stay available even if the firmware API changes internally.</li>
+          <li>When UI changes, update the preview pages in the same task so the test harness stays useful.</li>
+        </ul>
+      </div>
+    </section>
+
+    <p class="footer-note">
+      Suggested workflow: preview pages first, backend/frontend integration second, real ESP32 validation last.
+    </p>
   </div>
-</div>
-
-<div class="card">
-  <div class="section-header">
-    <div class="section-icon">
-      <svg viewBox="0 0 24 24">
-        <line x1="8" y1="5" x2="8" y2="19"></line>
-        <line x1="16" y1="5" x2="16" y2="19"></line>
-        <circle cx="8" cy="10" r="2.5"></circle>
-        <circle cx="16" cy="14" r="2.5"></circle>
-      </svg>
-    </div>
-    <div>
-      <div class="section-title">Manual control</div>
-      <div class="section-subtitle">Control the servo manually</div>
-    </div>
-  </div>
-  <div class="row">
-    <label>Servo angle: <span id="angleLabel">0</span>°</label>
-    <input id="angleSlider" type="range" min="0" max="180" value="0">
-  </div>
-  <div class="row">
-    <label>Servo speed: <span id="speedValue">20</span></label>
-    <input id="speedSlider" type="range" min="1" max="20" step="0.1" value="20" oninput="updateSpeed(this.value)">
-  </div>
-  <button type="button" id="btnSaveSpeed" onclick="saveSpeed()">Save speed</button>
-</div>
-
-<div class="card">
-  <div class="section-header">
-    <div class="section-icon">
-      <svg viewBox="0 0 24 24">
-        <path d="M5 11h14"></path>
-        <path d="M7 11v2a5 5 0 0 0 10 0v-2"></path>
-        <path d="M9 6.5l1.2 3"></path>
-        <path d="M15 6.5l-1.2 3"></path>
-      </svg>
-    </div>
-    <div>
-      <div class="section-title">Manual feeding</div>
-      <div class="section-subtitle">Quick feed cycle start</div>
-    </div>
-  </div>
-  <div class="flex-row">
-    <span>Repeats</span>
-    <input id="feedRepeats" type="number" min="1" max="20" value="1">
-  </div>
-  <button type="button" id="btnSaveRepeats" onclick="saveRepeats()" style="margin-top: 0;">Save</button>
-  <div id="manualFeedHint" style="margin-top: 10px; line-height: 1.35; font-size: 13px;"></div>
-  <button type="button" id="btnFeedNow" onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Feed now</button>
-</div>
-
-<div class="card">
-  <div class="section-header">
-    <div class="section-icon">
-      <svg viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="7"></circle>
-        <line x1="12" y1="12" x2="12" y2="7.5"></line>
-        <line x1="12" y1="12" x2="15.5" y2="13.5"></line>
-        <path d="M4.5 5.5l1.5 1.5"></path>
-        <path d="M19.5 5.5l-1.5 1.5"></path>
-      </svg>
-    </div>
-    <div>
-      <div class="section-title">Automatic feeding</div>
-      <div class="section-subtitle">Set your feeding schedule</div>
-      <div class="section-subtitle" id="localTimeLabel">Час: --:--</div>
-      <div class="section-subtitle" id="sleepCountdownLabel">Сон: --</div>
-      <div class="section-subtitle" id="sleepReasonLabel">Причина: --</div>
-    </div>
-  </div>
-  <div id="feedTimesContainer">
-    <!-- Blocks are added dynamically -->
-  </div>
-  <button type="button" class="add-btn" id="btnAddFeeding" onclick="addFeedTime()">+ Add feeding</button>
-  <button type="button" id="btnSaveAllTimes" onclick="saveFeedTimes()" style="margin-top: 8px;">Save all times</button>
-</div>
-
-<script>
-const I18N = {
-  uk: {
-    appSubtitle: 'Розумна годівниця',
-    batteryTitle: 'Стан батареї',
-    batteryVoltagePrefix: 'Напруга:',
-    nextFeedTitle: 'До наступного годування',
-    manualControlTitle: 'Ручне керування',
-    manualControlSubtitle: 'Керуйте серво-приводом вручну',
-    servoAngle: 'Кут серво:',
-    servoSpeed: 'Швидкість серво:',
-    saveSpeed: 'Зберегти швидкість',
-    manualFeedTitle: 'Ручне годування',
-    manualFeedSubtitle: 'Швидкий запуск циклу годування',
-    repeats: 'Кількість повторів',
-    save: 'Зберегти',
-    feedNow: 'Годувати зараз',
-    autoFeedTitle: 'Автоматичне годування',
-    autoFeedSubtitle: 'Налаштуйте розклад годувань',
-    timePrefix: 'Час:',
-    sleepPrefix: 'Сон через:',
-    sleepNow: 'зараз',
-    sleepPaused: 'пауза',
-    sleepReasonPrefix: 'Причина:',
-    sleepReasonReady: 'готово до сну',
-    sleepReasonPowerSaveOff: 'режим енергозбереження вимкнено',
-    sleepReasonApMode: 'увімкнено AP режим',
-    sleepReasonFeeding: 'триває годування',
-    sleepReasonWebActive: 'веб-інтерфейс активний',
-    sleepReasonRecentActivity: 'нещодавня активність',
-    sleepReasonDisplayAwake: 'дисплей ще активний',
-    sleepReasonUnknown: 'стан уточнюється',
-    addFeeding: '+ Додати годування',
-    saveAllTimes: 'Зберегти всі часи',
-    tabHome: 'Головна',
-    tabSettings: 'Налаштування',
-    feedTime: 'Час:',
-    feedRepeatsField: 'Повторів:',
-    removeTitle: 'Видалити',
-    toastSaved: 'Збережено',
-    toastFeeding: 'Годую',
-    toastSpeedSaved: 'Швидкість збережено',
-    durationH: 'год',
-    durationM: 'хв',
-    durationEmpty: '— год — хв',
-    previewBanner: 'Прев\'ю (без підключення до пристрою)',
-    manualFeedReadyHint: 'Можна запустити ручне годування.',
-    manualFeedCooldownHint: 'Мінімальний інтервал між годуваннями — 5 хв. Наступне ручне годування — через %s.',
-    toastFeedBlocked: 'Занадто рано: мінімальний інтервал між годуваннями.'
-  },
-  en: {
-    appSubtitle: 'Smart feeder',
-    batteryTitle: 'Battery status',
-    batteryVoltagePrefix: 'Voltage:',
-    nextFeedTitle: 'Until next feeding',
-    manualControlTitle: 'Manual control',
-    manualControlSubtitle: 'Control the servo manually',
-    servoAngle: 'Servo angle:',
-    servoSpeed: 'Servo speed:',
-    saveSpeed: 'Save speed',
-    manualFeedTitle: 'Manual feeding',
-    manualFeedSubtitle: 'Quick feed cycle start',
-    repeats: 'Repeats',
-    save: 'Save',
-    feedNow: 'Feed now',
-    autoFeedTitle: 'Automatic feeding',
-    autoFeedSubtitle: 'Set your feeding schedule',
-    timePrefix: 'Time:',
-    sleepPrefix: 'Sleep in:',
-    sleepNow: 'now',
-    sleepPaused: 'paused',
-    sleepReasonPrefix: 'Reason:',
-    sleepReasonReady: 'ready to sleep',
-    sleepReasonPowerSaveOff: 'power save is off',
-    sleepReasonApMode: 'AP mode is active',
-    sleepReasonFeeding: 'feeding in progress',
-    sleepReasonWebActive: 'web interface is active',
-    sleepReasonRecentActivity: 'recent activity',
-    sleepReasonDisplayAwake: 'display is still awake',
-    sleepReasonUnknown: 'checking status',
-    addFeeding: '+ Add feeding',
-    saveAllTimes: 'Save all times',
-    tabHome: 'Home',
-    tabSettings: 'Settings',
-    feedTime: 'Time:',
-    feedRepeatsField: 'Repeats:',
-    removeTitle: 'Remove',
-    toastSaved: 'Saved',
-    toastFeeding: 'Feeding',
-    toastSpeedSaved: 'Speed saved',
-    durationH: 'h',
-    durationM: 'm',
-    durationEmpty: '— h — m',
-    previewBanner: 'Preview (without device connection)',
-    manualFeedReadyHint: 'You can start a manual feed.',
-    manualFeedCooldownHint: 'Minimum 5 minutes between feeds. Next manual feed in %s.',
-    toastFeedBlocked: 'Too soon: minimum time between feeds.'
-  }
-};
-let currentLang = localStorage.getItem('aqua_lang') || 'uk';
-function t(key) {
-  return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.uk[key] || key);
-}
-
-function formatSleepCountdown(seconds) {
-  if (!Number.isFinite(seconds) || seconds < 0) return t('sleepPaused');
-  if (seconds <= 0) return t('sleepNow');
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-}
-
-function getSleepReasonText(reason) {
-  switch (reason) {
-    case 'ready': return t('sleepReasonReady');
-    case 'power_save_off': return t('sleepReasonPowerSaveOff');
-    case 'ap_mode': return t('sleepReasonApMode');
-    case 'feeding': return t('sleepReasonFeeding');
-    case 'web_active': return t('sleepReasonWebActive');
-    case 'recent_activity': return t('sleepReasonRecentActivity');
-    case 'display_awake': return t('sleepReasonDisplayAwake');
-    default: return t('sleepReasonUnknown');
-  }
-}
-
-let manualFeedCooldownLocal = 0;
-let manualFeedCooldownInterval = null;
-
-function formatManualFeedCountdown(totalSeconds) {
-  const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-  const mins = Math.floor(s / 60);
-  const secs = s % 60;
-  if (currentLang === 'en') {
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
-  }
-  if (mins > 0) return `${mins} хв ${secs} с`;
-  return `${secs} с`;
-}
-
-function renderManualFeedHint(seconds) {
-  const hint = document.getElementById('manualFeedHint');
-  const btn = document.getElementById('btnFeedNow');
-  if (!hint) return;
-  const s = Math.max(0, Math.floor(Number(seconds) || 0));
-  if (s <= 0) {
-    hint.textContent = t('manualFeedReadyHint');
-    hint.style.color = '';
-    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
-    return;
-  }
-  hint.textContent = t('manualFeedCooldownHint').replace('%s', formatManualFeedCountdown(s));
-  hint.style.color = '#6b7280';
-  if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; btn.style.cursor = 'not-allowed'; }
-}
-
-function syncManualFeedCooldownFromStatus(seconds) {
-  manualFeedCooldownLocal = Math.max(0, Math.floor(Number(seconds) || 0));
-  renderManualFeedHint(manualFeedCooldownLocal);
-  if (manualFeedCooldownInterval) {
-    clearInterval(manualFeedCooldownInterval);
-    manualFeedCooldownInterval = null;
-  }
-  if (manualFeedCooldownLocal > 0) {
-    manualFeedCooldownInterval = setInterval(() => {
-      manualFeedCooldownLocal = Math.max(0, manualFeedCooldownLocal - 1);
-      renderManualFeedHint(manualFeedCooldownLocal);
-      if (manualFeedCooldownLocal <= 0 && manualFeedCooldownInterval) {
-        clearInterval(manualFeedCooldownInterval);
-        manualFeedCooldownInterval = null;
-      }
-    }, 1000);
-  }
-}
-
-function applyLanguage() {
-  const sections = document.querySelectorAll('.section-title');
-  const subtitles = document.querySelectorAll('.section-subtitle');
-  const labels = document.querySelectorAll('label');
-  const tabs = document.querySelectorAll('.bottom-tab span');
-  const appSubtitle = document.querySelector('.app-subtitle');
-  const batteryTitle = document.querySelector('.battery-title');
-  const batterySubtitle = document.querySelector('.battery-subtitle');
-  const nextFeedTitle = document.querySelector('.next-feed-title');
-  if (appSubtitle) appSubtitle.textContent = t('appSubtitle');
-  if (batteryTitle) batteryTitle.textContent = t('batteryTitle');
-  if (batterySubtitle) {
-    const v = document.getElementById('batteryVoltage');
-    const vText = v ? v.innerText : '--';
-    batterySubtitle.innerHTML = `${t('batteryVoltagePrefix')} <span id="batteryVoltage">${vText}</span> V`;
-  }
-  if (nextFeedTitle) nextFeedTitle.textContent = t('nextFeedTitle');
-  if (sections[0]) sections[0].textContent = t('manualControlTitle');
-  if (subtitles[0]) subtitles[0].textContent = t('manualControlSubtitle');
-  if (sections[1]) sections[1].textContent = t('manualFeedTitle');
-  if (subtitles[1]) subtitles[1].textContent = t('manualFeedSubtitle');
-  if (sections[2]) sections[2].textContent = t('autoFeedTitle');
-  if (subtitles[2]) subtitles[2].textContent = t('autoFeedSubtitle');
-  const localTimeLabel = document.getElementById('localTimeLabel');
-  if (localTimeLabel) localTimeLabel.textContent = `${t('timePrefix')} 14:30`;
-  const sleepCountdownLabel = document.getElementById('sleepCountdownLabel');
-  const sleepReasonLabel = document.getElementById('sleepReasonLabel');
-  if (sleepCountdownLabel && !sleepCountdownLabel.dataset.dynamic) {
-    sleepCountdownLabel.textContent = `${t('sleepPrefix')} --`;
-  }
-  if (sleepReasonLabel && !sleepReasonLabel.dataset.dynamic) {
-    sleepReasonLabel.textContent = `${t('sleepReasonPrefix')} --`;
-  }
-  refreshPreviewSleepFromMock();
-  if (labels[0]) labels[0].innerHTML = `${t('servoAngle')} <span id="angleLabel">0</span>°`;
-  if (labels[1]) labels[1].innerHTML = `${t('servoSpeed')} <span id="speedValue">20</span>`;
-  var b1 = document.getElementById('btnSaveSpeed');
-  var b2 = document.getElementById('btnSaveRepeats');
-  var b3 = document.getElementById('btnFeedNow');
-  var b4 = document.getElementById('btnAddFeeding');
-  var b5 = document.getElementById('btnSaveAllTimes');
-  if (b1) b1.textContent = t('saveSpeed');
-  if (b2) b2.textContent = t('save');
-  if (b3) b3.textContent = t('feedNow');
-  if (b4) b4.textContent = t('addFeeding');
-  if (b5) b5.textContent = t('saveAllTimes');
-  renderManualFeedHint(manualFeedCooldownLocal);
-  const repeatsLabel = document.querySelector('.flex-row span');
-  if (repeatsLabel) repeatsLabel.textContent = t('repeats');
-  if (tabs[0]) tabs[0].textContent = t('tabHome');
-  if (tabs[1]) tabs[1].textContent = t('tabSettings');
-  document.querySelectorAll('.feed-block .flex-row').forEach(function(row) {
-    const spans = row.querySelectorAll('span');
-    if (spans.length >= 3) {
-      spans[0].textContent = t('feedTime');
-      spans[1].textContent = ':';
-      spans[2].textContent = t('feedRepeatsField');
-    }
-    const rm = row.querySelector('.remove-btn');
-    if (rm) rm.title = t('removeTitle');
-  });
-}
-
-// Mock data for preview
-const mockStatus = {
-  status: "ok",
-  currentAngle: 0,
-  speed: 20,
-  feedRepeats: 1,
-  powerSaveMode: true,
-  batteryVoltage: 8.20,
-  batteryPercent: 92,
-  sleepCountdownSeconds: 12,
-  sleepReason: "recent_activity",
-  manualFeedCooldownSeconds: 150,
-  feedTimes: [
-    {h: 10, m: 0, r: 1}
-  ]
-};
-
-function updateAngleLabel(v){ document.getElementById('angleLabel').innerText=v; }
-function updateSpeed(v){ document.getElementById('speedValue').innerText=v; }
-
-document.getElementById('angleSlider').addEventListener('input', function(){
-  const val = this.value;
-  updateAngleLabel(val);
-  console.log('Angle set to:', val + '°');
-});
-
-function showToast(text) {
-  if (text === undefined || text === null) text = t('toastSaved');
-  const toast = document.getElementById('toast');
-  toast.innerText = text;
-  toast.classList.add('show');
-  setTimeout(() => {
-    toast.classList.remove('show');
-  }, 2000);
-}
-
-function feedNow() {
-  Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('feeding') })
-    .then(async (response) => {
-      if (response.ok) {
-        showToast(currentLang === 'en' ? 'Feeding now' : 'Годую');
-        mockStatus.manualFeedCooldownSeconds = 5 * 60;
-        syncManualFeedCooldownFromStatus(mockStatus.manualFeedCooldownSeconds);
-        return;
-      }
-      const message = await response.text();
-      if (response.status === 429) {
-        showToast(t('toastFeedBlocked'));
-      } else {
-        showToast(message || (currentLang === 'en' ? 'Feed error' : 'Помилка годування'));
-      }
-    })
-    .catch(() => {
-      showToast(currentLang === 'en' ? 'Feed error' : 'Помилка годування');
-    });
-}
-function saveSpeed(){ 
-  const s=document.getElementById('speedSlider').value; 
-  console.log('Speed saved:', s);
-  showToast(t('toastSpeedSaved'));
-}
-function saveRepeats(){ 
-  const r=document.getElementById('feedRepeats').value; 
-  console.log('Repeats saved:', r);
-  showToast();
-}
-let feedTimeCounter = 0;
-
-function addFeedTime(hour = 10, minute = 0, repeats = 1) {
-  const container = document.getElementById('feedTimesContainer');
-  const blockId = 'feedBlock_' + feedTimeCounter++;
-  const block = document.createElement('div');
-  block.className = 'feed-block';
-  block.id = blockId;
-  block.innerHTML = `
-    <div class="flex-row">
-      <span>${t('feedTime')}</span>
-      <input type="number" class="feed-hour" min="0" max="23" value="${hour}" style="width:35px; min-width:35px; padding: 4px;">
-      <span>:</span>
-      <input type="number" class="feed-minute" min="0" max="59" value="${minute}" style="width:35px; min-width:35px; padding: 4px;">
-      <span>${t('feedRepeatsField')}</span>
-      <input type="number" class="feed-repeats" min="1" max="20" value="${repeats}" style="width:35px; min-width:35px; padding: 4px;">
-      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('removeTitle')}">×</button>
-    </div>
-  `;
-  container.appendChild(block);
-}
-
-function removeFeedTime(blockId) {
-  const block = document.getElementById(blockId);
-  if (block) block.remove();
-}
-
-function saveFeedTimes(){
-  const blocks = document.querySelectorAll('.feed-block');
-  const feedTimes = [];
-  blocks.forEach(block => {
-    const hour = block.querySelector('.feed-hour').value;
-    const minute = block.querySelector('.feed-minute').value;
-    const repeats = block.querySelector('.feed-repeats').value;
-    feedTimes.push({h: hour, m: minute, r: repeats});
-  });
-  console.log('Feed times saved:', feedTimes);
-  showToast();
-}
-
-function loadFeedTimes(feedTimes) {
-  const container = document.getElementById('feedTimesContainer');
-  container.innerHTML = '';
-  if (feedTimes && feedTimes.length > 0) {
-    feedTimes.forEach(ft => {
-      addFeedTime(ft.h || ft.hour || 10, ft.m || ft.minute || 0, ft.r || ft.repeats || 1);
-    });
-  } else {
-    addFeedTime(10, 0, 1);
-  }
-}
-
-function normalizeFeedSchedule(status) {
-  const schedule = [];
-  if (status.feedTimes && status.feedTimes.length) {
-    status.feedTimes.forEach(ft => {
-      const rawHour = ft.h !== undefined ? ft.h : (ft.hour !== undefined ? ft.hour : 0);
-      const rawMinute = ft.m !== undefined ? ft.m : (ft.minute !== undefined ? ft.minute : 0);
-      const hour = parseInt(rawHour, 10);
-      const minute = parseInt(rawMinute, 10);
-      if (!isNaN(hour) && !isNaN(minute)) {
-        const normHour = ((hour % 24) + 24) % 24;
-        const normMinute = ((minute % 60) + 60) % 60;
-        schedule.push({ hour: normHour, minute: normMinute, total: normHour * 60 + normMinute });
-      }
-    });
-  } else if (status.feedHour1 !== undefined && status.feedMinute1 !== undefined) {
-    const h1 = Number(status.feedHour1);
-    const m1 = Number(status.feedMinute1);
-    const h2 = Number(status.feedHour2);
-    const m2 = Number(status.feedMinute2);
-    if (!isNaN(h1) && !isNaN(m1)) {
-      const normHour = ((h1 % 24) + 24) % 24;
-      const normMinute = ((m1 % 60) + 60) % 60;
-      schedule.push({ hour: normHour, minute: normMinute, total: normHour * 60 + normMinute });
-    }
-    if (!isNaN(h2) && !isNaN(m2)) {
-      const normHour = ((h2 % 24) + 24) % 24;
-      const normMinute = ((m2 % 60) + 60) % 60;
-      schedule.push({ hour: normHour, minute: normMinute, total: normHour * 60 + normMinute });
-    }
-  }
-  schedule.sort((a, b) => a.total - b.total);
-  return schedule;
-}
-
-function formatTimeHM(hour, minute) {
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function formatDurationMinutes(minutes) {
-  if (minutes <= 0) return `0 ${t('durationH')} 0 ${t('durationM')}`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours} ${t('durationH')} ${mins} ${t('durationM')}`;
-}
-
-function updateNextFeedingProgress(status) {
-  const percentTextEl = document.getElementById('nextFeedPercent');
-  const fillPath = document.getElementById('nextFeedFill');
-  if (!percentTextEl || !fillPath) return;
-
-  const schedule = normalizeFeedSchedule(status);
-  if (!schedule.length) {
-    percentTextEl.innerText = t('durationEmpty');
-    fillPath.style.strokeDasharray = 345.58;
-    fillPath.style.strokeDashoffset = 345.58;
-    return;
-  }
-
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-  let nextIndex = schedule.findIndex(item => item.total > nowMinutes);
-  if (nextIndex === -1) nextIndex = 0;
-  const next = schedule[nextIndex];
-  const prev = schedule[(nextIndex - 1 + schedule.length) % schedule.length];
-
-  let minutesUntilNext = next.total - nowMinutes;
-  if (minutesUntilNext <= 0) minutesUntilNext += 24 * 60;
-
-  let interval = next.total - prev.total;
-  if (interval <= 0) interval += 24 * 60;
-
-  const elapsed = Math.max(0, interval - minutesUntilNext);
-  const percent = Math.max(0, Math.min(100, (elapsed / interval) * 100));
-
-  const circumference = 345.58;
-  fillPath.style.strokeDasharray = circumference;
-  const offset = circumference - (percent / 100) * circumference;
-  fillPath.style.strokeDashoffset = offset;
-  percentTextEl.innerText = formatDurationMinutes(minutesUntilNext);
-}
-
-function updateBatteryGauge(percent) {
-  const gaugeFill = document.getElementById('gaugeFill');
-  const percentLabel = document.getElementById('batteryPercent');
-  if (!gaugeFill || !percentLabel) return;
-
-  const safePercent = Math.max(0, Math.min(100, percent));
-  const radius = 110;
-  const circumference = Math.PI * radius;
-  const offset = circumference - (safePercent / 100) * circumference;
-
-  gaugeFill.style.strokeDasharray = circumference;
-  gaugeFill.style.strokeDashoffset = offset;
-  percentLabel.innerText = `${safePercent}%`;
-
-  let color = '#FF5E5E';
-  if (safePercent >= 80) {
-    color = '#4CAF50';
-  } else if (safePercent >= 40) {
-    color = '#FF5E5E';
-  } else {
-    color = '#D32F2F';
-  }
-
-  gaugeFill.style.stroke = color;
-  percentLabel.style.color = color;
-}
-
-function statusUpdate(){
-  // Use mock data for preview
-  const j = mockStatus;
-  const batteryPercent = Math.round(j.batteryPercent);
-  const statusLabel = document.getElementById('status');
-  if (statusLabel) {
-    statusLabel.innerText = t('previewBanner');
-  }
-  document.getElementById('batteryVoltage').innerText = j.batteryVoltage.toFixed(2);
-  updateBatteryGauge(batteryPercent);
-  updateNextFeedingProgress(j);
-  refreshPreviewSleepFromMock();
-  syncManualFeedCooldownFromStatus(typeof j.manualFeedCooldownSeconds === 'number' ? j.manualFeedCooldownSeconds : 0);
-  document.getElementById('angleSlider').value = j.currentAngle; 
-  updateAngleLabel(j.currentAngle);
-  document.getElementById('speedSlider').value = j.speed; 
-  updateSpeed(j.speed);
-  document.getElementById('feedRepeats').value = j.feedRepeats;
-  
-  // Load dynamic feedings
-  if (j.feedTimes) {
-    loadFeedTimes(j.feedTimes);
-  }
-}
-
-window.onload = function() {
-  applyLanguage();
-  statusUpdate();
-};
-</script>
-
-<div class="bottom-tabs">
-  <a href="preview.html" class="bottom-tab active">
-    <svg class="bottom-tab-icon home-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10 20V14H14V20H19V12H22L12 3L2 12H5V20H10Z" fill="currentColor"/>
-    </svg>
-    <span>Home</span>
-  </a>
-  <a href="preview_wifi.html" class="bottom-tab">
-    <svg class="bottom-tab-icon bottom-tab-icon-svg wifi-icon" viewBox="0 0 24 24">
-      <path d="M2.5 9.2C7.03 4.66 16.97 4.66 21.5 9.2" />
-      <path d="M5.8 12.5C9.12 9.19 14.88 9.19 18.2 12.5" />
-      <path d="M9.4 15.9C11.15 14.15 12.85 14.15 14.6 15.9" />
-      <circle class="filled" cx="12" cy="19.2" r="1.2" />
-    </svg>
-    <span>Settings</span>
-  </a>
-</div>
 </body>
 </html>
 

@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api } from './services/api'
-import { StatusResponse } from './types'
+import type { FeedTime, StatusResponse } from './types'
+import { APP_VERSION } from './version'
 import './App.css'
+
+function formatFeedTime(time: FeedTime): string {
+  const formatted = `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}`
+  return time.repeats > 1 ? `${formatted} (${time.repeats}x)` : formatted
+}
 
 function App() {
   const [status, setStatus] = useState<StatusResponse | null>(null)
@@ -38,24 +44,6 @@ function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Feeding error')
       setFeeding(false)
-    }
-  }
-
-  const handleSetSpeed = async (speed: number) => {
-    try {
-      await api.setSpeed({ speed })
-      fetchStatus()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set speed')
-    }
-  }
-
-  const handleSetSchedule = async (times: string[]) => {
-    try {
-      await api.setSchedule({ times })
-      fetchStatus()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set schedule')
     }
   }
 
@@ -111,6 +99,12 @@ function App() {
                 <span className="label">Feed repeats:</span>
                 <span className="value">{status.feedRepeats}</span>
               </div>
+              {status.currentTime && (
+                <div className="status-item">
+                  <span className="label">Current time:</span>
+                  <span className="value">{status.currentTime}</span>
+                </div>
+              )}
             </div>
 
             <div className="status-card">
@@ -119,13 +113,25 @@ function App() {
                 {status.feedTimes.length > 0 ? (
                   status.feedTimes.map((time, index) => (
                     <div key={index} className="schedule-item">
-                      🕐 {time}
+                      🕐 {formatFeedTime(time)}
                     </div>
                   ))
                 ) : (
                   <div className="schedule-item">No schedule configured</div>
                 )}
               </div>
+              {status.nextFeedHour !== null &&
+                status.nextFeedHour !== undefined &&
+                status.nextFeedMinute !== null &&
+                status.nextFeedMinute !== undefined && (
+                  <div className="status-item">
+                    <span className="label">Next feed:</span>
+                    <span className="value">
+                      {String(status.nextFeedHour).padStart(2, '0')}:
+                      {String(status.nextFeedMinute).padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
             </div>
 
             <div className="status-card actions">
@@ -142,7 +148,7 @@ function App() {
         )}
 
         <footer className="footer">
-          <p>AquaFeed v1.0.0</p>
+          <p>AquaFeed v{APP_VERSION}</p>
         </footer>
       </div>
     </div>

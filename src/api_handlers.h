@@ -2,6 +2,7 @@
 #define API_HANDLERS_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <stdint.h>
 #include <WebServer.h>
 #include <Preferences.h>
@@ -76,9 +77,17 @@ private:
   }
   void noteClientActivity() { lastClientActivityMillis = millis(); }
   
-  static int extractIntField(const String& obj, char fieldKey, int fallback);
-  static bool isDigitChar(char c);
   String buildStatusJson();
+  void populateStatusDocument(JsonDocument& doc);
+  void appendFeedTimes(JsonArray feedTimesArray) const;
+  void appendLegacyFeedTimes(JsonDocument& doc) const;
+  void appendRuntimeStatus(JsonDocument& doc, const NextFeedInfo& nextFeed) const;
+  void appendMemoryStatus(JsonDocument& doc) const;
+  String getCurrentTimeString() const;
+  String getWifiIp() const;
+  unsigned long computeCacheAge(bool hasCachedStatus) const;
+  int parseFeedTimesJson(const String& jsonData, FeedTime* target, int maxCount) const;
+  void saveFeedTimes(const FeedTime* newFeedTimes, int count);
   
 };
 
