@@ -39,18 +39,19 @@ void ApiHandlers::setDisplayOffAfterSec(uint16_t sec) {
 }
 
 void ApiHandlers::setupRoutes() {
-  server.on("/", [this]() { handleRoot(); });
-  server.on("/info", [this]() { handleInfo(); });
-  server.on("/api/status", [this]() { handleStatus(); });
-  server.on("/api/setAngle", [this]() { handleSetAngle(); });
-  server.on("/api/feedNow", [this]() { handleFeedNow(); });
-  server.on("/api/setSpeed", [this]() { handleSetSpeed(); });
-  server.on("/api/setRepeats", [this]() { handleSetRepeats(); });
-  server.on("/api/setFeedTimes", [this]() { handleSetFeedTimes(); });
-  server.on("/api/setPowerMode", [this]() { handleSetPowerMode(); });
-  server.on("/api/setDisplayMode", [this]() { handleSetDisplayMode(); });
-  server.on("/api/setDisplayOff", [this]() { handleSetDisplayOff(); });
-  server.on("/api/setDeepSleep", [this]() { handleSetDeepSleep(); });
+  configureRequestSecurity(server);
+  server.on("/", HTTP_GET, [this]() { handleRoot(); });
+  server.on("/info", HTTP_GET, [this]() { handleInfo(); });
+  server.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
+  server.on("/api/setAngle", HTTP_POST, [this]() { handleSetAngle(); });
+  server.on("/api/feedNow", HTTP_POST, [this]() { handleFeedNow(); });
+  server.on("/api/setSpeed", HTTP_POST, [this]() { handleSetSpeed(); });
+  server.on("/api/setRepeats", HTTP_POST, [this]() { handleSetRepeats(); });
+  server.on("/api/setFeedTimes", HTTP_POST, [this]() { handleSetFeedTimes(); });
+  server.on("/api/setPowerMode", HTTP_POST, [this]() { handleSetPowerMode(); });
+  server.on("/api/setDisplayMode", HTTP_POST, [this]() { handleSetDisplayMode(); });
+  server.on("/api/setDisplayOff", HTTP_POST, [this]() { handleSetDisplayOff(); });
+  server.on("/api/setDeepSleep", HTTP_POST, [this]() { handleSetDeepSleep(); });
 }
 
 void ApiHandlers::handleRoot() {
@@ -193,6 +194,7 @@ void ApiHandlers::handleStatus() {
 }
 
 void ApiHandlers::handleSetAngle() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("angle") && !servo.isMoving()) {
     servo.setAngle(server.arg("angle").toInt(), false);
@@ -202,7 +204,12 @@ void ApiHandlers::handleSetAngle() {
 }
 
 void ApiHandlers::handleFeedNow() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
+  int repeatsForFeed = feedRepeats;
+  if (server.hasArg("repeats")) {
+    repeatsForFeed = constrain(server.arg("repeats").toInt(), 1, 20);
+  }
   if (!scheduler.canFeedNow()) {
     server.send(429, "text/plain", "feeding blocked: recently fed");
     return;
@@ -211,12 +218,13 @@ void ApiHandlers::handleFeedNow() {
   server.send(200, "text/plain", "feeding");
   delay(10);
 
-  servo.feedSequence(feedRepeats);
+  servo.feedSequence(repeatsForFeed);
   scheduler.recordManualFeed();
   invalidateCache();
 }
 
 void ApiHandlers::handleSetSpeed() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("speed")) {
     float speed = server.arg("speed").toFloat();
@@ -228,6 +236,7 @@ void ApiHandlers::handleSetSpeed() {
 }
 
 void ApiHandlers::handleSetRepeats() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("repeats")) {
     feedRepeats = server.arg("repeats").toInt();
@@ -273,6 +282,7 @@ void ApiHandlers::saveFeedTimes(const FeedTime* newFeedTimes, int count) {
 }
 
 void ApiHandlers::handleSetFeedTimes() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("data")) {
     String jsonData = server.arg("data");
@@ -304,6 +314,7 @@ void ApiHandlers::handleSetFeedTimes() {
 }
 
 void ApiHandlers::handleSetPowerMode() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("enabled")) {
     powerSaveMode = server.arg("enabled") == "true";
@@ -314,6 +325,7 @@ void ApiHandlers::handleSetPowerMode() {
 }
 
 void ApiHandlers::handleSetDisplayMode() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("enabled")) {
     displayEnabled = server.arg("enabled") == "true";
@@ -325,6 +337,7 @@ void ApiHandlers::handleSetDisplayMode() {
 }
 
 void ApiHandlers::handleSetDisplayOff() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if (server.hasArg("sec")) {
     int v = server.arg("sec").toInt();
@@ -337,6 +350,7 @@ void ApiHandlers::handleSetDisplayOff() {
 }
 
 void ApiHandlers::handleSetDeepSleep() {
+  if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if (server.hasArg("idleSec")) {
     int v = server.arg("idleSec").toInt();

@@ -70,8 +70,7 @@ async def get_status():
 
 @app.post("/api/feed", response_model=CommandResponse)
 async def feed_now(request: FeedRequest):
-    await request_firmware("/api/setRepeats", params={"repeats": request.repeats})
-    await request_firmware("/api/feedNow")
+    await request_firmware("/api/feedNow", method="POST", data={"repeats": request.repeats})
     return CommandResponse(
         success=True,
         message=f"Feeding started with {request.repeats} repeats",
@@ -80,19 +79,19 @@ async def feed_now(request: FeedRequest):
 
 @app.post("/api/speed", response_model=CommandResponse)
 async def set_speed(request: SpeedRequest):
-    await request_firmware("/api/setSpeed", params={"speed": request.speed})
+    await request_firmware("/api/setSpeed", method="POST", data={"speed": request.speed})
     return CommandResponse(success=True, message=f"Speed set to {request.speed}")
 
 
 @app.post("/api/schedule", response_model=CommandResponse)
 async def set_schedule(request: ScheduleRequest):
-    await request_firmware("/api/setFeedTimes", params={"data": encode_schedule(request.times)})
+    await request_firmware("/api/setFeedTimes", method="POST", data={"data": encode_schedule(request.times)})
     return CommandResponse(success=True, message="Schedule updated")
 
 
 @app.post("/api/angle", response_model=CommandResponse)
 async def set_angle(request: AngleRequest):
-    await request_firmware("/api/setAngle", params={"angle": request.angle})
+    await request_firmware("/api/setAngle", method="POST", data={"angle": request.angle})
     return CommandResponse(success=True, message=f"Angle set to {request.angle}")
 
 
@@ -100,7 +99,8 @@ async def set_angle(request: AngleRequest):
 async def set_power_mode(request: PowerModeRequest):
     await request_firmware(
         "/api/setPowerMode",
-        params={"enabled": str(request.enabled).lower()},
+        method="POST",
+        data={"enabled": str(request.enabled).lower()},
     )
     return CommandResponse(
         success=True,

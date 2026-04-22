@@ -12,12 +12,25 @@ try:
 except ImportError:
     from config import ESP32_BASE_URL
 
-http_client = httpx.AsyncClient(timeout=5.0, follow_redirects=True)
+http_client = httpx.AsyncClient(timeout=5.0, follow_redirects=False)
+MUTATION_HEADERS = {"X-AquaFeed-Client": "backend"}
 
 
-async def request_firmware(path: str, *, params: dict[str, Any] | None = None) -> httpx.Response:
+async def request_firmware(
+    path: str,
+    *,
+    method: str = "GET",
+    params: dict[str, Any] | None = None,
+    data: dict[str, Any] | None = None,
+) -> httpx.Response:
     try:
-        response = await http_client.get(f"{ESP32_BASE_URL}{path}", params=params)
+        response = await http_client.request(
+            method,
+            f"{ESP32_BASE_URL}{path}",
+            params=params,
+            data=data,
+            headers=MUTATION_HEADERS if method.upper() != "GET" else None,
+        )
         response.raise_for_status()
         return response
     except httpx.TimeoutException as exc:
