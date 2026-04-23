@@ -1,3 +1,4 @@
+R"rawliteral(
 <div class="bottom-tabs">
   <a href="/" class="bottom-tab">
     <svg class="bottom-tab-icon home-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -23,3 +24,4 @@
     <span>Налаштування</span>
   </a>
 </div>
+)rawliteral"

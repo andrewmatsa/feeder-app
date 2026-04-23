@@ -6,6 +6,7 @@
 namespace {
 constexpr uint64_t MIN_DEEP_SLEEP_US = 5000000ULL;
 constexpr long FEED_WAKE_MARGIN_SECONDS = 15;
+constexpr long MIN_WORTHWHILE_DEEP_SLEEP_SECONDS = 120;
 }
 
 PowerManager::PowerManager(ApiHandlers& apiHandlers,
@@ -43,8 +44,7 @@ long PowerManager::computePreciseSecondsUntilNextFeed(const NextFeedInfo& nextIn
 
   time_t now = time(nullptr);
   struct tm localTime;
-  time_t adjusted = now + FeedingScheduler::KIEV_UTC_OFFSET_SECONDS;
-  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+  if (!FeedingScheduler::toLocalTime(now, localTime) || localTime.tm_year + 1900 < 2020) {
     return static_cast<long>(nextInfo.minutesUntil) * 60L;
   }
 
@@ -57,11 +57,25 @@ long PowerManager::computePreciseSecondsUntilNextFeed(const NextFeedInfo& nextIn
   return diffSeconds;
 }
 
-uint64_t PowerManager::computeDeepSleepWakeMicros() const {
-  NextFeedInfo nextInfo = scheduler.computeNextFeed();
-  long secondsUntilNextFeed = computePreciseSecondsUntilNextFeed(nextInfo);
+long PowerManager::computeSecondsUntilNextFeed() const {
+  return computePreciseSecondsUntilNextFeed(scheduler.computeNextFeed());
+}
+
+bool PowerManager::isDeepSleepWorthwhile(long secondsUntilNextFeed) const {
   if (secondsUntilNextFeed <= 0) {
-    return 60000000ULL;
+    return true;
+  }
+  return (secondsUntilNextFeed - FEED_WAKE_MARGIN_SECONDS) >= MIN_WORTHWHILE_DEEP_SLEEP_SECONDS;
+}
+
+uint64_t PowerManager::computeDeepSleepWakeMicros() const {
+  long secondsUntilNextFeed = computeSecondsUntilNextFeed();
+  if (secondsUntilNextFeed <= 0) {
+    long fallbackSleepSeconds = apiHandlers.getDeepSleepIdleSec();
+    if (fallbackSleepSeconds < 900) {
+      fallbackSleepSeconds = 900;
+    }
+    return static_cast<uint64_t>(fallbackSleepSeconds) * 1000000ULL;
   }
 
   long wakeAfterSeconds = secondsUntilNextFeed - FEED_WAKE_MARGIN_SECONDS;
@@ -72,6 +86,13 @@ uint64_t PowerManager::computeDeepSleepWakeMicros() const {
   return static_cast<uint64_t>(wakeAfterSeconds) * 1000000ULL;
 }
 
+void PowerManager::applyCpuPowerProfile(bool lowPowerMode) const {
+  const int targetFreq = lowPowerMode ? LOW_POWER_CPU_FREQUENCY_MHZ : ACTIVE_CPU_FREQUENCY_MHZ;
+  if (getCpuFrequencyMhz() != targetFreq) {
+    setCpuFrequencyMhz(targetFreq);
+  }
+}
+
 void PowerManager::enterPowerSaveDeepSleep() {
   if (apiHandlers.getDisplayEnabled()) {
     oled.showDeepSleepNotice(true);
@@ -79,6 +100,7 @@ void PowerManager::enterPowerSaveDeepSleep() {
     delay(100);
   }
 
+  servo.setPowerSave(true);
   oled.setPowerSave(true);
   esp_deep_sleep_enable_gpio_wakeup(1ULL << buttonPin, ESP_GPIO_WAKEUP_GPIO_LOW);
 
@@ -95,6 +117,10 @@ void PowerManager::enterPowerSaveDeepSleep() {
 
 long PowerManager::computeSleepCountdownSeconds(bool isAPMode, bool recentlyActive, bool webClientActive) const {
   if (!apiHandlers.getPowerSaveMode() || isAPMode || servo.isMoving()) {
+    return -1;
+  }
+
+  if (!isDeepSleepWorthwhile(computeSecondsUntilNextFeed())) {
     return -1;
   }
 
@@ -131,6 +157,7 @@ String PowerManager::computeSleepReason(bool isAPMode,
   if (webClientActive) return "web_active";
   if (recentlyActive) return "recent_activity";
   if (displayShouldBeAwake) return "display_awake";
+  if (!isDeepSleepWorthwhile(computeSecondsUntilNextFeed())) return "next_feed_soon";
   return "ready";
 }
 
@@ -146,6 +173,13 @@ void PowerManager::updateSleepState(bool isAPMode, bool displayShouldBeAwake) {
   const unsigned long idleMsLoop = powerSaveIdleMs();
   bool recentlyActive = (millis() - lastInteractionMillis) < idleMsLoop;
   bool webClientActive = (millis() - apiHandlers.getLastClientActivityMillis()) < idleMsLoop;
+  bool lowPowerCpuMode = currentPowerSaveMode && !isAPMode && !servo.isMoving() && !displayShouldBeAwake;
+  bool lowPowerPeripheralMode = lowPowerCpuMode && !displayShouldBeAwake;
+  bool deepSleepWorthwhile = isDeepSleepWorthwhile(computeSecondsUntilNextFeed());
+
+  servo.setPowerSave(lowPowerPeripheralMode);
+  applyCpuPowerProfile(lowPowerCpuMode);
+
   long sleepCountdownSeconds = computeSleepCountdownSeconds(isAPMode, recentlyActive, webClientActive);
   String sleepReason = computeSleepReason(
     isAPMode,
@@ -160,6 +194,7 @@ void PowerManager::updateSleepState(bool isAPMode, bool displayShouldBeAwake) {
       powerSaveSleepArmed &&
       !servo.isMoving() &&
       !isAPMode &&
+      deepSleepWorthwhile &&
       !recentlyActive &&
       !webClientActive) {
     enterPowerSaveDeepSleep();

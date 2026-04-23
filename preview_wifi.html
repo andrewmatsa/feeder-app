@@ -68,6 +68,11 @@ body {
   color: #6b7280;
   letter-spacing: 0.3px;
 }
+.section-subtitle {
+  font-size: 12px;
+  color: #9099A6;
+  margin-top: 4px;
+}
 .card {
   padding: 16px;
   border-radius: 12px;
@@ -93,7 +98,21 @@ input[type=number] {
   font-size: 13px;
   box-sizing: border-box;
 }
+select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d5d9e0;
+  background: #f9fafc;
+  font-size: 13px;
+  box-sizing: border-box;
+}
 input[type=number]:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+select:focus {
   outline: none;
   border-color: #1976D2;
   box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
@@ -351,6 +370,7 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
 
 <div class="card">
   <h3 id="wifiH3Lang">Interface language</h3>
+  <div class="section-subtitle" id="wifiLangSubtitle">Choose the web interface language</div>
   <div class="lang-section-row">
     <button type="button" id="wifiLangUkBtn" class="lang-btn">UK</button>
     <button type="button" id="wifiLangEnBtn" class="lang-btn">EN</button>
@@ -384,11 +404,19 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
   <div class="note-text" id="wifiNotePower"></div>
   <div id="deepSleepIdleRow" style="margin-top:12px;">
     <label for="deepSleepIdleSec" id="labelDeepSleepIdle" class="field-num-label">Idle seconds before deep sleep (10–3600):</label>
-    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="60">
+    <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="300">
   </div>
   <div class="note-text" id="wifiNotePowerOff" style="margin-top:12px;"></div>
   <div class="button-row" style="margin-top: 8px;">
     <button type="button" id="wifiBtnSavePower" onclick="previewSavePowerMode()">Save power mode</button>
+  </div>
+  <div id="timezoneRow" style="margin-top:12px;">
+    <label for="timezoneOffsetMin" id="labelTimezoneOffset" class="field-num-label">Time zone (UTC offset):</label>
+    <select id="timezoneOffsetMin"></select>
+  </div>
+  <div class="note-text" id="wifiNoteTimezone" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
+  <div class="button-row" style="margin-top: 8px;">
+    <button type="button" id="wifiBtnSaveTimezone" onclick="previewSaveTimezone()">Save time zone</button>
   </div>
   <label class="power-toggle" style="margin-top: 16px;">
     <input type="checkbox" id="displayEnabled">
@@ -435,12 +463,35 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
 <script>
 var wifiLang = localStorage.getItem('aqua_lang') || 'uk';
 function wifiIsEn() { return wifiLang === 'en'; }
+function formatTimezoneOffsetLabel(offsetMin) {
+  var total = Number(offsetMin) || 0;
+  var sign = total >= 0 ? '+' : '-';
+  var abs = Math.abs(total);
+  var hours = Math.floor(abs / 60);
+  var mins = abs % 60;
+  return 'UTC' + sign + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+}
+function populatePreviewTimezoneOptions(selectedOffsetMin) {
+  var select = document.getElementById('timezoneOffsetMin');
+  if (!select) return;
+  var current = Number.isFinite(Number(selectedOffsetMin)) ? Number(selectedOffsetMin) : Number(select.value || 120);
+  select.innerHTML = '';
+  for (var offset = -720; offset <= 840; offset += 15) {
+    var option = document.createElement('option');
+    option.value = String(offset);
+    option.textContent = formatTimezoneOffsetLabel(offset);
+    option.selected = offset === current;
+    select.appendChild(option);
+  }
+}
 function applyWiFiLanguage() {
   document.title = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
   var sub = document.getElementById('wifiPageSubtitle');
   if (sub) sub.textContent = wifiIsEn() ? 'WiFi settings' : 'Налаштування WiFi';
   var hLang = document.getElementById('wifiH3Lang');
   if (hLang) hLang.textContent = wifiIsEn() ? 'Interface language' : 'Мова інтерфейсу';
+  var langSub = document.getElementById('wifiLangSubtitle');
+  if (langSub) langSub.textContent = wifiIsEn() ? 'Choose the web interface language' : 'Оберіть мову веб-інтерфейсу';
   var h1 = document.getElementById('wifiH3Connect');
   if (h1) h1.textContent = wifiIsEn() ? 'Connect to WiFi' : 'Підключення до WiFi';
   var h2 = document.getElementById('wifiH3Current');
@@ -493,6 +544,14 @@ function applyWiFiLanguage() {
     : 'У режимі економії дисплей лишається увімкненим стільки секунд після кнопки або вебу, потім гасне. За замовчуванням 20 с.';
   var bp = document.getElementById('wifiBtnSavePower');
   if (bp) bp.textContent = wifiIsEn() ? 'Save power mode' : 'Зберегти режим енергії';
+  var ltz = document.getElementById('labelTimezoneOffset');
+  if (ltz) ltz.textContent = wifiIsEn() ? 'Time zone (UTC offset):' : 'Часовий пояс (зсув UTC):';
+  var ntz = document.getElementById('wifiNoteTimezone');
+  if (ntz) ntz.textContent = wifiIsEn()
+    ? 'Select the device local UTC offset used for the clock, schedule, and next feeding countdown. If your region changes daylight saving time, update this manually.'
+    : 'Оберіть локальний зсув UTC для годинника, розкладу та відліку до наступного годування. Якщо у вашому регіоні змінюється літній/зимовий час, оновлюйте це вручну.';
+  var btz = document.getElementById('wifiBtnSaveTimezone');
+  if (btz) btz.textContent = wifiIsEn() ? 'Save time zone' : 'Зберегти часовий пояс';
   var bd = document.getElementById('wifiBtnSaveDisplay');
   if (bd) bd.textContent = wifiIsEn() ? 'Save display' : 'Зберегти дисплей';
   var ph = document.getElementById('wifiPreviewPowerHint');
@@ -525,8 +584,8 @@ function showPreviewToast(msg) {
 function previewSavePowerMode() {
   var on = document.getElementById('powerSaveMode').checked;
   var el = document.getElementById('deepSleepIdleSec');
-  var idle = el ? parseInt(el.value, 10) : 60;
-  if (!Number.isFinite(idle)) idle = 60;
+  var idle = el ? parseInt(el.value, 10) : 300;
+  if (!Number.isFinite(idle)) idle = 300;
   idle = Math.max(10, Math.min(3600, idle));
   if (el) el.value = idle;
   try {
@@ -548,6 +607,19 @@ function previewSyncPowerEcoUi() {
   if (ds) ds.disabled = !on;
   if (np) np.style.display = on ? 'block' : 'none';
   if (npo) npo.style.display = on ? 'none' : 'block';
+}
+function previewSaveTimezone() {
+  var el = document.getElementById('timezoneOffsetMin');
+  var offsetMin = el ? parseInt(el.value, 10) : 120;
+  if (!Number.isFinite(offsetMin)) offsetMin = 120;
+  offsetMin = Math.max(-720, Math.min(840, offsetMin));
+  if (el) el.value = String(offsetMin);
+  try {
+    localStorage.setItem('preview_timezoneOffsetMin', String(offsetMin));
+  } catch (e) {}
+  showPreviewToast(wifiIsEn()
+    ? 'Time zone saved (preview only)'
+    : 'Часовий пояс збережено (лише прев’ю)');
 }
 function previewSaveDisplayMode() {
   var on = document.getElementById('displayEnabled').checked;
@@ -581,9 +653,11 @@ function loadPreviewPowerDisplay() {
         var v = parseInt(dsi, 10);
         if (Number.isFinite(v)) dsEl.value = Math.max(10, Math.min(3600, v));
       } else {
-        dsEl.value = 60;
+        dsEl.value = 300;
       }
     }
+    var tz = localStorage.getItem('preview_timezoneOffsetMin');
+    populatePreviewTimezoneOptions(tz !== null ? parseInt(tz, 10) : 120);
     var dos = localStorage.getItem('preview_displayOffSec');
     var displayOffEl = document.getElementById('displayOffSec');
     if (displayOffEl) {
@@ -603,6 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('wifiLangUkBtn').addEventListener('click', function() { setWiFiLanguage('uk'); });
   document.getElementById('wifiLangEnBtn').addEventListener('click', function() { setWiFiLanguage('en'); });
   loadPreviewPowerDisplay();
+  populatePreviewTimezoneOptions(120);
   applyWiFiLanguage();
 });
 </script>

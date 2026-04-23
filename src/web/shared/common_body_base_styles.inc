@@ -1,3 +1,4 @@
+R"rawliteral(
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 8px;
@@ -8,3 +9,4 @@ body {
   color: #333;
   font-size: 14px;
 }
+)rawliteral"

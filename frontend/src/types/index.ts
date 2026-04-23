@@ -8,6 +8,7 @@ export interface StatusResponse {
   angle: number
   speed: number
   feedRepeats: number
+  minFeedIntervalMin: number
   powerSaveMode: boolean
   displayEnabled: boolean
   displayOffAfterSec: number

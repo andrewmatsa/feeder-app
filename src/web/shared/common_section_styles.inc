@@ -1,3 +1,4 @@
+R"rawliteral(
 .section-header {
   display: flex;
   align-items: flex-start;
@@ -37,3 +38,4 @@
   color: #9099A6;
   margin-top: 2px;
 }
+)rawliteral"

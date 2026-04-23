@@ -80,7 +80,7 @@ void loadApiSettingsFromPreferences() {
   apiHandlers.setPowerSaveMode(preferences.getBool("powerSaveMode", true));
   apiHandlers.setDisplayEnabled(preferences.getBool("displayEnabled", true));
 
-  uint32_t dsIdle = preferences.getUInt("dsIdleSec", 60);
+  uint32_t dsIdle = preferences.getUInt("dsIdleSec", 300);
   if (dsIdle < 10) {
     dsIdle = 10;
   }
@@ -206,6 +206,7 @@ void setup(){
 // === Loop ===
 void loop(){
   server.handleClient();
+  updateWiFiProvisioning();
   handleManualButtonPress();
   updateWiFiPowerSaveMode();
 

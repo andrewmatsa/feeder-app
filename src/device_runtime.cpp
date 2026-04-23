@@ -38,8 +38,7 @@ void DeviceRuntime::getCurrentLocalTime(int& currentHour, int& currentMinute) co
 
   time_t now = time(nullptr);
   struct tm localTime;
-  time_t adjusted = now + FeedingScheduler::KIEV_UTC_OFFSET_SECONDS;
-  if (gmtime_r(&adjusted, &localTime) && localTime.tm_year + 1900 >= 2020) {
+  if (FeedingScheduler::toLocalTime(now, localTime) && localTime.tm_year + 1900 >= 2020) {
     currentHour = localTime.tm_hour;
     currentMinute = localTime.tm_min;
   }

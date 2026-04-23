@@ -22,6 +22,9 @@ public:
   void updateSleepState(bool isAPMode, bool displayShouldBeAwake);
 
 private:
+  static const int ACTIVE_CPU_FREQUENCY_MHZ = 160;
+  static const int LOW_POWER_CPU_FREQUENCY_MHZ = 80;
+
   ApiHandlers& apiHandlers;
   FeedingScheduler& scheduler;
   ServoController& servo;
@@ -32,7 +35,10 @@ private:
 
   unsigned long powerSaveIdleMs() const;
   long computePreciseSecondsUntilNextFeed(const NextFeedInfo& nextInfo) const;
+  long computeSecondsUntilNextFeed() const;
   uint64_t computeDeepSleepWakeMicros() const;
+  bool isDeepSleepWorthwhile(long secondsUntilNextFeed) const;
+  void applyCpuPowerProfile(bool lowPowerMode) const;
   void enterPowerSaveDeepSleep();
   long computeSleepCountdownSeconds(bool isAPMode, bool recentlyActive, bool webClientActive) const;
   String computeSleepReason(bool isAPMode,

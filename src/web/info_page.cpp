@@ -9,8 +9,10 @@ const char* pageInfo = R"rawliteral(
 <title>Інформація про систему</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
+)rawliteral"
 #include "shared/common_body_base_styles.inc"
 #include "shared/common_card_styles.inc"
+R"rawliteral(
 .info-row {
   display: flex;
   justify-content: space-between;
@@ -28,9 +30,11 @@ const char* pageInfo = R"rawliteral(
   color: #333;
   text-align: right;
 }
+)rawliteral"
 #include "shared/common_section_styles.inc"
 #include "shared/common_hero_styles.inc"
 #include "shared/common_bottom_nav_styles.inc"
+R"rawliteral(
 .toast {
   position: fixed;
   top: 20px;
@@ -88,7 +92,9 @@ a:active {
 <body>
 <div id="toast" class="toast">Збережено</div>
 <div class="hero-header">
+)rawliteral"
 #include "shared/hero_illustration.inc"
+R"rawliteral(
   <div class="app-heading">
     <div class="app-title">AquaFeed Control</div>
     <div class="app-subtitle">Інформація про систему</div>
@@ -275,7 +281,9 @@ a:active {
 </div>
 
 <script>
+)rawliteral"
 #include "shared/common_js_helpers.inc"
+R"rawliteral(
 function infoIsEn() { return isStoredUiLangEn(); }
 function applyInfoLanguage() {
   document.title = infoIsEn() ? 'System information' : 'Інформація про систему';
@@ -438,7 +446,9 @@ window.onload = function() {
 };
 </script>
 
+)rawliteral"
 #include "shared/bottom_tabs_info.inc"
+R"rawliteral(
 </body>
 </html>
 )rawliteral";

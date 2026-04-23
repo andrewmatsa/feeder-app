@@ -20,12 +20,16 @@ struct NextFeedInfo {
 class FeedingScheduler {
 public:
   static const int MAX_FEED_TIMES = 20;
-  static constexpr long KIEV_UTC_OFFSET_SECONDS = 2 * 3600; // UTC+2
+  static const int DEFAULT_TIMEZONE_OFFSET_MINUTES = 120; // UTC+2
   
   FeedingScheduler();
   void begin(Preferences& preferences);
   void loadFromPreferences(Preferences& preferences);
   void saveToPreferences(Preferences& preferences);
+  static void setTimezoneOffsetMinutes(int minutes);
+  static int getTimezoneOffsetMinutes();
+  static long getTimezoneOffsetSeconds();
+  static bool toLocalTime(time_t now, struct tm& localTime, long long* epochMinute = nullptr);
   
   void setFeedTimes(const FeedTime* times, int count);
   int getFeedTimesCount() const { return feedTimesCount; }
@@ -39,6 +43,8 @@ public:
   /** Seconds until manual feed is allowed; 0 if allowed now or time unknown. */
   int getSecondsUntilManualFeedAllowed() const;
   void recordManualFeed();
+  void setMinFeedIntervalMinutes(int minutes);
+  int getMinFeedIntervalMinutes() const { return minFeedIntervalMinutes; }
   
   void setLegacyFeedTimes(int h1, int m1, int r1, int h2, int m2, int r2);
   void getLegacyFeedTimes(int& h1, int& m1, int& r1, int& h2, int& m2, int& r2) const;
@@ -58,8 +64,12 @@ private:
   int lastFedMinute;
   long long lastFedEpochMinute;
   long long lastScheduledFeedEpochMinute;
+  int minFeedIntervalMinutes;
   Preferences* preferencesRef;
-  static const int MIN_FEED_INTERVAL_MINUTES = 5;
+  static int timezoneOffsetMinutes;
+  static const int DEFAULT_MIN_FEED_INTERVAL_MINUTES = 5;
+  static const int MIN_ALLOWED_FEED_INTERVAL_MINUTES = 1;
+  static const int MAX_ALLOWED_FEED_INTERVAL_MINUTES = 1440;
   
   bool wasRecentlyFed(int currentHour, int currentMinute);
   bool getCurrentLocalTime(struct tm& localTime, long long* epochMinute = nullptr);

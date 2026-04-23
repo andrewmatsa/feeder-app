@@ -12,7 +12,7 @@ ApiHandlers::ApiHandlers(WebServer& server, Preferences& preferences,
     servo(servo), battery(battery), scheduler(scheduler),
     powerSaveMode(true), displayEnabled(true),
     displayOffAfterSec(20),
-    deepSleepIdleSec(60),
+    deepSleepIdleSec(300),
     feedRepeats(1),
     cachedStatusTime(0), lastClientActivityMillis(0),
     sleepReason("unknown"), sleepCountdownSeconds(-1), displayAwakeNow(true) {
@@ -52,11 +52,17 @@ void ApiHandlers::setupRoutes() {
   server.on("/api/setDisplayMode", HTTP_POST, [this]() { handleSetDisplayMode(); });
   server.on("/api/setDisplayOff", HTTP_POST, [this]() { handleSetDisplayOff(); });
   server.on("/api/setDeepSleep", HTTP_POST, [this]() { handleSetDeepSleep(); });
+  server.on("/api/setTimezone", HTTP_POST, [this]() { handleSetTimezone(); });
+  server.on("/api/setFeedInterval", HTTP_POST, [this]() { handleSetFeedInterval(); });
 }
 
 void ApiHandlers::handleRoot() {
   noteClientActivity();
-  if (isAPMode || WiFi.status() != WL_CONNECTED) {
+  if (isAPMode) {
+    handleWiFi(server);
+    return;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
     server.sendHeader("Location", "/wifi", true);
     server.send(302, "text/plain", "");
     return;
@@ -66,6 +72,10 @@ void ApiHandlers::handleRoot() {
 
 void ApiHandlers::handleInfo() {
   noteClientActivity();
+  if (isAPMode || !isApSessionAuthorized(server)) {
+    handleWiFi(server);
+    return;
+  }
   server.send(200, "text/html", pageInfo);
 }
 
@@ -95,8 +105,7 @@ String ApiHandlers::getCurrentTimeString() const {
   time_t now = time(nullptr);
   struct tm localTime;
   char timeBuf[6] = "--:--";
-  time_t adjusted = now + FeedingScheduler::KIEV_UTC_OFFSET_SECONDS;
-  if (gmtime_r(&adjusted, &localTime) && localTime.tm_year + 1900 >= 2020) {
+  if (FeedingScheduler::toLocalTime(now, localTime) && localTime.tm_year + 1900 >= 2020) {
     snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", localTime.tm_hour, localTime.tm_min);
   }
   return String(timeBuf);
@@ -128,6 +137,8 @@ void ApiHandlers::appendRuntimeStatus(JsonDocument& doc, const NextFeedInfo& nex
   doc["sleepCountdownSeconds"] = sleepCountdownSeconds;
   doc["displayAwake"] = displayAwakeNow;
   doc["manualFeedCooldownSeconds"] = scheduler.getSecondsUntilManualFeedAllowed();
+  doc["minFeedIntervalMin"] = scheduler.getMinFeedIntervalMinutes();
+  doc["timezoneOffsetMin"] = FeedingScheduler::getTimezoneOffsetMinutes();
   doc["wifiIP"] = getWifiIp();
   doc["cacheSize"] = cachedStatusJson.length();
   doc["cacheAge"] = computeCacheAge(hasCachedStatus);
@@ -182,6 +193,10 @@ String ApiHandlers::buildStatusJson() {
 
 void ApiHandlers::handleStatus() {
   noteClientActivity();
+  if (isAPMode || !isApSessionAuthorized(server)) {
+    server.send(403, "text/plain", "login required");
+    return;
+  }
   // ============================================================================
   // ============================================================================
   // ============================================================================
@@ -259,9 +274,13 @@ int ApiHandlers::parseFeedTimesJson(const String& jsonData, FeedTime* target, in
     if (count >= maxCount) {
       break;
     }
-    int h = constrain(item["h"] | item["hour"] | 10, 0, 23);
-    int m = constrain(item["m"] | item["minute"] | 0, 0, 59);
-    int r = max(1, static_cast<int>(item["r"] | item["repeats"] | 1));
+    JsonVariantConst hourValue = item["h"].isNull() ? item["hour"] : item["h"];
+    JsonVariantConst minuteValue = item["m"].isNull() ? item["minute"] : item["m"];
+    JsonVariantConst repeatsValue = item["r"].isNull() ? item["repeats"] : item["r"];
+
+    int h = constrain(hourValue.isNull() ? 10 : hourValue.as<int>(), 0, 23);
+    int m = constrain(minuteValue.isNull() ? 0 : minuteValue.as<int>(), 0, 59);
+    int r = max(1, repeatsValue.isNull() ? 1 : repeatsValue.as<int>());
     target[count++] = {h, m, r, false};
   }
   return count;
@@ -316,9 +335,19 @@ void ApiHandlers::handleSetFeedTimes() {
 void ApiHandlers::handleSetPowerMode() {
   if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
+  bool updated = false;
   if(server.hasArg("enabled")) {
     powerSaveMode = server.arg("enabled") == "true";
     preferences.putBool("powerSaveMode", powerSaveMode);
+    updated = true;
+  }
+  if (server.hasArg("idleSec")) {
+    int v = server.arg("idleSec").toInt();
+    setDeepSleepIdleSec(static_cast<uint16_t>(v));
+    preferences.putUInt("dsIdleSec", deepSleepIdleSec);
+    updated = true;
+  }
+  if (updated) {
     invalidateCache();
   }
   server.send(200, "text/plain", "ok");
@@ -327,11 +356,22 @@ void ApiHandlers::handleSetPowerMode() {
 void ApiHandlers::handleSetDisplayMode() {
   if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
+  bool updated = false;
   if(server.hasArg("enabled")) {
     displayEnabled = server.arg("enabled") == "true";
     preferences.putBool("displayEnabled", displayEnabled);
-    invalidateCache();
     Serial.printf("Display %s\n", displayEnabled ? "enabled" : "disabled");
+    updated = true;
+  }
+  if (server.hasArg("sec")) {
+    int v = server.arg("sec").toInt();
+    setDisplayOffAfterSec(static_cast<uint16_t>(v));
+    preferences.putUInt("displayOffSec", displayOffAfterSec);
+    Serial.printf("Display off after %u s (power-save ON)\n", displayOffAfterSec);
+    updated = true;
+  }
+  if (updated) {
+    invalidateCache();
   }
   server.send(200, "text/plain", "ok");
 }
@@ -359,6 +399,31 @@ void ApiHandlers::handleSetDeepSleep() {
   }
   invalidateCache();
   Serial.printf("Deep sleep idle: %u s (wake: button + timer before feed)\n", deepSleepIdleSec);
+  server.send(200, "text/plain", "ok");
+}
+
+void ApiHandlers::handleSetTimezone() {
+  if (!isTrustedMutationRequest(server)) return;
+  noteClientActivity();
+  if (server.hasArg("offsetMin")) {
+    int offsetMin = server.arg("offsetMin").toInt();
+    FeedingScheduler::setTimezoneOffsetMinutes(offsetMin);
+    preferences.putInt("tzOffsetMin", FeedingScheduler::getTimezoneOffsetMinutes());
+    invalidateCache();
+    Serial.printf("Timezone offset set to %d minutes\n", FeedingScheduler::getTimezoneOffsetMinutes());
+  }
+  server.send(200, "text/plain", "ok");
+}
+
+void ApiHandlers::handleSetFeedInterval() {
+  if (!isTrustedMutationRequest(server)) return;
+  noteClientActivity();
+  if (server.hasArg("minutes")) {
+    scheduler.setMinFeedIntervalMinutes(server.arg("minutes").toInt());
+    preferences.putInt("minFeedGapMin", scheduler.getMinFeedIntervalMinutes());
+    invalidateCache();
+    Serial.printf("Manual feed interval: %d min\n", scheduler.getMinFeedIntervalMinutes());
+  }
   server.send(200, "text/plain", "ok");
 }
 

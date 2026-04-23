@@ -190,10 +190,9 @@ void OledDisplay::drawSimpleScreen(const DisplayData& data) {
   if (data.nextFeedHour >= 0 && data.nextFeedMinute >= 0 && data.minutesUntilNext > 0) {
     time_t now = time(nullptr);
     struct tm localTime;
-    time_t adjusted = now + FeedingScheduler::KIEV_UTC_OFFSET_SECONDS;
     int remainingSeconds = 0;
     
-    if (gmtime_r(&adjusted, &localTime) && localTime.tm_year + 1900 >= 2020) {
+    if (FeedingScheduler::toLocalTime(now, localTime) && localTime.tm_year + 1900 >= 2020) {
       int currentTotalSeconds = localTime.tm_hour * 3600 + localTime.tm_min * 60 + localTime.tm_sec;
       int nextTotalSeconds = data.nextFeedHour * 3600 + data.nextFeedMinute * 60;
       

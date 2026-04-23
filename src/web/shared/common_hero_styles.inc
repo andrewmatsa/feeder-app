@@ -1,3 +1,4 @@
+R"rawliteral(
 .hero-header {
   display: flex;
   align-items: center;
@@ -50,3 +51,4 @@
   color: #6b7280;
   letter-spacing: 0.3px;
 }
+)rawliteral"

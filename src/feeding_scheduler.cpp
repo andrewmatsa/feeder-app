@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <Preferences.h>
 
+int FeedingScheduler::timezoneOffsetMinutes = FeedingScheduler::DEFAULT_TIMEZONE_OFFSET_MINUTES;
+
 FeedingScheduler::FeedingScheduler()
   : feedTimesCount(0),
     feedHour1(10), feedMinute1(0), feedRepeats1(1),
@@ -11,6 +13,7 @@ FeedingScheduler::FeedingScheduler()
     lastFedHour(-1), lastFedMinute(-1),
     lastFedEpochMinute(-1),
     lastScheduledFeedEpochMinute(-1),
+    minFeedIntervalMinutes(DEFAULT_MIN_FEED_INTERVAL_MINUTES),
     preferencesRef(nullptr) {
   for(int i = 0; i < MAX_FEED_TIMES; i++) {
     feedTimes[i] = {0, 0, 1, false};
@@ -19,12 +22,44 @@ FeedingScheduler::FeedingScheduler()
 
 void FeedingScheduler::begin(Preferences& preferences) {
   preferencesRef = &preferences;
+  setTimezoneOffsetMinutes(preferences.getInt("tzOffsetMin", DEFAULT_TIMEZONE_OFFSET_MINUTES));
   loadFromPreferences(preferences);
   lastFedEpochMinute = preferences.getLong64("lastFeedEpochMin", -1);
   lastScheduledFeedEpochMinute = preferences.getLong64("lastScheduledFeedEpochMin", -1);
 }
 
+void FeedingScheduler::setTimezoneOffsetMinutes(int minutes) {
+  if (minutes < -720) {
+    minutes = -720;
+  }
+  if (minutes > 840) {
+    minutes = 840;
+  }
+  timezoneOffsetMinutes = minutes;
+}
+
+int FeedingScheduler::getTimezoneOffsetMinutes() {
+  return timezoneOffsetMinutes;
+}
+
+long FeedingScheduler::getTimezoneOffsetSeconds() {
+  return static_cast<long>(timezoneOffsetMinutes) * 60L;
+}
+
+bool FeedingScheduler::toLocalTime(time_t now, struct tm& localTime, long long* epochMinute) {
+  time_t adjusted = now + getTimezoneOffsetSeconds();
+  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+    return false;
+  }
+
+  if (epochMinute) {
+    *epochMinute = static_cast<long long>(now / 60);
+  }
+  return true;
+}
+
 void FeedingScheduler::loadFromPreferences(Preferences& preferences) {
+  setMinFeedIntervalMinutes(preferences.getInt("minFeedGapMin", DEFAULT_MIN_FEED_INTERVAL_MINUTES));
   feedTimesCount = preferences.getInt("feedTimesCount", 0);
   Serial.printf("Loading feed times from preferences: count=%d\n", feedTimesCount);
   
@@ -78,6 +113,7 @@ void FeedingScheduler::loadFromPreferences(Preferences& preferences) {
 }
 
 void FeedingScheduler::saveToPreferences(Preferences& preferences) {
+  preferences.putInt("minFeedGapMin", minFeedIntervalMinutes);
   preferences.putInt("feedTimesCount", feedTimesCount);
   Serial.printf("Saving %d feed times to preferences\n", feedTimesCount);
   char key[20];
@@ -136,8 +172,7 @@ NextFeedInfo FeedingScheduler::computeNextFeed() {
   NextFeedInfo info;
   time_t now = time(nullptr);
   struct tm localTime;
-  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
-  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+  if (!toLocalTime(now, localTime)) {
     return info;
   }
   
@@ -180,7 +215,7 @@ bool FeedingScheduler::wasRecentlyFed(int currentHour, int currentMinute) {
       lastFedEpochMinute >= 0 &&
       currentEpochMinute >= lastFedEpochMinute) {
     long long diff = currentEpochMinute - lastFedEpochMinute;
-    if (diff < MIN_FEED_INTERVAL_MINUTES) {
+    if (diff < minFeedIntervalMinutes) {
       Serial.printf("Feed blocked: only %lld minutes since last feed at %02d:%02d\n",
                     diff, lastFedHour, lastFedMinute);
       return true;
@@ -200,7 +235,7 @@ bool FeedingScheduler::wasRecentlyFed(int currentHour, int currentMinute) {
     diff += 24 * 60;
   }
   
-  if (diff < MIN_FEED_INTERVAL_MINUTES) {
+  if (diff < minFeedIntervalMinutes) {
     Serial.printf("Feed blocked: only %d minutes since last feed at %02d:%02d\n", diff, lastFedHour, lastFedMinute);
     return true;
   }
@@ -210,15 +245,7 @@ bool FeedingScheduler::wasRecentlyFed(int currentHour, int currentMinute) {
 
 bool FeedingScheduler::getCurrentLocalTime(struct tm& localTime, long long* epochMinute) {
   time_t now = time(nullptr);
-  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
-  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
-    return false;
-  }
-
-  if (epochMinute) {
-    *epochMinute = static_cast<long long>(adjusted / 60);
-  }
-  return true;
+  return toLocalTime(now, localTime, epochMinute);
 }
 
 void FeedingScheduler::updateLastFeedState(const struct tm& localTime, long long epochMinute) {
@@ -249,14 +276,13 @@ void FeedingScheduler::persistLastScheduledFeedState() {
 bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
   time_t now = time(nullptr);
   struct tm localTime;
-  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
-  if (!gmtime_r(&adjusted, &localTime) || localTime.tm_year + 1900 < 2020) {
+  long long currentEpochMinute = -1;
+  if (!toLocalTime(now, localTime, &currentEpochMinute)) {
     return false;
   }
   
   int curHour = localTime.tm_hour;
   int curMinute = localTime.tm_min;
-  long long currentEpochMinute = static_cast<long long>(adjusted / 60);
   
   if (wasScheduleAlreadyExecuted(currentEpochMinute)) {
     for (int i = 0; i < feedTimesCount; i++) {
@@ -375,15 +401,14 @@ int FeedingScheduler::getSecondsUntilManualFeedAllowed() const {
   if (lastFedEpochMinute < 0) {
     return 0;
   }
-  time_t now = time(nullptr);
-  time_t adjusted = now + KIEV_UTC_OFFSET_SECONDS;
-  long long curEm = static_cast<long long>(adjusted / 60);
+  long long nowEpochSeconds = static_cast<long long>(time(nullptr));
+  long long curEm = nowEpochSeconds / 60;
   long long diffMin = curEm - lastFedEpochMinute;
-  if (diffMin >= MIN_FEED_INTERVAL_MINUTES) {
+  if (diffMin >= minFeedIntervalMinutes) {
     return 0;
   }
-  long long endAdjusted = (lastFedEpochMinute + MIN_FEED_INTERVAL_MINUTES) * 60LL;
-  long long remain = endAdjusted - static_cast<long long>(adjusted);
+  long long endEpochSeconds = (lastFedEpochMinute + minFeedIntervalMinutes) * 60LL;
+  long long remain = endEpochSeconds - nowEpochSeconds;
   if (remain <= 0) {
     return 0;
   }
@@ -400,5 +425,15 @@ void FeedingScheduler::recordManualFeed() {
     updateLastFeedState(localTime, epochMinute);
     Serial.printf("Manual feed recorded at %02d:%02d\n", lastFedHour, lastFedMinute);
   }
+}
+
+void FeedingScheduler::setMinFeedIntervalMinutes(int minutes) {
+  if (minutes < MIN_ALLOWED_FEED_INTERVAL_MINUTES) {
+    minutes = MIN_ALLOWED_FEED_INTERVAL_MINUTES;
+  }
+  if (minutes > MAX_ALLOWED_FEED_INTERVAL_MINUTES) {
+    minutes = MAX_ALLOWED_FEED_INTERVAL_MINUTES;
+  }
+  minFeedIntervalMinutes = minutes;
 }
 

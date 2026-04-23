@@ -33,6 +33,7 @@ class StatusResponse(BaseModel):
     angle: int
     speed: int
     feedRepeats: int
+    minFeedIntervalMin: int = 5
     powerSaveMode: bool
     displayEnabled: bool = True
     displayOffAfterSec: int = 20

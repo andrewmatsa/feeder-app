@@ -1,3 +1,4 @@
+R"rawliteral(
 .card {
   padding: 16px;
   border-radius: 12px;
@@ -12,3 +13,4 @@ h2 {
   font-size: 1.4em;
   font-weight: 600;
 }
+)rawliteral"

@@ -1,3 +1,4 @@
+R"rawliteral(
 function getStoredUiLang() {
   return localStorage.getItem('aqua_lang') || 'uk';
 }
@@ -27,6 +28,21 @@ function setActiveBottomTab(options = {}) {
   });
 }
 
+function getApSessionToken() {
+  try {
+    return sessionStorage.getItem('aquafeed_ap_session') || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function setApSessionToken(token) {
+  try {
+    if (token) sessionStorage.setItem('aquafeed_ap_session', token);
+    else sessionStorage.removeItem('aquafeed_ap_session');
+  } catch (_) {}
+}
+
 function postForm(path, values = {}) {
   const body = new URLSearchParams();
   Object.entries(values).forEach(([key, value]) => {
@@ -34,14 +50,24 @@ function postForm(path, values = {}) {
       body.append(key, String(value));
     }
   });
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+    'X-AquaFeed-Client': 'webui',
+  };
+  const sessionToken = getApSessionToken();
+  if (sessionToken) {
+    headers['X-AquaFeed-Session'] = sessionToken;
+  }
   return fetch(path, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-      'X-AquaFeed-Client': 'webui',
-    },
+    headers,
     body: body.toString(),
   });
+}
+
+function expectOk(response) {
+  if (response.ok) return response;
+  return response.text().then(text => Promise.reject(new Error(text || ('HTTP ' + response.status))));
 }
 
 function voltageToPercentClient(v) {
@@ -52,3 +78,4 @@ function voltageToPercentClient(v) {
   if (v <= MIN_VOLTAGE) return 0;
   return Math.round(((v - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE)) * 100);
 }
+)rawliteral"

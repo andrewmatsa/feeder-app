@@ -54,6 +54,7 @@ def map_firmware_status(payload: dict[str, Any]) -> StatusResponse:
         angle=max(0, min(180, to_int(payload.get("currentAngle", payload.get("angle")), 0))),
         speed=max(0, to_int(payload.get("speed"), 0)),
         feedRepeats=max(1, to_int(payload.get("feedRepeats"), 1)),
+        minFeedIntervalMin=max(1, to_int(payload.get("minFeedIntervalMin"), 5)),
         powerSaveMode=bool(payload.get("powerSaveMode", False)),
         displayEnabled=bool(payload.get("displayEnabled", True)),
         displayOffAfterSec=max(0, to_int(payload.get("displayOffAfterSec"), 20)),

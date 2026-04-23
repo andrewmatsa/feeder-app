@@ -1,3 +1,4 @@
+R"rawliteral(
 .bottom-tabs {
   position: fixed;
   bottom: 0;
@@ -61,3 +62,4 @@
 .bottom-tab.active .home-icon {
   color: #111827;
 }
+)rawliteral"

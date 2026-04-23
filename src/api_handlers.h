@@ -32,6 +32,8 @@ public:
   void handleSetDisplayMode();
   void handleSetDisplayOff();
   void handleSetDeepSleep();
+  void handleSetTimezone();
+  void handleSetFeedInterval();
   
   void setPowerSaveMode(bool enabled) { powerSaveMode = enabled; }
   bool getPowerSaveMode() const { return powerSaveMode; }

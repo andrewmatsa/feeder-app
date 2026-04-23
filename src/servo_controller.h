@@ -9,6 +9,7 @@ public:
   void begin();
   void setAngle(int angle, bool smooth = false);
   void setSpeed(float speed);
+  void setPowerSave(bool enabled);
   float getSpeed() const { return speedSetting; }
   int getCurrentAngle() const { return currentAngle; }
   bool isMoving() const { return manualMoving; }
@@ -24,7 +25,9 @@ private:
   float speedSetting;
   int currentAngle;
   bool manualMoving;
+  bool servoAttached;
   
+  void ensureAttached();
   void moveServoSmooth(int target);
   void moveServoFast(int target);
   int speedToStepDelayMs(float sliderSpeed);

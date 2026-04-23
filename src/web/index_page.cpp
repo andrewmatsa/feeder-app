@@ -8,7 +8,9 @@ const char* pageIndex = R"rawliteral(
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AquaFeed Control</title>
 <style>
+)rawliteral"
 #include "shared/common_body_base_styles.inc"
+R"rawliteral(
 .row {margin-bottom: 8px;}
 label {display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; font-size: 13px;}
 input[type=range], input[type=number], select {width: 95%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px;}
@@ -89,7 +91,9 @@ button.remove-btn:active {
   background: rgba(0, 0, 0, 0.03);
   border-radius: 6px;
 }
+)rawliteral"
 #include "shared/common_card_styles.inc"
+R"rawliteral(
 .flex-row {
   display: flex;
   gap: 4px;
@@ -243,12 +247,16 @@ button.remove-btn:active {
   font-size: 12px;
   text-align: center;
 }
+)rawliteral"
 #include "shared/common_section_styles.inc"
 #include "shared/common_bottom_nav_styles.inc"
+R"rawliteral(
 body {
   padding-bottom: 75px;
 }
+)rawliteral"
 #include "shared/common_hero_styles.inc"
+R"rawliteral(
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.3.1"></script>
@@ -256,7 +264,9 @@ body {
 <body>
 <div id="toast" class="toast">Збережено</div>
 <div class="hero-header">
+)rawliteral"
 #include "shared/hero_illustration.inc"
+R"rawliteral(
   <div class="app-heading">
     <div class="app-title">AquaFeed Control</div>
     <div class="app-subtitle">Розумна годівниця</div>
@@ -338,12 +348,12 @@ body {
       <div class="section-subtitle">Швидкий запуск циклу годування</div>
     </div>
   </div>
+  <div id="manualFeedHint" style="margin-top: 10px; line-height: 1.35; font-size: 13px;"></div>
   <div class="flex-row">
     <span>Кількість повторів</span>
     <input id="feedRepeats" type="number" min="1" max="20" value="1">
   </div>
   <button type="button" id="btnSaveRepeats" onclick="saveRepeats()" style="margin-top: 0;">Зберегти</button>
-  <div id="manualFeedHint" style="margin-top: 10px; line-height: 1.35; font-size: 13px;"></div>
   <button type="button" id="btnFeedNow" onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Годувати зараз</button>
 </div>
 
@@ -374,7 +384,9 @@ body {
 </div>
 
 <script>
+)rawliteral"
 #include "shared/common_js_helpers.inc"
+R"rawliteral(
 const I18N = {
   uk: {
     appSubtitle: 'Розумна годівниця',
@@ -405,17 +417,19 @@ const I18N = {
     sleepReasonWebActive: 'веб-інтерфейс активний',
     sleepReasonRecentActivity: 'нещодавня активність',
     sleepReasonDisplayAwake: 'дисплей ще активний',
+    sleepReasonNextFeedSoon: 'наступне годування вже скоро',
     sleepReasonUnknown: 'стан уточнюється',
     addFeeding: '+ Додати годування',
     saveAllTimes: 'Зберегти всі часи',
     manualFeedReadyHint: 'Можна запустити ручне годування.',
-    manualFeedCooldownHint: 'Мінімальний інтервал між годуваннями — 5 хв. Наступне ручне годування — через %s.',
+    manualFeedCooldownHint: 'Мінімальний інтервал між годуваннями — %m хв. Наступне ручне годування — через %s.',
     toastFeedBlocked: 'Занадто рано: мінімальний інтервал між годуваннями.',
     deepSleepHelpBanner: 'Якщо сторінка не відкривається — пристрій може бути в <strong>глибокому сні</strong>. Натисніть фізичну кнопку на корпусі, щоб прокинути та знову відкрити веб.',
     tabHome: 'Головна',
     tabInfo: 'Інформація',
     tabSettings: 'Налаштування',
     toastDefault: 'Збережено',
+    toastSaveError: 'Помилка збереження',
     wifiScanning: 'Сканування мереж...',
     wifiNoNetworks: 'Мережі не знайдено',
     wifiSelect: 'Обрати',
@@ -474,17 +488,19 @@ const I18N = {
     sleepReasonWebActive: 'web interface is active',
     sleepReasonRecentActivity: 'recent activity',
     sleepReasonDisplayAwake: 'display is still awake',
+    sleepReasonNextFeedSoon: 'next feeding is soon',
     sleepReasonUnknown: 'checking status',
     addFeeding: '+ Add feeding',
     saveAllTimes: 'Save all times',
     manualFeedReadyHint: 'You can start a manual feed.',
-    manualFeedCooldownHint: 'Minimum 5 minutes between feeds. Next manual feed in %s.',
+    manualFeedCooldownHint: 'Minimum interval between feeds is %m min. Next manual feed in %s.',
     toastFeedBlocked: 'Too soon: minimum time between feeds.',
     deepSleepHelpBanner: 'If this page won\'t load, the device may be in <strong>deep sleep</strong>. Press the physical button on the unit to wake it and use the web UI again.',
     tabHome: 'Home',
     tabInfo: 'Info',
     tabSettings: 'Settings',
     toastDefault: 'Saved',
+    toastSaveError: 'Save error',
     wifiScanning: 'Scanning networks...',
     wifiNoNetworks: 'No networks found',
     wifiSelect: 'Select',
@@ -562,6 +578,15 @@ function applyLanguage() {
   if (tabs[0]) tabs[0].textContent = t('tabHome');
   if (tabs[1]) tabs[1].textContent = t('tabInfo');
   if (tabs[2]) tabs[2].textContent = t('tabSettings');
+  document.querySelectorAll('.feed-block .flex-row').forEach(row => {
+    const spans = row.querySelectorAll('span');
+    if (spans.length >= 2) {
+      spans[0].textContent = t('feedBlockTime');
+      spans[1].textContent = t('feedBlockRepeats');
+    }
+    const removeBtn = row.querySelector('.remove-btn');
+    if (removeBtn) removeBtn.title = t('feedRemoveTitle');
+  });
   const toastEl = document.getElementById('toast');
   if (toastEl) toastEl.textContent = t('toastDefault');
   const nextFeedPct = document.getElementById('nextFeedPercent');
@@ -597,6 +622,7 @@ function getSleepReasonText(reason) {
     case 'web_active': return t('sleepReasonWebActive');
     case 'recent_activity': return t('sleepReasonRecentActivity');
     case 'display_awake': return t('sleepReasonDisplayAwake');
+    case 'next_feed_soon': return t('sleepReasonNextFeedSoon');
     default: return t('sleepReasonUnknown');
   }
 }
@@ -615,6 +641,7 @@ function formatManualFeedCountdown(totalSeconds) {
 
 let manualFeedCooldownLocal = 0;
 let manualFeedCooldownInterval = null;
+let manualFeedMinIntervalMinutes = 5;
 
 function renderManualFeedHint(seconds) {
   const hint = document.getElementById('manualFeedHint');
@@ -627,7 +654,9 @@ function renderManualFeedHint(seconds) {
     if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
     return;
   }
-  hint.textContent = t('manualFeedCooldownHint').replace('%s', formatManualFeedCountdown(s));
+  hint.textContent = t('manualFeedCooldownHint')
+    .replace('%m', String(Math.max(1, Math.floor(Number(manualFeedMinIntervalMinutes) || 5))))
+    .replace('%s', formatManualFeedCountdown(s));
   hint.style.color = '#6b7280';
   if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; btn.style.cursor = 'not-allowed'; }
 }
@@ -658,12 +687,19 @@ let lastSentAngle = null;
 function flushAngleUpdate(showNotification = false) {
   if (lastQueuedAngle === null || lastQueuedAngle === lastSentAngle) return;
   const angleToSend = lastQueuedAngle;
-  postForm('/api/setAngle', { angle: angleToSend }).then(() => {
-    lastSentAngle = angleToSend;
-    if (showNotification) {
-      showToast(t('toastAngleUpdated'));
-    }
-  });
+  postForm('/api/setAngle', { angle: angleToSend })
+    .then(expectOk)
+    .then(() => {
+      lastSentAngle = angleToSend;
+      if (showNotification) {
+        showToast(t('toastAngleUpdated'));
+      }
+    })
+    .catch(() => {
+      if (showNotification) {
+        showToast(t('toastSaveError'));
+      }
+    });
 }
 
 document.getElementById('angleSlider').addEventListener('input', function(){
@@ -691,6 +727,10 @@ function showToast(text = t('toastDefault')) {
   showToastMessage(text);
 }
 
+function showActionError(error, fallbackText = t('toastSaveError')) {
+  showToast((error && error.message) ? error.message : fallbackText);
+}
+
 function feedNow(){
   const repeatsEl = document.getElementById('feedRepeats');
   const repeats = repeatsEl ? repeatsEl.value : 1;
@@ -714,8 +754,8 @@ function feedNow(){
       showToast(t('toastFeedError'));
     });
 }
-function saveSpeed(){ const s=document.getElementById('speedSlider').value; postForm('/api/setSpeed', { speed: s }).then(()=>{statusUpdate(); showToast(t('toastSpeedSaved'));}); }
-function saveRepeats(){ const r=document.getElementById('feedRepeats').value; postForm('/api/setRepeats', { repeats: r }).then(()=>{statusUpdate(); showToast(t('toastDefault'));}); }
+function saveSpeed(){ const s=document.getElementById('speedSlider').value; postForm('/api/setSpeed', { speed: s }).then(expectOk).then(()=>{statusUpdate(); showToast(t('toastSpeedSaved'));}).catch(error => showActionError(error)); }
+function saveRepeats(){ const r=document.getElementById('feedRepeats').value; postForm('/api/setRepeats', { repeats: r }).then(expectOk).then(()=>{statusUpdate(); showToast(t('toastDefault'));}).catch(error => showActionError(error)); }
 function scanWiFi(){
   showToast(t('wifiScanning'));
   fetch('/api/scanWiFi')
@@ -760,15 +800,14 @@ function scanWiFi(){
 function reconnectWiFi(){
   showToast(t('wifiReconnecting'));
   postForm('/api/reconnectWiFi')
+    .then(expectOk)
     .then(()=>{
       showToast(t('wifiReconnectDone'));
       setTimeout(()=>{
         statusUpdate();
       }, 2000);
     })
-    .catch(()=>{
-      showToast(t('wifiReconnectError'));
-    });
+    .catch(error => showActionError(error, t('wifiReconnectError')));
 }
 
 function saveWiFi(){ 
@@ -780,17 +819,43 @@ function saveWiFi(){
     return;
   }
   postForm('/api/setWiFi', { ssid: ssid.value, password: password.value })
+    .then(expectOk)
     .then(()=>{
       showToast(t('wifiSavedRestarting'));
       setTimeout(()=>{
         window.location.reload();
       }, 3000);
     })
-    .catch(()=>{
-      showToast(t('wifiSaveError'));
-    });
+    .catch(error => showActionError(error, t('wifiSaveError')));
 }
 let feedTimeCounter = 0;
+
+function clampFeedValue(value, min, max, fallback) {
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function readFeedTimeField(item, shortKey, longKey, fallback) {
+  if (item && item[shortKey] !== undefined && item[shortKey] !== null) return item[shortKey];
+  if (item && item[longKey] !== undefined && item[longKey] !== null) return item[longKey];
+  return fallback;
+}
+
+function formatFeedTimeValue(hour, minute) {
+  return `${String(clampFeedValue(hour, 0, 23, 10)).padStart(2, '0')}:${String(clampFeedValue(minute, 0, 59, 0)).padStart(2, '0')}`;
+}
+
+function parseFeedTimeValue(value) {
+  const match = /^(\d{1,2}):(\d{1,2})$/.exec(String(value || '').trim());
+  if (!match) {
+    return { hour: 10, minute: 0 };
+  }
+  return {
+    hour: clampFeedValue(match[1], 0, 23, 10),
+    minute: clampFeedValue(match[2], 0, 59, 0),
+  };
+}
 
 function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true) {
   const container = document.getElementById('feedTimesContainer');
@@ -805,11 +870,9 @@ function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true
   block.innerHTML = `
     <div class="flex-row">
       <span>${t('feedBlockTime')}</span>
-      <input type="number" class="feed-hour" min="0" max="23" value="${hour}" style="width:30px; min-width:20px; padding: 4px;">
-      <span>:</span>
-      <input type="number" class="feed-minute" min="0" max="59" value="${minute}" style="width:30px; min-width:20px; padding: 4px;">
+      <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}" style="width:96px; min-width:96px; padding: 4px;">
       <span>${t('feedBlockRepeats')}</span>
-      <input type="number" class="feed-repeats" min="1" max="20" value="${repeats}" style="width:30px; min-width:20px; padding: 4px;">
+      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}" style="width:44px; min-width:44px; padding: 4px;">
       <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('feedRemoveTitle')}">×</button>
     </div>
   `;
@@ -831,13 +894,13 @@ function saveFeedTimes(){
   const blocks = document.querySelectorAll('.feed-block');
   const feedTimes = [];
   blocks.forEach(block => {
-    const hour = block.querySelector('.feed-hour').value;
-    const minute = block.querySelector('.feed-minute').value;
-    const repeats = block.querySelector('.feed-repeats').value;
-    feedTimes.push({h: hour, m: minute, r: repeats});
+    const timeValue = block.querySelector('.feed-time').value;
+    const { hour, minute } = parseFeedTimeValue(timeValue);
+    const repeats = clampFeedValue(block.querySelector('.feed-repeats').value, 1, 20, 1);
+    feedTimes.push({ hour, minute, repeats });
   });
   const data = JSON.stringify(feedTimes);
-  postForm('/api/setFeedTimes', { data }).then(()=>{statusUpdate(); showToast(t('feedTimesSaved'));});
+  postForm('/api/setFeedTimes', { data }).then(expectOk).then(()=>{statusUpdate(); showToast(t('feedTimesSaved'));}).catch(error => showActionError(error));
 }
 
 
@@ -848,7 +911,12 @@ function loadFeedTimes(feedTimes) {
   feedTimeCounter = 0; // Скидаємо лічильник
   if (feedTimes && feedTimes.length > 0) {
     feedTimes.forEach(ft => {
-      addFeedTime(ft.h || ft.hour || 10, ft.m || ft.minute || 0, ft.r || ft.repeats || 1, false);
+      addFeedTime(
+        readFeedTimeField(ft, 'h', 'hour', 10),
+        readFeedTimeField(ft, 'm', 'minute', 0),
+        readFeedTimeField(ft, 'r', 'repeats', 1),
+        false
+      );
     });
   } else {
     // Якщо немає збережених годувань, додаємо одне стандартне
@@ -1077,6 +1145,9 @@ function statusUpdate(){
       updateBatteryGauge(null);
     }
     updateNextFeedingProgress(j);
+    if (typeof j.minFeedIntervalMin === 'number') {
+      manualFeedMinIntervalMinutes = j.minFeedIntervalMin;
+    }
     syncManualFeedCooldownFromStatus(j.manualFeedCooldownSeconds);
     document.getElementById('angleSlider').value=j.currentAngle; updateAngleLabel(j.currentAngle);
     lastSentAngle = String(j.currentAngle);
@@ -1134,7 +1205,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+)rawliteral"
 #include "shared/bottom_tabs_home.inc"
+R"rawliteral(
 </body>
 </html>
 )rawliteral";
