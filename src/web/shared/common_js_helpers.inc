@@ -72,7 +72,7 @@ function expectOk(response) {
 
 function voltageToPercentClient(v) {
   const MAX_VOLTAGE = 8.4;
-  const MIN_VOLTAGE = 6.6;
+  const MIN_VOLTAGE = 6.0;
   if (!Number.isFinite(v)) return null;
   if (v >= MAX_VOLTAGE) return 100;
   if (v <= MIN_VOLTAGE) return 0;

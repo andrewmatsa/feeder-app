@@ -1127,16 +1127,13 @@ function statusUpdate(){
     }
 
     let batteryPercentValue = null;
-    if (typeof j.batteryVoltage === 'number' || typeof j.batteryVoltage === 'string') {
+    const rawPercent = Number(j.batteryPercent);
+    if (Number.isFinite(rawPercent)) {
+      batteryPercentValue = Math.round(rawPercent);
+    } else if (typeof j.batteryVoltage === 'number' || typeof j.batteryVoltage === 'string') {
       const computed = voltageToPercentClient(Number(j.batteryVoltage));
       if (Number.isFinite(computed)) {
         batteryPercentValue = computed;
-      }
-    }
-    if (batteryPercentValue === null) {
-      const rawPercent = Number(j.batteryPercent);
-      if (Number.isFinite(rawPercent)) {
-        batteryPercentValue = Math.round(rawPercent);
       }
     }
     if (batteryPercentValue !== null) {

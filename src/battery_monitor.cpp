@@ -4,9 +4,10 @@
 const float BatteryMonitor::ADC_REFERENCE_VOLTAGE = 3.3f;
 const float BatteryMonitor::ADC_MAX_VALUE = 4095.0f;
 const float BatteryMonitor::VOLTAGE_DIVIDER_RATIO = 5.08f;
-const float BatteryMonitor::BATTERY_CALIBRATION = 0.58f;
+const float BatteryMonitor::BATTERY_CALIBRATION = 0.518f;
 const float BatteryMonitor::MAX_VOLTAGE = 8.4f;
-const float BatteryMonitor::MIN_VOLTAGE = 6.6f;
+// 2S Li-ion practical lower bound for UI percentage mapping.
+const float BatteryMonitor::MIN_VOLTAGE = 6.0f;
 
 BatteryMonitor::BatteryMonitor(int pin)
   : pin(pin), batteryVoltage(0.0), batteryPercent(0.0) {

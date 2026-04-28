@@ -331,9 +331,9 @@ function updateInfo(){
       document.getElementById('infoVoltage').innerText = '-- В';
     }
     const infoPercentEl = document.getElementById('infoPercent');
-    let infoPercentVal = voltageToPercentClient(Number(j.batteryVoltage));
+    let infoPercentVal = Number(j.batteryPercent);
     if (!Number.isFinite(infoPercentVal)) {
-      infoPercentVal = Number(j.batteryPercent);
+      infoPercentVal = voltageToPercentClient(Number(j.batteryVoltage));
     }
     if (Number.isFinite(infoPercentVal)) {
       infoPercentEl.innerText = Math.round(infoPercentVal) + '%';
