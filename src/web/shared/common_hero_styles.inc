@@ -26,13 +26,43 @@ R"rawliteral(
   100% { transform: translateY(0px); opacity: 0.9; }
 }
 .hero-svg-fish {
-  animation: hero-fish-bob 4.5s ease-in-out infinite;
+  animation: hero-fish-swim 4.2s ease-in-out infinite;
   transform-origin: 32px 42px;
   transform-box: fill-box;
 }
-@keyframes hero-fish-bob {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-3.5px); }
+.hero-fish-body {
+  animation: hero-fish-body-wave 2.2s ease-in-out infinite;
+  transform-origin: 29px 40px;
+  transform-box: fill-box;
+}
+.hero-fish-tail {
+  animation: hero-fish-tail-flick 1.25s ease-in-out infinite;
+  transform-origin: 43px 56px;
+  transform-box: fill-box;
+}
+.hero-fish-eye {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: hero-fish-eye-blink 6s linear infinite;
+}
+@keyframes hero-fish-swim {
+  0%, 100% { transform: translate3d(0px, 0px, 0) rotate(-0.6deg); }
+  25% { transform: translate3d(1.8px, -2.4px, 0) rotate(0.5deg); }
+  50% { transform: translate3d(3.2px, -0.8px, 0) rotate(0.9deg); }
+  75% { transform: translate3d(1px, -3px, 0) rotate(0.1deg); }
+}
+@keyframes hero-fish-body-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(1.6deg); }
+}
+@keyframes hero-fish-tail-flick {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-2.8deg); }
+  65% { transform: rotate(2deg); }
+}
+@keyframes hero-fish-eye-blink {
+  0%, 47%, 49%, 100% { transform: scaleY(1); }
+  48% { transform: scaleY(0.15); }
 }
 .app-heading {
   display: flex;
