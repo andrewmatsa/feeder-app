@@ -298,6 +298,16 @@ R"rawliteral(
   width: 100%;
   height: auto;
 }
+@keyframes gauge-charge-fill {
+  0%   { stroke-dashoffset: var(--charge-full, 345.58); }
+  62%  { stroke-dashoffset: var(--charge-target, 0); }
+  80%  { stroke-dashoffset: var(--charge-target, 0); }
+  100% { stroke-dashoffset: var(--charge-full, 345.58); }
+}
+.battery-gauge-charging {
+  animation: gauge-charge-fill 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transition: none !important;
+}
 .battery-gauge-percent {
   font-size: 32px;
   font-weight: 700;
@@ -1250,6 +1260,8 @@ function updateBatteryGauge(percent) {
 
   if (!Number.isFinite(percent)) {
     const circumference = 345.58;
+    gaugeFill.classList.remove('battery-gauge-charging');
+    gaugeFill.style.transition = '';
     gaugeFill.style.strokeDasharray = circumference;
     gaugeFill.style.strokeDashoffset = circumference;
     percentLabel.textContent = '--%';
@@ -1268,32 +1280,33 @@ function updateBatteryGauge(percent) {
   const offset = circumference - (safePercent / 100) * circumference;
 
   gaugeFill.style.strokeDasharray = circumference;
-  if (!hasBatteryGaugeIntroAnimated) {
-    gaugeFill.style.transition = 'none';
-    gaugeFill.style.strokeDashoffset = circumference;
-    void gaugeFill.getBoundingClientRect();
-    gaugeFill.style.transition = 'stroke-dashoffset 1.15s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease';
-    requestAnimationFrame(() => {
-      gaugeFill.style.strokeDashoffset = offset;
-    });
-    hasBatteryGaugeIntroAnimated = true;
-  } else {
-    gaugeFill.style.transition = 'stroke-dashoffset 0.6s ease, stroke 0.3s ease';
-    gaugeFill.style.strokeDashoffset = offset;
-  }
-  percentLabel.textContent = `${safePercent}%`;
 
-  let color = '#FF5E5E';
-  if (safePercent >= 75) {
-    color = '#4CAF50';
-  } else if (safePercent >= 35) {
-    color = '#FFB300';
-  } else {
-    color = '#D32F2F';
-  }
-
+  let color = batteryChargingNow ? '#4CAF50' : (safePercent >= 75 ? '#4CAF50' : safePercent >= 35 ? '#FFB300' : '#D32F2F');
   gaugeFill.style.stroke = color;
   percentLabel.setAttribute('fill', color);
+  percentLabel.textContent = `${safePercent}%`;
+
+  if (batteryChargingNow) {
+    gaugeFill.style.setProperty('--charge-full', circumference);
+    gaugeFill.style.setProperty('--charge-target', offset);
+    gaugeFill.classList.add('battery-gauge-charging');
+    hasBatteryGaugeIntroAnimated = true;
+  } else {
+    gaugeFill.classList.remove('battery-gauge-charging');
+    if (!hasBatteryGaugeIntroAnimated) {
+      gaugeFill.style.transition = 'none';
+      gaugeFill.style.strokeDashoffset = circumference;
+      void gaugeFill.getBoundingClientRect();
+      gaugeFill.style.transition = 'stroke-dashoffset 1.15s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease';
+      requestAnimationFrame(() => {
+        gaugeFill.style.strokeDashoffset = offset;
+      });
+      hasBatteryGaugeIntroAnimated = true;
+    } else {
+      gaugeFill.style.transition = 'stroke-dashoffset 0.6s ease, stroke 0.3s ease';
+      gaugeFill.style.strokeDashoffset = offset;
+    }
+  }
 
   const gaugeWrapper = document.querySelector('.battery-gauge-wrapper');
   if (gaugeWrapper) {
