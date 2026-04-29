@@ -15,6 +15,7 @@ export interface StatusResponse {
   deepSleepIdleSec: number
   batteryVoltage: number
   batteryPercent: number
+  isCharging: boolean
   feedTimes: FeedTime[]
   nextFeedMinutes?: number | null
   nextFeedHour?: number | null

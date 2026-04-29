@@ -7,7 +7,7 @@ const char* pageInfo = R"rawliteral(
 <head>
 <meta charset="utf-8">
 <title>Інформація про систему</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
 )rawliteral"
 #include "shared/common_body_base_styles.inc"
@@ -56,7 +56,7 @@ R"rawliteral(
   align-items: center;
   justify-content: center;
   gap: 8px;
-  z-index: 1000;
+  z-index: 1100;
   opacity: 0;
   transform: translateY(-14px) scale(0.985);
   transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
@@ -84,7 +84,7 @@ R"rawliteral(
   transform: translateY(0) scale(1);
 }
 body {
-  padding-bottom: 75px;
+  padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
 }
 a {
   display: inline-flex;

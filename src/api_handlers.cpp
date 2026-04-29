@@ -177,6 +177,7 @@ void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
   doc["batteryVoltage"] = battery.getVoltage();
   doc["batteryPercent"] = static_cast<int>(battery.getPercent());
   doc["batteryCalibration"] = battery.getCalibrationFactor();
+  doc["isCharging"] = battery.isCharging();
 
   appendFeedTimes(doc["feedTimes"].to<JsonArray>());
   appendLegacyFeedTimes(doc);

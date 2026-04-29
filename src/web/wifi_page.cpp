@@ -6,7 +6,7 @@ const char* pageWiFiLocked = R"rawliteral(
 <head>
 <meta charset="utf-8">
 <title>AquaFeed Login</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -35,6 +35,82 @@ body {
   display: block;
   transform: translateY(-6px);
   filter: drop-shadow(0 16px 28px rgba(17, 24, 39, 0.2));
+}
+.app-illustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-bubble {
+  animation: hero-bubble-rise 2.4s ease-in-out infinite;
+  transform-box: fill-box;
+}
+.hero-bubble-1 { animation-delay: 0s; }
+.hero-bubble-2 { animation-delay: 0.4s; }
+.hero-bubble-3 { animation-delay: 0.8s; }
+@keyframes hero-bubble-rise {
+  0% { transform: translateY(0px); opacity: 0.9; }
+  50% { transform: translateY(-6px); opacity: 0.55; }
+  100% { transform: translateY(0px); opacity: 0.9; }
+}
+.hero-svg-fish {
+  animation: hero-fish-swim 4.2s ease-in-out infinite;
+  transform-origin: 32px 42px;
+  transform-box: fill-box;
+  cursor: pointer;
+}
+.hero-fish-body {
+  animation: hero-fish-body-wave 2.2s ease-in-out infinite;
+  transform-origin: 29px 40px;
+  transform-box: fill-box;
+}
+.hero-fish-tail {
+  animation: hero-fish-tail-flick 1.25s ease-in-out infinite;
+  transform-origin: 38px 56px;
+  transform-box: fill-box;
+}
+.hero-fish-eye {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: hero-fish-eye-blink 6s linear infinite;
+}
+@keyframes hero-fish-swim {
+  0%, 100% { transform: translate3d(0px, 0px, 0) rotate(-0.6deg); }
+  25% { transform: translate3d(1.8px, -2.4px, 0) rotate(0.5deg); }
+  50% { transform: translate3d(3.2px, -0.8px, 0) rotate(0.9deg); }
+  75% { transform: translate3d(1px, -3px, 0) rotate(0.1deg); }
+}
+@keyframes hero-fish-body-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(1.6deg); }
+}
+@keyframes hero-fish-tail-flick {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-5deg); }
+  65% { transform: rotate(4deg); }
+}
+@keyframes hero-fish-eye-blink {
+  0%, 47%, 49%, 100% { transform: scaleY(1); }
+  48% { transform: scaleY(0.15); }
+}
+.app-illustration.is-escaping {
+  animation: hero-fish-escape-left 2.1s cubic-bezier(0.22, 0.7, 0.2, 1) 1;
+}
+.hero-fish-tail.tail-burst {
+  animation: hero-fish-tail-burst 0.16s ease-in-out 6;
+}
+@keyframes hero-fish-escape-left {
+  0% { transform: translate3d(0px, 0px, 0); }
+  22% { transform: translate3d(-16px, -1px, 0); }
+  48% { transform: translate3d(-42px, -3px, 0); }
+  72% { transform: translate3d(-10px, 0px, 0); }
+  86% { transform: translate3d(6px, 0px, 0); }
+  100% { transform: translate3d(0px, 0px, 0); }
+}
+@keyframes hero-fish-tail-burst {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-16deg); }
+  100% { transform: rotate(14deg); }
 }
 .app-heading {
   display: flex;
@@ -112,21 +188,21 @@ button {
   <div class="shell">
     <div class="hero-header">
       <div class="app-illustration">
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AquaFeed logo">
-          <path d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
+        <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
+          <path class="hero-fish-body" d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
           <g fill="#8d9ba3">
-            <path d="M48.1 60.5c-1.2 1.2-3.6 2.7-6.2 0s-5.4-7.5-4.2-8.7c1.2-1.2 5.8 1.7 8.4 4.4c2.6 2.6 3.2 3.1 2 4.3"/>
+            <path class="hero-fish-tail" d="M48.1 60.5c-1.2 1.2-3.6 2.7-6.2 0s-5.4-7.5-4.2-8.7c1.2-1.2 5.8 1.7 8.4 4.4c2.6 2.6 3.2 3.1 2 4.3"/>
             <ellipse cx="33.4" cy="35.3" rx="2.2" ry="3.2"/>
             <ellipse cx="37.6" cy="39.2" rx="1.2" ry="2.5"/>
             <ellipse cx="39.9" cy="36" rx=".6" ry="1.7"/>
           </g>
           <g fill="#75d6ff">
-            <ellipse cx="5.3" cy="44" rx="1.7" ry="1.8"/>
-            <ellipse cx="6.3" cy="23.4" rx="4.3" ry="4.5"/>
-            <ellipse cx="12.8" cy="10.3" rx="8" ry="8.3"/>
+            <ellipse class="hero-bubble hero-bubble-1" cx="5.3" cy="44" rx="1.7" ry="1.8"/>
+            <ellipse class="hero-bubble hero-bubble-2" cx="6.3" cy="23.4" rx="4.3" ry="4.5"/>
+            <ellipse class="hero-bubble hero-bubble-3" cx="12.8" cy="10.3" rx="8" ry="8.3"/>
           </g>
           <ellipse cx="18.7" cy="38.5" rx="7.1" ry="7.4" fill="#fcfcfa"/>
-          <ellipse cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
+          <ellipse class="hero-fish-eye" cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
         </svg>
       </div>
       <div class="app-heading">
@@ -168,6 +244,8 @@ function login() {
 document.getElementById('password').addEventListener('keydown', (event) => {
   if (event.key === 'Enter') login();
 });
+let _hTbt=null,_hEt=null;
+document.addEventListener('DOMContentLoaded',()=>{const f=document.querySelector('.hero-svg-fish'),t=document.querySelector('.hero-fish-tail'),i=f&&f.closest('.app-illustration');if(!f||!t||!i||f.dataset.tbi)return;f.dataset.tbi='1';f.addEventListener('click',()=>{if(i.classList.contains('is-escaping'))return;i.classList.add('is-escaping');t.classList.remove('tail-burst');void t.offsetWidth;t.classList.add('tail-burst');if(_hTbt)clearTimeout(_hTbt);_hTbt=setTimeout(()=>{t.classList.remove('tail-burst');_hTbt=null;},950);if(_hEt)clearTimeout(_hEt);_hEt=setTimeout(()=>{i.classList.remove('is-escaping');_hEt=null;},2150);});});
 </script>
 </body>
 </html>
@@ -179,7 +257,7 @@ const char* pageWiFiConnect = R"rawliteral(
 <head>
 <meta charset="utf-8">
 <title>AquaFeed WiFi Setup</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -208,6 +286,82 @@ body {
   display: block;
   transform: translateY(-6px);
   filter: drop-shadow(0 16px 28px rgba(17, 24, 39, 0.2));
+}
+.app-illustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-bubble {
+  animation: hero-bubble-rise 2.4s ease-in-out infinite;
+  transform-box: fill-box;
+}
+.hero-bubble-1 { animation-delay: 0s; }
+.hero-bubble-2 { animation-delay: 0.4s; }
+.hero-bubble-3 { animation-delay: 0.8s; }
+@keyframes hero-bubble-rise {
+  0% { transform: translateY(0px); opacity: 0.9; }
+  50% { transform: translateY(-6px); opacity: 0.55; }
+  100% { transform: translateY(0px); opacity: 0.9; }
+}
+.hero-svg-fish {
+  animation: hero-fish-swim 4.2s ease-in-out infinite;
+  transform-origin: 32px 42px;
+  transform-box: fill-box;
+  cursor: pointer;
+}
+.hero-fish-body {
+  animation: hero-fish-body-wave 2.2s ease-in-out infinite;
+  transform-origin: 29px 40px;
+  transform-box: fill-box;
+}
+.hero-fish-tail {
+  animation: hero-fish-tail-flick 1.25s ease-in-out infinite;
+  transform-origin: 38px 56px;
+  transform-box: fill-box;
+}
+.hero-fish-eye {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: hero-fish-eye-blink 6s linear infinite;
+}
+@keyframes hero-fish-swim {
+  0%, 100% { transform: translate3d(0px, 0px, 0) rotate(-0.6deg); }
+  25% { transform: translate3d(1.8px, -2.4px, 0) rotate(0.5deg); }
+  50% { transform: translate3d(3.2px, -0.8px, 0) rotate(0.9deg); }
+  75% { transform: translate3d(1px, -3px, 0) rotate(0.1deg); }
+}
+@keyframes hero-fish-body-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(1.6deg); }
+}
+@keyframes hero-fish-tail-flick {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-5deg); }
+  65% { transform: rotate(4deg); }
+}
+@keyframes hero-fish-eye-blink {
+  0%, 47%, 49%, 100% { transform: scaleY(1); }
+  48% { transform: scaleY(0.15); }
+}
+.app-illustration.is-escaping {
+  animation: hero-fish-escape-left 2.1s cubic-bezier(0.22, 0.7, 0.2, 1) 1;
+}
+.hero-fish-tail.tail-burst {
+  animation: hero-fish-tail-burst 0.16s ease-in-out 6;
+}
+@keyframes hero-fish-escape-left {
+  0% { transform: translate3d(0px, 0px, 0); }
+  22% { transform: translate3d(-16px, -1px, 0); }
+  48% { transform: translate3d(-42px, -3px, 0); }
+  72% { transform: translate3d(-10px, 0px, 0); }
+  86% { transform: translate3d(6px, 0px, 0); }
+  100% { transform: translate3d(0px, 0px, 0); }
+}
+@keyframes hero-fish-tail-burst {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-16deg); }
+  100% { transform: rotate(14deg); }
 }
 .app-heading {
   display: flex;
@@ -293,21 +447,21 @@ button {
   <div class="shell">
     <div class="hero-header">
       <div class="app-illustration">
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AquaFeed logo">
-          <path d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
+        <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
+          <path class="hero-fish-body" d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
           <g fill="#8d9ba3">
-            <path d="M48.1 60.5c-1.2 1.2-3.6 2.7-6.2 0s-5.4-7.5-4.2-8.7c1.2-1.2 5.8 1.7 8.4 4.4c2.6 2.6 3.2 3.1 2 4.3"/>
+            <path class="hero-fish-tail" d="M48.1 60.5c-1.2 1.2-3.6 2.7-6.2 0s-5.4-7.5-4.2-8.7c1.2-1.2 5.8 1.7 8.4 4.4c2.6 2.6 3.2 3.1 2 4.3"/>
             <ellipse cx="33.4" cy="35.3" rx="2.2" ry="3.2"/>
             <ellipse cx="37.6" cy="39.2" rx="1.2" ry="2.5"/>
             <ellipse cx="39.9" cy="36" rx=".6" ry="1.7"/>
           </g>
           <g fill="#75d6ff">
-            <ellipse cx="5.3" cy="44" rx="1.7" ry="1.8"/>
-            <ellipse cx="6.3" cy="23.4" rx="4.3" ry="4.5"/>
-            <ellipse cx="12.8" cy="10.3" rx="8" ry="8.3"/>
+            <ellipse class="hero-bubble hero-bubble-1" cx="5.3" cy="44" rx="1.7" ry="1.8"/>
+            <ellipse class="hero-bubble hero-bubble-2" cx="6.3" cy="23.4" rx="4.3" ry="4.5"/>
+            <ellipse class="hero-bubble hero-bubble-3" cx="12.8" cy="10.3" rx="8" ry="8.3"/>
           </g>
           <ellipse cx="18.7" cy="38.5" rx="7.1" ry="7.4" fill="#fcfcfa"/>
-          <ellipse cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
+          <ellipse class="hero-fish-eye" cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
         </svg>
       </div>
       <div class="app-heading">
@@ -450,6 +604,8 @@ document.getElementById('password').addEventListener('keydown', (event) => {
   if (event.key === 'Enter') connectWifi();
 });
 pollProvisionStatus();
+let _hTbt2=null,_hEt2=null;
+document.addEventListener('DOMContentLoaded',()=>{const f=document.querySelector('.hero-svg-fish'),t=document.querySelector('.hero-fish-tail'),i=f&&f.closest('.app-illustration');if(!f||!t||!i||f.dataset.tbi)return;f.dataset.tbi='1';f.addEventListener('click',()=>{if(i.classList.contains('is-escaping'))return;i.classList.add('is-escaping');t.classList.remove('tail-burst');void t.offsetWidth;t.classList.add('tail-burst');if(_hTbt2)clearTimeout(_hTbt2);_hTbt2=setTimeout(()=>{t.classList.remove('tail-burst');_hTbt2=null;},950);if(_hEt2)clearTimeout(_hEt2);_hEt2=setTimeout(()=>{i.classList.remove('is-escaping');_hEt2=null;},2150);});});
 </script>
 </body>
 </html>
@@ -461,7 +617,7 @@ const char* pageWiFi = R"rawliteral(
 <head>
 <meta charset="utf-8">
 <title>Налаштування WiFi</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
 )rawliteral"
 #include "shared/common_body_base_styles.inc"
@@ -573,7 +729,7 @@ R"rawliteral(
   align-items: center;
   justify-content: center;
   gap: 8px;
-  z-index: 1000;
+  z-index: 1100;
   opacity: 0;
   transform: translateY(-14px) scale(0.985);
   transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
@@ -770,7 +926,7 @@ R"rawliteral(
   display: inline-block;
 }
 body {
-  padding-bottom: 75px;
+  padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
 }
 .page-title {
   display: flex;
@@ -850,9 +1006,6 @@ R"rawliteral(
   <div class="status-pill" id="wifiStatusPill">
     <span id="wifiStatusText">завантаження...</span>
   </div>
-  <div class="button-row" id="wifiReconnectRow">
-    <button type="button" id="btnWifiReconnect" onclick="reconnectWiFi()" style="background: linear-gradient(45deg, #FF9800, #F57C00);">Перезапустити підключення</button>
-  </div>
 </div>
 
 <div class="card" id="apLoginCard" style="display:none;">
@@ -891,24 +1044,13 @@ R"rawliteral(
       </svg>
     </div>
     <div>
-      <div class="section-title">Налаштування мережі</div>
-      <div class="section-subtitle">Введіть SSID та пароль для підключення</div>
+      <div class="section-title">Підключення до WiFi</div>
+      <div class="section-subtitle" id="wifiNetworkSubtitle">Управління збереженою мережею</div>
     </div>
   </div>
-  <div class="row">
-    <label id="wifiLblSsid">SSID (назва мережі):</label>
-    <input type="text" id="wifiSSID" placeholder="Введіть назву WiFi або виберіть зі списку" style="width: 100%;">
-  </div>
-  <div class="row">
-    <label id="wifiLblPass">Пароль:</label>
-    <input type="password" id="wifiPassword" placeholder="Введіть пароль" style="width: 100%;">
-  </div>
-  <div class="button-row" id="wifiActions">
-    <button type="button" id="btnWifiSave" onclick="saveWiFi()">Зберегти WiFi</button>
-    <button type="button" class="secondary" id="btnWifiForget" onclick="forgetWiFi()">Забути мережу</button>
-  </div>
+  <button type="button" class="secondary" id="btnWifiForget" onclick="forgetWiFi()">Забути мережу</button>
   <div class="note-text" id="wifiNoteNetwork">
-    <strong>Примітка:</strong> Після збереження пристрій перезапустить підключення. Якщо підключення не вдасться, пристрій створить захищену точку доступу AquaFeed. Кнопка «Забути» видаляє збережені креденшіали та одразу повертає пристрій у режим точки доступу, який доступний за адресами <code>http://192.168.4.1</code> або <code>http://fish.local</code>.
+    Кнопка «Забути» видаляє збережені дані мережі та повертає пристрій у режим точки доступу за адресами <code>http://192.168.4.1</code> або <code>http://fish.local</code>.
   </div>
 </div>
 
@@ -1078,11 +1220,9 @@ function getSessionAwareHeaders(extraHeaders = {}) {
 function applyApAuthUi() {
   const needsLogin = apLoginRequired && !apAuthenticated;
   const loginCard = document.getElementById('apLoginCard');
-  const reconnectRow = document.getElementById('wifiReconnectRow');
   const gatedCards = document.querySelectorAll('.auth-gated-card');
   const bottomTabs = document.querySelector('.bottom-tabs');
   if (loginCard) loginCard.style.display = needsLogin ? '' : 'none';
-  if (reconnectRow) reconnectRow.style.display = needsLogin ? 'none' : 'flex';
   gatedCards.forEach(card => {
     card.style.display = needsLogin ? 'none' : '';
   });
@@ -1148,26 +1288,16 @@ function applyWiFiLanguage() {
   if (apLoginNote) apLoginNote.innerHTML = wifiIsEn()
     ? 'Use the <strong>AquaFeed access point password</strong> to unlock local settings while the device is in AP mode.'
     : 'Використайте <strong>пароль точки доступу AquaFeed</strong>, щоб відкрити локальні налаштування в режимі AP.';
-  const lblSsid = document.getElementById('wifiLblSsid');
-  if (lblSsid) lblSsid.textContent = wifiIsEn() ? 'SSID (network name):' : 'SSID (назва мережі):';
-  const lblPass = document.getElementById('wifiLblPass');
-  if (lblPass) lblPass.textContent = wifiIsEn() ? 'Password:' : 'Пароль:';
-  const inpSsid = document.getElementById('wifiSSID');
-  if (inpSsid) inpSsid.placeholder = wifiIsEn() ? 'Enter WiFi name or pick from list' : 'Введіть назву WiFi або виберіть зі списку';
-  const inpPass = document.getElementById('wifiPassword');
-  if (inpPass) inpPass.placeholder = wifiIsEn() ? 'Enter password' : 'Введіть пароль';
-  const btnRec = document.getElementById('btnWifiReconnect');
-  if (btnRec) btnRec.textContent = wifiIsEn() ? 'Restart connection' : 'Перезапустити підключення';
-  const btnSave = document.getElementById('btnWifiSave');
-  if (btnSave) btnSave.textContent = wifiIsEn() ? 'Save WiFi' : 'Зберегти WiFi';
   const btnForget = document.getElementById('btnWifiForget');
   if (btnForget) btnForget.textContent = wifiIsEn() ? 'Forget network' : 'Забути мережу';
   const noteNet = document.getElementById('wifiNoteNetwork');
   if (noteNet) {
     noteNet.innerHTML = wifiIsEn()
-      ? '<strong>Note:</strong> After saving, the device reconnects. If it fails, it opens a protected AquaFeed access point. <strong>Forget</strong> clears saved credentials and returns AP mode at <code>http://192.168.4.1</code> or <code>http://fish.local</code>.'
-      : '<strong>Примітка:</strong> Після збереження пристрій перезапустить підключення. Якщо підключення не вдасться, пристрій створить захищену точку доступу AquaFeed. Кнопка «Забути» видаляє збережені креденшіали та одразу повертає пристрій у режим точки доступу, який доступний за адресами <code>http://192.168.4.1</code> або <code>http://fish.local</code>.';
+      ? '<strong>Forget</strong> clears saved credentials and returns the device to AP mode at <code>http://192.168.4.1</code> or <code>http://fish.local</code>.'
+      : 'Кнопка «Забути» видаляє збережені дані мережі та повертає пристрій у режим точки доступу за адресами <code>http://192.168.4.1</code> або <code>http://fish.local</code>.';
   }
+  const wifiNetSub = document.getElementById('wifiNetworkSubtitle');
+  if (wifiNetSub) wifiNetSub.textContent = wifiIsEn() ? 'Manage saved network' : 'Управління збереженою мережею';
   const lblPowerEco = document.getElementById('wifiLblPowerEco');
   if (lblPowerEco) lblPowerEco.textContent = wifiIsEn() ? 'Power saving mode' : 'Режим економії енергії';
   const lblDisp = document.getElementById('wifiLblDisplayToggle');
@@ -1317,44 +1447,11 @@ function showToast(text = (wifiIsEn() ? 'Saved' : 'Збережено')) {
   showToastMessage(text);
 }
 
-function reconnectWiFi(){
-  showToast(wifiIsEn() ? 'Restarting connection...' : 'Перезапуск підключення...');
-  postForm('/api/reconnectWiFi')
-    .then(expectOk)
-    .then(()=>{
-      showToast(wifiIsEn() ? 'Connection restarted' : 'Підключення перезапущено');
-      setTimeout(()=>{
-        updateStatus();
-      }, 2000);
-    })
-    .catch(error => showProtectedActionError(error, wifiIsEn() ? 'Restart error' : 'Помилка перезапуску'));
-}
-
-function saveWiFi(){ 
-  const ssid = document.getElementById('wifiSSID').value;
-  const password = document.getElementById('wifiPassword').value;
-  if(!ssid || ssid.trim() === '') {
-    showToast(wifiIsEn() ? 'Enter WiFi network name' : 'Введіть назву WiFi мережі');
-    return;
-  }
-  postForm('/api/setWiFi', { ssid, password })
-    .then(expectOk)
-    .then(()=>{
-      showToast(wifiIsEn() ? 'WiFi saved, restarting connection...' : 'WiFi збережено, перезапуск підключення...');
-      setTimeout(()=>{
-        window.location.reload();
-      }, 3000);
-    })
-    .catch(error => showProtectedActionError(error, wifiIsEn() ? 'WiFi save error' : 'Помилка збереження WiFi'));
-}
-
 function forgetWiFi(){
   showToast(wifiIsEn() ? 'Removing network...' : 'Видаляю мережу...');
   postForm('/api/forgetWiFi')
     .then(expectOk)
     .then(()=>{
-      document.getElementById('wifiSSID').value = '';
-      document.getElementById('wifiPassword').value = '';
       showToast(wifiIsEn() ? 'Network forgotten. Reconnect to the AquaFeed access point' : 'Мережу забуто. Повторно підключіться до точки доступу AquaFeed');
       setTimeout(()=>{ window.location.reload(); }, 2000);
     })
@@ -1453,40 +1550,19 @@ function updateStatus(){
     applyApAuthUi();
     const statusText = document.getElementById('wifiStatusText');
     const statusPill = document.getElementById('wifiStatusPill');
-    const actionsRow = document.getElementById('wifiActions');
     if (statusPill) {
       statusPill.classList.remove('success','warning','error');
     }
     statusText.style.color = '';
-    const ssidInput = document.getElementById('wifiSSID');
-    if(ssidInput) {
-      if(j.wifiSSID) {
-        ssidInput.value = j.wifiSSID;
-      } else {
-        ssidInput.value = '';
-      }
-    }
-    const passwordInput = document.getElementById('wifiPassword');
-    if (passwordInput && (!j.wifiSSID || j.isAPMode)) {
-      passwordInput.value = '';
-    }
     if(j.isAPMode) {
       statusText.innerText = (wifiIsEn() ? 'Access Point mode (AP) - ' : 'Режим точки доступу (AP) - ') + (j.wifiSSID || (wifiIsEn() ? 'not set' : 'не налаштовано'));
       if (statusPill) statusPill.classList.add('warning');
-      if (actionsRow) actionsRow.style.display = 'flex';
-      if (actionsRow) actionsRow.classList.add('ap-mode');
     } else if(j.wifiIP) {
       statusText.innerText = (wifiIsEn() ? 'Connected to: ' : 'Підключено до: ') + (j.wifiSSID || (wifiIsEn() ? 'unknown' : 'невідомо')) + ' (IP: ' + j.wifiIP + ')';
       if (statusPill) statusPill.classList.add('success');
-      if (actionsRow) {
-        actionsRow.style.display = 'flex';
-        actionsRow.classList.remove('ap-mode');
-      }
     } else {
       statusText.innerText = wifiIsEn() ? 'Not connected' : 'Не підключено';
       if (statusPill) statusPill.classList.add('error');
-      if (actionsRow) actionsRow.style.display = 'flex';
-      if (actionsRow) actionsRow.classList.add('ap-mode');
     }
     const powerToggle = document.getElementById('powerSaveMode');
     if (powerToggle) {

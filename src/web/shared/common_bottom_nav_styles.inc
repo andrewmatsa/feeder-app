@@ -7,9 +7,9 @@ R"rawliteral(
   display: flex;
   background: rgba(255,255,255,0.96);
   box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 1020;
   border-top: 1px solid rgba(15, 23, 42, 0.08);
-  padding: 10px 12px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   border-radius: 16px 16px 0 0;
   backdrop-filter: blur(10px);
 }

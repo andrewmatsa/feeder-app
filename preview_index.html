@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AquaFeed Control</title>
 <style>
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 8px;
-  padding-bottom: 75px;
+  padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
   max-width: 100%;
   margin: auto;
   background: #F5F5F5;
@@ -43,6 +43,17 @@ input[type=number]:focus {
 }
 .flex-row span {font-weight: 500; color: #555; font-size: 12px;}
 .flex-row input, .flex-row select {width: auto; min-width: 20px; font-size: 12px;}
+.feed-block .flex-row {
+  flex-wrap: nowrap;
+}
+.feed-block .feed-time {
+  width: 84px;
+  min-width: 84px;
+}
+.feed-block .feed-repeats {
+  width: 64px;
+  min-width: 64px;
+}
 button {
   display: inline-flex;
   align-items: center;
@@ -142,6 +153,24 @@ button.add-btn:hover {
   font-weight: 700;
   letter-spacing: 0.15px;
 }
+.low-battery-alert.is-low {
+  border: 1px solid rgba(198, 40, 40, 0.35);
+  background: rgba(211, 47, 47, 0.12);
+  color: #b71c1c;
+}
+.low-battery-alert.is-low .low-battery-alert-icon {
+  background: #d32f2f;
+  color: #fff;
+}
+.low-battery-alert.is-charging {
+  border: 1px solid rgba(46, 125, 50, 0.35);
+  background: rgba(76, 175, 80, 0.14);
+  color: #1b5e20;
+}
+.low-battery-alert.is-charging .low-battery-alert-icon {
+  background: #2e7d32;
+  color: #fff;
+}
 .low-battery-alert.is-visible {
   display: inline-flex;
 }
@@ -157,6 +186,9 @@ button.add-btn:hover {
   font-size: 12px;
   font-weight: 800;
   line-height: 1;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .battery-gauge-svg {
   width: 100%;
@@ -334,9 +366,9 @@ button.add-btn:hover {
   display: flex;
   background: rgba(255,255,255,0.96);
   box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 1020;
   border-top: 1px solid rgba(15, 23, 42, 0.08);
-  padding: 10px 12px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   border-radius: 16px 16px 0 0;
   backdrop-filter: blur(10px);
 }
@@ -436,7 +468,7 @@ button.add-btn:hover {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  z-index: 1000;
+  z-index: 1100;
   opacity: 0;
   transform: translateY(-14px) scale(0.985);
   transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
@@ -558,7 +590,7 @@ button.add-btn:hover {
                 fill="none" stroke="#1976D2" stroke-width="14" stroke-linecap="round"
                 stroke-dasharray="345.58" stroke-dashoffset="173" style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
           <text id="nextFeedPercent" x="130" y="130" text-anchor="middle" dominant-baseline="middle"
-                font-size="28" font-weight="600" fill="#1976D2">2 h 30 m</text>
+                font-size="28" font-weight="600" fill="#1976D2">— год — хв</text>
         </svg>
       </div>
       <div class="next-feed-title">Until next feeding</div>
@@ -633,9 +665,7 @@ button.add-btn:hover {
     <div>
       <div class="section-title">Automatic feeding</div>
       <div class="section-subtitle">Set your feeding schedule</div>
-      <div class="section-subtitle" id="localTimeLabel">Час: --:--</div>
-      <div class="section-subtitle" id="sleepCountdownLabel">Сон: --</div>
-      <div class="section-subtitle" id="sleepReasonLabel">Причина: --</div>
+      <div class="section-subtitle" id="nextFeedingInlineLabel">До наступного годування:</div>
     </div>
   </div>
   <div id="feedTimesContainer">
@@ -677,6 +707,7 @@ const I18N = {
     appSubtitle: 'Розумна годівниця',
     batteryTitle: 'Стан батареї',
     batteryVoltagePrefix: 'Напруга:',
+    chargingNow: 'Заряджається',
     lowBatteryAlert: 'Низький рівень заряду',
     nextFeedTitle: 'До наступного годування',
     manualControlTitle: 'Ручне керування',
@@ -691,6 +722,7 @@ const I18N = {
     feedNow: 'Годувати зараз',
     autoFeedTitle: 'Автоматичне годування',
     autoFeedSubtitle: 'Налаштуйте розклад годувань',
+    nextFeedingInlineLabel: 'До наступного годування:',
     timePrefix: 'Час:',
     sleepPrefix: 'Сон через:',
     sleepNow: 'зараз',
@@ -727,6 +759,7 @@ const I18N = {
     appSubtitle: 'Smart feeder',
     batteryTitle: 'Battery status',
     batteryVoltagePrefix: 'Voltage:',
+    chargingNow: 'Charging',
     lowBatteryAlert: 'Low battery level',
     nextFeedTitle: 'Until next feeding',
     manualControlTitle: 'Manual control',
@@ -741,6 +774,7 @@ const I18N = {
     feedNow: 'Feed now',
     autoFeedTitle: 'Automatic feeding',
     autoFeedSubtitle: 'Set your feeding schedule',
+    nextFeedingInlineLabel: 'Until next feeding:',
     timePrefix: 'Time:',
     sleepPrefix: 'Sleep in:',
     sleepNow: 'now',
@@ -779,6 +813,7 @@ function t(key) {
   return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.uk[key] || key);
 }
 const LOW_BATTERY_ALERT_THRESHOLD = 20;
+let previewChargingNow = false;
 
 function getPreviewBatteryPercent() {
   const percentEl = document.getElementById('batteryPercent');
@@ -787,12 +822,28 @@ function getPreviewBatteryPercent() {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function updateLowBatteryAlert(percent) {
+function updateLowBatteryAlert(percent, isCharging = false) {
   const alertEl = document.getElementById('lowBatteryAlert');
+  const textEl = document.getElementById('lowBatteryAlertText');
+  const iconEl = alertEl ? alertEl.querySelector('.low-battery-alert-icon') : null;
   if (!alertEl) return;
+  if (isCharging) {
+    if (textEl) textEl.textContent = t('chargingNow');
+    if (iconEl) iconEl.textContent = 'i';
+    alertEl.classList.remove('is-low');
+    alertEl.classList.add('is-charging');
+    alertEl.classList.add('is-visible');
+    return;
+  }
   if (Number.isFinite(percent) && percent <= LOW_BATTERY_ALERT_THRESHOLD) {
+    if (textEl) textEl.textContent = t('lowBatteryAlert');
+    if (iconEl) iconEl.textContent = '!';
+    alertEl.classList.remove('is-charging');
+    alertEl.classList.add('is-low');
     alertEl.classList.add('is-visible');
   } else {
+    alertEl.classList.remove('is-charging');
+    alertEl.classList.remove('is-low');
     alertEl.classList.remove('is-visible');
   }
 }
@@ -812,7 +863,7 @@ function updateBatteryGauge(percent) {
     gaugeFill.style.stroke = '#E6E9EF';
     percentLabel.textContent = '--%';
     percentLabel.setAttribute('fill', '#6b7280');
-    updateLowBatteryAlert(null);
+    updateLowBatteryAlert(null, previewChargingNow);
     return;
   }
 
@@ -843,7 +894,7 @@ function updateBatteryGauge(percent) {
   }
   gaugeFill.style.stroke = color;
   percentLabel.setAttribute('fill', color);
-  updateLowBatteryAlert(safePercent);
+  updateLowBatteryAlert(safePercent, previewChargingNow);
 }
 
 function animateNextFeedGaugeIntro() {
@@ -872,6 +923,54 @@ const previewSleepState = {
 
 let heroTailBurstTimer = null;
 let heroEscapeTimer = null;
+
+function syncPreviewNextFeedingInlineLabel() {
+  const inlineLabelEl = document.getElementById('nextFeedingInlineLabel');
+  const gaugeTextEl = document.getElementById('nextFeedPercent');
+  if (!inlineLabelEl) return;
+  const currentValue = gaugeTextEl && gaugeTextEl.textContent && gaugeTextEl.textContent.trim().length
+    ? gaugeTextEl.textContent.trim()
+    : t('nextFeedDash');
+  inlineLabelEl.textContent = `${t('nextFeedingInlineLabel')} ${currentValue}`;
+}
+
+function formatDurationMinutes(minutes) {
+  if (!Number.isFinite(minutes) || minutes < 0) return t('nextFeedDash');
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return currentLang === 'en' ? `${hours} h ${mins} m` : `${hours} год ${mins} хв`;
+}
+
+function collectPreviewScheduleFromDom() {
+  const schedule = [];
+  document.querySelectorAll('.feed-block .feed-time').forEach((input) => {
+    const parsed = parseFeedTimeValue(input.value);
+    const hour = ((parsed.hour % 24) + 24) % 24;
+    const minute = ((parsed.minute % 60) + 60) % 60;
+    schedule.push({ total: hour * 60 + minute });
+  });
+  schedule.sort((a, b) => a.total - b.total);
+  return schedule;
+}
+
+function updatePreviewNextFeedTime() {
+  const gaugeTextEl = document.getElementById('nextFeedPercent');
+  if (!gaugeTextEl) return;
+  const schedule = collectPreviewScheduleFromDom();
+  if (!schedule.length) {
+    gaugeTextEl.textContent = t('nextFeedDash');
+    syncPreviewNextFeedingInlineLabel();
+    return;
+  }
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  let next = schedule.find(item => item.total > nowMinutes);
+  if (!next) next = schedule[0];
+  let minutesUntilNext = next.total - nowMinutes;
+  if (minutesUntilNext <= 0) minutesUntilNext += 24 * 60;
+  gaugeTextEl.textContent = formatDurationMinutes(minutesUntilNext);
+  syncPreviewNextFeedingInlineLabel();
+}
 
 function initHeroFishTailBurst() {
   const fish = document.querySelector('.hero-svg-fish');
@@ -1014,6 +1113,8 @@ function applyLanguage() {
   if (nextFeedTitle) nextFeedTitle.textContent = t('nextFeedTitle');
   const lowBatteryAlertText = document.getElementById('lowBatteryAlertText');
   if (lowBatteryAlertText) lowBatteryAlertText.textContent = t('lowBatteryAlert');
+  const currentBatteryPercent = getPreviewBatteryPercent();
+  updateLowBatteryAlert(currentBatteryPercent, previewChargingNow);
   updateBatteryGauge(getPreviewBatteryPercent());
   const deepSleepBanner = document.getElementById('deepSleepHelpBanner');
   if (deepSleepBanner) deepSleepBanner.innerHTML = t('deepSleepHelpBanner');
@@ -1023,16 +1124,7 @@ function applyLanguage() {
   if (subtitles[1]) subtitles[1].textContent = t('manualFeedSubtitle');
   if (sections[2]) sections[2].textContent = t('autoFeedTitle');
   if (subtitles[2]) subtitles[2].textContent = t('autoFeedSubtitle');
-  const localTimeLabel = document.getElementById('localTimeLabel');
-  if (localTimeLabel) localTimeLabel.textContent = t('timePrefix') + ' 14:30';
-  const sleepCountdownLabel = document.getElementById('sleepCountdownLabel');
-  const sleepReasonLabel = document.getElementById('sleepReasonLabel');
-  if (sleepCountdownLabel && !sleepCountdownLabel.dataset.dynamic) {
-    sleepCountdownLabel.textContent = `${t('sleepPrefix')} --`;
-  }
-  if (sleepReasonLabel && !sleepReasonLabel.dataset.dynamic) {
-    sleepReasonLabel.textContent = `${t('sleepReasonPrefix')} --`;
-  }
+  syncPreviewNextFeedingInlineLabel();
   applyPreviewSleepLabels();
   if (labels[0]) labels[0].innerHTML = `${t('servoAngle')} <span id="angleLabel">0</span>°`;
   if (labels[1]) labels[1].innerHTML = `${t('servoSpeed')} <span id="speedValue">20</span>`;
@@ -1128,13 +1220,19 @@ function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true
   block.innerHTML = `
     <div class="flex-row">
       <span>${t('feedTime')}</span>
-      <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}" style="width:96px; min-width:96px; padding: 4px;">
+      <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}" style="padding: 4px;">
       <span>${t('feedRepeatsField')}</span>
-      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}" style="width:96px; min-width:96px;">
+      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}">
       <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('removeTitle')}">×</button>
     </div>
   `;
   container.appendChild(block);
+  const timeInput = block.querySelector('.feed-time');
+  if (timeInput) {
+    timeInput.addEventListener('input', updatePreviewNextFeedTime);
+    timeInput.addEventListener('change', updatePreviewNextFeedTime);
+  }
+  updatePreviewNextFeedTime();
   if (showNotification) {
     showToast(t('toastFeedingAdded'));
   }
@@ -1144,6 +1242,7 @@ function removeFeedTime(blockId) {
   const block = document.getElementById(blockId);
   if (block) {
     block.remove();
+    updatePreviewNextFeedTime();
     showToast(t('toastFeedingRemoved'));
   }
 }
@@ -1160,6 +1259,7 @@ function saveFeedTimes(){
   console.log('Saved feeding times:', feedTimes);
   console.log('JSON payload:', JSON.stringify(feedTimes));
   // On a real ESP32 this will be: fetch('/api/setFeedTimes?data=' + encodeURIComponent(JSON.stringify(feedTimes)))
+  updatePreviewNextFeedTime();
   showToast(t('toastTimesSaved'));
 }
 
@@ -1181,6 +1281,7 @@ function loadFeedTimes(feedTimes) {
     // If no feedings are saved, add one default entry
     addFeedTime(10, 0, 1, false);
   }
+  updatePreviewNextFeedTime();
 }
 
 // Servo angle change handler
@@ -1254,6 +1355,7 @@ window.onload = function() {
   animateNextFeedGaugeIntro();
   syncManualFeedCooldownFromStatus(previewManualFeedCooldownSeconds);
   loadFeedTimes([]);
+  updatePreviewNextFeedTime();
 };
 </script>
 </body>

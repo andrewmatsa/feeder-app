@@ -40,6 +40,7 @@ class StatusResponse(BaseModel):
     deepSleepIdleSec: int = 60
     batteryVoltage: float
     batteryPercent: int
+    isCharging: bool = False
     feedTimes: list[FeedTime]
     nextFeedMinutes: int | None = None
     nextFeedHour: int | None = None

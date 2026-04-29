@@ -61,6 +61,7 @@ def map_firmware_status(payload: dict[str, Any]) -> StatusResponse:
         deepSleepIdleSec=max(0, to_int(payload.get("deepSleepIdleSec"), 60)),
         batteryVoltage=to_float(payload.get("batteryVoltage"), 0.0),
         batteryPercent=max(0, min(100, to_int(payload.get("batteryPercent"), 0))),
+        isCharging=bool(payload.get("isCharging", False)),
         feedTimes=normalize_feed_times(payload.get("feedTimes")),
         nextFeedMinutes=to_optional_non_negative_int(payload.get("nextFeedMinutes")),
         nextFeedHour=to_optional_non_negative_int(payload.get("nextFeedHour")),

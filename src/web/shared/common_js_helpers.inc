@@ -90,4 +90,33 @@ function voltageToPercentClient(v) {
   if (v <= MIN_VOLTAGE) return 0;
   return Math.round(((v - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE)) * 100);
 }
+
+let heroTailBurstTimer = null;
+let heroEscapeTimer = null;
+
+function initHeroFishTailBurst() {
+  const fish = document.querySelector('.hero-svg-fish');
+  const tail = document.querySelector('.hero-fish-tail');
+  const illustration = fish ? fish.closest('.app-illustration') : null;
+  if (!fish || !tail || !illustration || fish.dataset.tailBurstReady === '1') return;
+  fish.dataset.tailBurstReady = '1';
+  fish.addEventListener('click', () => {
+    if (illustration.classList.contains('is-escaping')) return;
+    illustration.classList.add('is-escaping');
+    tail.classList.remove('tail-burst');
+    void tail.offsetWidth;
+    tail.classList.add('tail-burst');
+    if (heroTailBurstTimer) clearTimeout(heroTailBurstTimer);
+    heroTailBurstTimer = setTimeout(() => {
+      tail.classList.remove('tail-burst');
+      heroTailBurstTimer = null;
+    }, 950);
+    if (heroEscapeTimer) clearTimeout(heroEscapeTimer);
+    heroEscapeTimer = setTimeout(() => {
+      illustration.classList.remove('is-escaping');
+      heroEscapeTimer = null;
+    }, 2150);
+  });
+}
+document.addEventListener('DOMContentLoaded', initHeroFishTailBurst);
 )rawliteral"

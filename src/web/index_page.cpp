@@ -5,7 +5,7 @@ const char* pageIndex = R"rawliteral(
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AquaFeed Control</title>
 <style>
 )rawliteral"
@@ -118,6 +118,17 @@ R"rawliteral(
 }
 .flex-row span {font-weight: 500; color: #555; font-size: 12px;}
 .flex-row input, .flex-row select {width: auto; min-width: 20px; font-size: 12px;}
+.feed-block .flex-row {
+  flex-wrap: nowrap;
+}
+.feed-block .feed-time {
+  width: 84px;
+  min-width: 84px;
+}
+.feed-block .feed-repeats {
+  width: 64px;
+  min-width: 64px;
+}
 .toast {
   position: fixed;
   top: 0;
@@ -139,7 +150,7 @@ R"rawliteral(
   align-items: center;
   justify-content: center;
   gap: 8px;
-  z-index: 1000;
+  z-index: 1100;
   opacity: 0;
   transform: translateY(-14px) scale(0.985);
   transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
@@ -239,6 +250,24 @@ R"rawliteral(
   font-weight: 700;
   letter-spacing: 0.15px;
 }
+.low-battery-alert.is-low {
+  border: 1px solid rgba(198, 40, 40, 0.35);
+  background: rgba(211, 47, 47, 0.12);
+  color: #b71c1c;
+}
+.low-battery-alert.is-low .low-battery-alert-icon {
+  background: #d32f2f;
+  color: #fff;
+}
+.low-battery-alert.is-charging {
+  border: 1px solid rgba(46, 125, 50, 0.35);
+  background: rgba(76, 175, 80, 0.14);
+  color: #1b5e20;
+}
+.low-battery-alert.is-charging .low-battery-alert-icon {
+  background: #2e7d32;
+  color: #fff;
+}
 .low-battery-alert.is-visible {
   display: inline-flex;
 }
@@ -254,6 +283,9 @@ R"rawliteral(
   font-size: 12px;
   font-weight: 800;
   line-height: 1;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .battery-info-row {
   display: flex;
@@ -353,7 +385,7 @@ R"rawliteral(
 #include "shared/common_bottom_nav_styles.inc"
 R"rawliteral(
 body {
-  padding-bottom: 75px;
+  padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
 }
 )rawliteral"
 #include "shared/common_hero_styles.inc"
@@ -478,9 +510,7 @@ R"rawliteral(
     <div>
       <div class="section-title">Автоматичне годування</div>
       <div class="section-subtitle">Налаштуйте розклад годувань</div>
-      <div class="section-subtitle" id="localTimeLabel">Час: --:--</div>
-      <div class="section-subtitle" id="sleepCountdownLabel">Сон: --</div>
-      <div class="section-subtitle" id="sleepReasonLabel">Причина: --</div>
+      <div class="section-subtitle" id="nextFeedingInlineLabel">До наступного годування:</div>
     </div>
   </div>
   <div id="feedTimesContainer">
@@ -499,6 +529,7 @@ const I18N = {
     appSubtitle: 'Розумна годівниця',
     batteryTitle: 'Стан батареї',
     batteryVoltagePrefix: 'Напруга:',
+    chargingNow: 'Заряджається',
     lowBatteryAlert: 'Низький рівень заряду',
     nextFeedTitle: 'До наступного годування',
     manualControlTitle: 'Ручне керування',
@@ -513,6 +544,7 @@ const I18N = {
     feedNow: 'Годувати зараз',
     autoFeedTitle: 'Автоматичне годування',
     autoFeedSubtitle: 'Налаштуйте розклад годувань',
+    nextFeedingInlineLabel: 'До наступного годування:',
     timePrefix: 'Час:',
     sleepPrefix: 'Сон через:',
     sleepNow: 'зараз',
@@ -570,6 +602,7 @@ const I18N = {
     appSubtitle: 'Smart feeder',
     batteryTitle: 'Battery status',
     batteryVoltagePrefix: 'Voltage:',
+    chargingNow: 'Charging',
     lowBatteryAlert: 'Low battery level',
     nextFeedTitle: 'Until next feeding',
     manualControlTitle: 'Manual control',
@@ -584,6 +617,7 @@ const I18N = {
     feedNow: 'Feed now',
     autoFeedTitle: 'Automatic feeding',
     autoFeedSubtitle: 'Set your feeding schedule',
+    nextFeedingInlineLabel: 'Until next feeding:',
     timePrefix: 'Time:',
     sleepPrefix: 'Sleep in:',
     sleepNow: 'now',
@@ -643,34 +677,7 @@ function t(key) {
   return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.uk[key] || key);
 }
 
-let heroTailBurstTimer = null;
-let heroEscapeTimer = null;
 
-function initHeroFishTailBurst() {
-  const fish = document.querySelector('.hero-svg-fish');
-  const tail = document.querySelector('.hero-fish-tail');
-  const illustration = fish ? fish.closest('.app-illustration') : null;
-  if (!fish || !tail || !illustration || fish.dataset.tailBurstReady === '1') return;
-  fish.dataset.tailBurstReady = '1';
-
-  fish.addEventListener('click', () => {
-    if (illustration.classList.contains('is-escaping')) return;
-    illustration.classList.add('is-escaping');
-    tail.classList.remove('tail-burst');
-    void tail.offsetWidth;
-    tail.classList.add('tail-burst');
-    if (heroTailBurstTimer) clearTimeout(heroTailBurstTimer);
-    heroTailBurstTimer = setTimeout(() => {
-      tail.classList.remove('tail-burst');
-      heroTailBurstTimer = null;
-    }, 950);
-    if (heroEscapeTimer) clearTimeout(heroEscapeTimer);
-    heroEscapeTimer = setTimeout(() => {
-      illustration.classList.remove('is-escaping');
-      heroEscapeTimer = null;
-    }, 2150);
-  });
-}
 function applyLanguage() {
   const sections = document.querySelectorAll('.section-title');
   const subtitles = document.querySelectorAll('.section-subtitle');
@@ -686,6 +693,11 @@ function applyLanguage() {
   if (nextFeedTitle) nextFeedTitle.textContent = t('nextFeedTitle');
   const lowBatteryAlertText = document.getElementById('lowBatteryAlertText');
   if (lowBatteryAlertText) lowBatteryAlertText.textContent = t('lowBatteryAlert');
+  const currentBatteryPercentLabel = document.getElementById('batteryPercent');
+  const currentBatteryPercent = currentBatteryPercentLabel
+    ? Number(String(currentBatteryPercentLabel.textContent || '').replace('%', '').trim())
+    : NaN;
+  updateLowBatteryAlert(Number.isFinite(currentBatteryPercent) ? currentBatteryPercent : null, batteryChargingNow);
   const deepSleepBanner = document.getElementById('deepSleepHelpBanner');
   if (deepSleepBanner) deepSleepBanner.innerHTML = t('deepSleepHelpBanner');
   if (sections[0]) sections[0].textContent = t('manualControlTitle');
@@ -694,6 +706,8 @@ function applyLanguage() {
   if (subtitles[1]) subtitles[1].textContent = t('manualFeedSubtitle');
   if (sections[2]) sections[2].textContent = t('autoFeedTitle');
   if (subtitles[2]) subtitles[2].textContent = t('autoFeedSubtitle');
+  const nextFeedingInlineLabel = document.getElementById('nextFeedingInlineLabel');
+  if (nextFeedingInlineLabel) nextFeedingInlineLabel.textContent = `${t('nextFeedingInlineLabel')} ${t('nextFeedDash')}`;
   if (labels[0]) labels[0].innerHTML = `${t('servoAngle')} <span id="angleLabel">0</span>°`;
   if (labels[1]) labels[1].innerHTML = `${t('servoSpeed')} <span id="speedValue">20</span>`;
   const sleepCountdownLabel = document.getElementById('sleepCountdownLabel');
@@ -1031,9 +1045,9 @@ function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true
   block.innerHTML = `
     <div class="flex-row">
       <span>${t('feedBlockTime')}</span>
-      <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}" style="width:96px; min-width:96px; padding: 4px;">
+      <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}" style="padding: 4px;">
       <span>${t('feedBlockRepeats')}</span>
-      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}" style="width:96px; min-width:96px;">
+      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}">
       <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('feedRemoveTitle')}">×</button>
     </div>
   `;
@@ -1150,6 +1164,7 @@ let hasNextFeedGaugeIntroAnimated = false;
 function updateNextFeedingProgress(status) {
   const percentTextEl = document.getElementById('nextFeedPercent');
   const fillPath = document.getElementById('nextFeedFill');
+  const inlineLabelEl = document.getElementById('nextFeedingInlineLabel');
   if (!percentTextEl || !fillPath) return;
 
   const schedule = normalizeFeedSchedule(status);
@@ -1171,6 +1186,9 @@ function updateNextFeedingProgress(status) {
     }
     fillPath.style.strokeDasharray = 345.58;
     fillPath.style.strokeDashoffset = 345.58;
+    if (inlineLabelEl) {
+      inlineLabelEl.textContent = `${t('nextFeedingInlineLabel')} ${percentTextEl.textContent}`;
+    }
     return;
   }
 
@@ -1218,6 +1236,9 @@ function updateNextFeedingProgress(status) {
     fillPath.style.strokeDashoffset = offset;
   }
   percentTextEl.textContent = formatDurationMinutes(minutesUntilNext);
+  if (inlineLabelEl) {
+    inlineLabelEl.textContent = `${t('nextFeedingInlineLabel')} ${percentTextEl.textContent}`;
+  }
 }
 
 let hasBatteryGaugeIntroAnimated = false;
@@ -1237,7 +1258,7 @@ function updateBatteryGauge(percent) {
     if (gaugeWrapper) {
       gaugeWrapper.removeAttribute('data-low-battery');
     }
-    updateLowBatteryAlert(null);
+    updateLowBatteryAlert(null, batteryChargingNow);
     return;
   }
 
@@ -1282,17 +1303,36 @@ function updateBatteryGauge(percent) {
       gaugeWrapper.removeAttribute('data-low-battery');
     }
   }
-  updateLowBatteryAlert(safePercent);
+  updateLowBatteryAlert(safePercent, batteryChargingNow);
 }
 
 const LOW_BATTERY_ALERT_THRESHOLD = 20;
+let batteryChargingNow = false;
 
-function updateLowBatteryAlert(percent) {
+function updateLowBatteryAlert(percent, isCharging = false) {
   const alertEl = document.getElementById('lowBatteryAlert');
+  const textEl = document.getElementById('lowBatteryAlertText');
+  const iconEl = alertEl ? alertEl.querySelector('.low-battery-alert-icon') : null;
   if (!alertEl) return;
+
+  if (isCharging) {
+    if (textEl) textEl.textContent = t('chargingNow');
+    if (iconEl) iconEl.textContent = 'i';
+    alertEl.classList.remove('is-low');
+    alertEl.classList.add('is-charging');
+    alertEl.classList.add('is-visible');
+    return;
+  }
+
   if (Number.isFinite(percent) && percent <= LOW_BATTERY_ALERT_THRESHOLD) {
+    if (textEl) textEl.textContent = t('lowBatteryAlert');
+    if (iconEl) iconEl.textContent = '!';
+    alertEl.classList.remove('is-charging');
+    alertEl.classList.add('is-low');
     alertEl.classList.add('is-visible');
   } else {
+    alertEl.classList.remove('is-charging');
+    alertEl.classList.remove('is-low');
     alertEl.classList.remove('is-visible');
   }
 }
@@ -1300,6 +1340,7 @@ function updateLowBatteryAlert(percent) {
 function statusUpdate(){
   fetch('/api/status').then(r=>r.json()).then(j=>{
     const batteryVoltageEl = document.getElementById('batteryVoltage');
+    batteryChargingNow = !!j.isCharging;
     if (batteryVoltageEl) {
       if (typeof j.batteryVoltage === 'number' && Number.isFinite(j.batteryVoltage)) {
         batteryVoltageEl.innerText = j.batteryVoltage.toFixed(2);
@@ -1385,10 +1426,8 @@ function statusUpdate(){
     }
   });
 }
-setInterval(statusUpdate,30000); // зменшено з 5 до 30 секунд
 window.onload=function(){
   applyLanguage();
-  initHeroFishTailBurst();
   statusUpdate();
   setActiveBottomTab({ matchRootToHome: true });
 };
