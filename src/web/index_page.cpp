@@ -127,6 +127,36 @@ R"rawliteral(
   opacity: 1;
   transform: translate(-50%, 0);
 }
+#btnFeedNow {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, opacity 0.2s ease;
+}
+#btnFeedNow:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+#btnFeedNow.is-feeding {
+  animation: feedNowPulse 1.1s ease-in-out infinite;
+}
+#btnFeedNow.is-feeding::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -45%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(105deg, rgba(255,255,255,0), rgba(255,255,255,0.28), rgba(255,255,255,0));
+  animation: feedNowSweep 0.95s linear infinite;
+}
+@keyframes feedNowPulse {
+  0% { box-shadow: 0 0 0 0 rgba(244,67,54,0.35); }
+  70% { box-shadow: 0 0 0 10px rgba(244,67,54,0); }
+  100% { box-shadow: 0 0 0 0 rgba(244,67,54,0); }
+}
+@keyframes feedNowSweep {
+  from { left: -45%; }
+  to { left: 115%; }
+}
 .battery-card {
   display: flex;
   flex-direction: column;
@@ -348,7 +378,6 @@ R"rawliteral(
       <div class="section-subtitle">Швидкий запуск циклу годування</div>
     </div>
   </div>
-  <div id="manualFeedHint" style="margin-top: 10px; line-height: 1.35; font-size: 13px;"></div>
   <div class="flex-row">
     <span>Кількість повторів</span>
     <input id="feedRepeats" type="number" min="1" max="20" value="1">
@@ -421,9 +450,8 @@ const I18N = {
     sleepReasonUnknown: 'стан уточнюється',
     addFeeding: '+ Додати годування',
     saveAllTimes: 'Зберегти всі часи',
-    manualFeedReadyHint: 'Можна запустити ручне годування.',
-    manualFeedCooldownHint: 'Мінімальний інтервал між годуваннями — %m хв. Наступне ручне годування — через %s.',
     toastFeedBlocked: 'Занадто рано: мінімальний інтервал між годуваннями.',
+    feedNowInProgress: 'Годую...',
     deepSleepHelpBanner: 'Якщо сторінка не відкривається — пристрій може бути в <strong>глибокому сні</strong>. Натисніть фізичну кнопку на корпусі, щоб прокинути та знову відкрити веб.',
     tabHome: 'Головна',
     tabInfo: 'Інформація',
@@ -492,9 +520,8 @@ const I18N = {
     sleepReasonUnknown: 'checking status',
     addFeeding: '+ Add feeding',
     saveAllTimes: 'Save all times',
-    manualFeedReadyHint: 'You can start a manual feed.',
-    manualFeedCooldownHint: 'Minimum interval between feeds is %m min. Next manual feed in %s.',
     toastFeedBlocked: 'Too soon: minimum time between feeds.',
+    feedNowInProgress: 'Feeding...',
     deepSleepHelpBanner: 'If this page won\'t load, the device may be in <strong>deep sleep</strong>. Press the physical button on the unit to wake it and use the web UI again.',
     tabHome: 'Home',
     tabInfo: 'Info',
@@ -564,14 +591,13 @@ function applyLanguage() {
   if (sleepReasonLabel && !sleepReasonLabel.dataset.dynamic) sleepReasonLabel.textContent = `${t('sleepReasonPrefix')} --`;
   const btnSaveSpeed = document.getElementById('btnSaveSpeed');
   const btnSaveRepeats = document.getElementById('btnSaveRepeats');
-  const btnFeedNow = document.getElementById('btnFeedNow');
   const btnAddFeeding = document.getElementById('btnAddFeeding');
   const btnSaveAllTimes = document.getElementById('btnSaveAllTimes');
   if (btnSaveSpeed) btnSaveSpeed.textContent = t('saveSpeed');
   if (btnSaveRepeats) btnSaveRepeats.textContent = t('save');
-  if (btnFeedNow) btnFeedNow.textContent = t('feedNow');
   if (btnAddFeeding) btnAddFeeding.textContent = t('addFeeding');
   if (btnSaveAllTimes) btnSaveAllTimes.textContent = t('saveAllTimes');
+  renderFeedNowButtonState();
   renderManualFeedHint(manualFeedCooldownLocal);
   const repeatsLabel = document.querySelector('.flex-row span');
   if (repeatsLabel) repeatsLabel.textContent = t('repeats');
@@ -641,29 +667,37 @@ function formatManualFeedCountdown(totalSeconds) {
 
 let manualFeedCooldownLocal = 0;
 let manualFeedCooldownInterval = null;
-let manualFeedMinIntervalMinutes = 5;
+let manualFeedInProgress = false;
+let manualFeedAnimationTimer = null;
+
+function renderFeedNowButtonState() {
+  const btn = document.getElementById('btnFeedNow');
+  if (!btn) return;
+  const cooldownSec = Math.max(0, Math.floor(Number(manualFeedCooldownLocal) || 0));
+  const inCooldown = cooldownSec > 0;
+  const isDisabled = manualFeedInProgress || inCooldown;
+
+  btn.disabled = isDisabled;
+  btn.style.opacity = isDisabled ? '0.72' : '';
+  btn.style.cursor = isDisabled ? 'not-allowed' : '';
+  btn.classList.toggle('is-feeding', manualFeedInProgress);
+
+  if (manualFeedInProgress) {
+    btn.textContent = t('feedNowInProgress');
+  } else if (inCooldown) {
+    btn.textContent = `${t('feedNow')} (${formatManualFeedCountdown(cooldownSec)})`;
+  } else {
+    btn.textContent = t('feedNow');
+  }
+}
 
 function renderManualFeedHint(seconds) {
-  const hint = document.getElementById('manualFeedHint');
-  const btn = document.getElementById('btnFeedNow');
-  if (!hint) return;
-  const s = Math.max(0, Math.floor(Number(seconds) || 0));
-  if (s <= 0) {
-    hint.textContent = t('manualFeedReadyHint');
-    hint.style.color = '';
-    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
-    return;
-  }
-  hint.textContent = t('manualFeedCooldownHint')
-    .replace('%m', String(Math.max(1, Math.floor(Number(manualFeedMinIntervalMinutes) || 5))))
-    .replace('%s', formatManualFeedCountdown(s));
-  hint.style.color = '#6b7280';
-  if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; btn.style.cursor = 'not-allowed'; }
+  manualFeedCooldownLocal = Math.max(0, Math.floor(Number(seconds) || 0));
+  renderFeedNowButtonState();
 }
 
 function syncManualFeedCooldownFromStatus(seconds) {
-  manualFeedCooldownLocal = Math.max(0, Math.floor(Number(seconds) || 0));
-  renderManualFeedHint(manualFeedCooldownLocal);
+  renderManualFeedHint(seconds);
   if (manualFeedCooldownInterval) {
     clearInterval(manualFeedCooldownInterval);
     manualFeedCooldownInterval = null;
@@ -732,6 +766,15 @@ function showActionError(error, fallbackText = t('toastSaveError')) {
 }
 
 function feedNow(){
+  if (manualFeedInProgress) return;
+  if (manualFeedCooldownLocal > 0) {
+    showToast(t('toastFeedBlocked'));
+    return;
+  }
+
+  manualFeedInProgress = true;
+  renderFeedNowButtonState();
+
   const repeatsEl = document.getElementById('feedRepeats');
   const repeats = repeatsEl ? repeatsEl.value : 1;
   postForm('/api/feedNow', { repeats })
@@ -752,6 +795,13 @@ function feedNow(){
     })
     .catch(() => {
       showToast(t('toastFeedError'));
+    })
+    .finally(() => {
+      if (manualFeedAnimationTimer) clearTimeout(manualFeedAnimationTimer);
+      manualFeedAnimationTimer = setTimeout(() => {
+        manualFeedInProgress = false;
+        renderFeedNowButtonState();
+      }, 1800);
     });
 }
 function saveSpeed(){ const s=document.getElementById('speedSlider').value; postForm('/api/setSpeed', { speed: s }).then(expectOk).then(()=>{statusUpdate(); showToast(t('toastSpeedSaved'));}).catch(error => showActionError(error)); }
@@ -1142,9 +1192,6 @@ function statusUpdate(){
       updateBatteryGauge(null);
     }
     updateNextFeedingProgress(j);
-    if (typeof j.minFeedIntervalMin === 'number') {
-      manualFeedMinIntervalMinutes = j.minFeedIntervalMin;
-    }
     syncManualFeedCooldownFromStatus(j.manualFeedCooldownSeconds);
     document.getElementById('angleSlider').value=j.currentAngle; updateAngleLabel(j.currentAngle);
     lastSentAngle = String(j.currentAngle);

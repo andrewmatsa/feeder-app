@@ -367,6 +367,36 @@ button.add-btn:hover {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+#btnFeedNow {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, opacity 0.2s ease;
+}
+#btnFeedNow:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+#btnFeedNow.is-feeding {
+  animation: feedNowPulse 1.1s ease-in-out infinite;
+}
+#btnFeedNow.is-feeding::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -45%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(105deg, rgba(255,255,255,0), rgba(255,255,255,0.28), rgba(255,255,255,0));
+  animation: feedNowSweep 0.95s linear infinite;
+}
+@keyframes feedNowPulse {
+  0% { box-shadow: 0 0 0 0 rgba(244,67,54,0.35); }
+  70% { box-shadow: 0 0 0 10px rgba(244,67,54,0); }
+  100% { box-shadow: 0 0 0 0 rgba(244,67,54,0); }
+}
+@keyframes feedNowSweep {
+  from { left: -45%; }
+  to { left: 115%; }
+}
 .preview-lang-hint {
   font-size: 11px;
   color: #6b7280;
@@ -478,7 +508,6 @@ button.add-btn:hover {
       <div class="section-subtitle">Quick feed cycle start</div>
     </div>
   </div>
-  <div id="manualFeedHint" style="margin-top: 10px; line-height: 1.35; font-size: 13px;"></div>
   <div class="flex-row">
     <span>Repeats</span>
     <input id="feedRepeats" type="number" min="1" max="20" value="1">
@@ -587,9 +616,8 @@ const I18N = {
     toastTimesSaved: 'Часи збережено',
     toastAngleUpdated: 'Кут змінено',
     deepSleepHelpBanner: 'Якщо сторінка не відкривається — пристрій може бути в <strong>глибокому сні</strong>. Натисніть фізичну кнопку на корпусі, щоб прокинути та знову відкрити веб.',
-    manualFeedReadyHint: 'Можна запустити ручне годування.',
-    manualFeedCooldownHint: 'Мінімальний інтервал між годуваннями — 5 хв. Наступне ручне годування — через %s.',
-    toastFeedBlocked: 'Занадто рано: мінімальний інтервал між годуваннями.'
+    toastFeedBlocked: 'Занадто рано: мінімальний інтервал між годуваннями.',
+    feedNowInProgress: 'Годую...'
   },
   en: {
     appSubtitle: 'Smart feeder',
@@ -637,9 +665,8 @@ const I18N = {
     toastTimesSaved: 'Times saved',
     toastAngleUpdated: 'Angle updated',
     deepSleepHelpBanner: 'If this page won\'t load, the device may be in <strong>deep sleep</strong>. Press the physical button on the unit to wake it and use the web UI again.',
-    manualFeedReadyHint: 'You can start a manual feed.',
-    manualFeedCooldownHint: 'Minimum 5 minutes between feeds. Next manual feed in %s.',
-    toastFeedBlocked: 'Too soon: minimum time between feeds.'
+    toastFeedBlocked: 'Too soon: minimum time between feeds.',
+    feedNowInProgress: 'Feeding...'
   }
 };
 let currentLang = localStorage.getItem('aqua_lang') || 'uk';
@@ -657,6 +684,8 @@ const previewManualFeedCooldownSeconds = 150;
 
 let manualFeedCooldownLocal = 0;
 let manualFeedCooldownInterval = null;
+let manualFeedInProgress = false;
+let manualFeedAnimationTimer = null;
 
 function formatManualFeedCountdown(totalSeconds) {
   const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
@@ -670,25 +699,34 @@ function formatManualFeedCountdown(totalSeconds) {
   return `${secs} с`;
 }
 
-function renderManualFeedHint(seconds) {
-  const hint = document.getElementById('manualFeedHint');
+function renderFeedNowButtonState() {
   const btn = document.getElementById('btnFeedNow');
-  if (!hint) return;
-  const s = Math.max(0, Math.floor(Number(seconds) || 0));
-  if (s <= 0) {
-    hint.textContent = t('manualFeedReadyHint');
-    hint.style.color = '';
-    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
-    return;
+  if (!btn) return;
+  const cooldownSec = Math.max(0, Math.floor(Number(manualFeedCooldownLocal) || 0));
+  const inCooldown = cooldownSec > 0;
+  const isDisabled = manualFeedInProgress || inCooldown;
+
+  btn.disabled = isDisabled;
+  btn.style.opacity = isDisabled ? '0.72' : '';
+  btn.style.cursor = isDisabled ? 'not-allowed' : '';
+  btn.classList.toggle('is-feeding', manualFeedInProgress);
+
+  if (manualFeedInProgress) {
+    btn.textContent = t('feedNowInProgress');
+  } else if (inCooldown) {
+    btn.textContent = `${t('feedNow')} (${formatManualFeedCountdown(cooldownSec)})`;
+  } else {
+    btn.textContent = t('feedNow');
   }
-  hint.textContent = t('manualFeedCooldownHint').replace('%s', formatManualFeedCountdown(s));
-  hint.style.color = '#6b7280';
-  if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; btn.style.cursor = 'not-allowed'; }
+}
+
+function renderManualFeedHint(seconds) {
+  manualFeedCooldownLocal = Math.max(0, Math.floor(Number(seconds) || 0));
+  renderFeedNowButtonState();
 }
 
 function syncManualFeedCooldownFromStatus(seconds) {
-  manualFeedCooldownLocal = Math.max(0, Math.floor(Number(seconds) || 0));
-  renderManualFeedHint(manualFeedCooldownLocal);
+  renderManualFeedHint(seconds);
   if (manualFeedCooldownInterval) {
     clearInterval(manualFeedCooldownInterval);
     manualFeedCooldownInterval = null;
@@ -777,14 +815,13 @@ function applyLanguage() {
   if (labels[1]) labels[1].innerHTML = `${t('servoSpeed')} <span id="speedValue">20</span>`;
   var b1 = document.getElementById('btnSaveSpeed');
   var b2 = document.getElementById('btnSaveRepeats');
-  var b3 = document.getElementById('btnFeedNow');
   var b4 = document.getElementById('btnAddFeeding');
   var b5 = document.getElementById('btnSaveAllTimes');
   if (b1) b1.textContent = t('saveSpeed');
   if (b2) b2.textContent = t('save');
-  if (b3) b3.textContent = t('feedNow');
   if (b4) b4.textContent = t('addFeeding');
   if (b5) b5.textContent = t('saveAllTimes');
+  renderFeedNowButtonState();
   renderManualFeedHint(manualFeedCooldownLocal);
   const repeatsLabel = document.querySelector('.flex-row span');
   if (repeatsLabel) repeatsLabel.textContent = t('repeats');
@@ -941,6 +978,14 @@ function saveRepeats() {
 }
 
 function feedNow() {
+  if (manualFeedInProgress) return;
+  if (manualFeedCooldownLocal > 0) {
+    showToast(t('toastFeedBlocked'));
+    return;
+  }
+  manualFeedInProgress = true;
+  renderFeedNowButtonState();
+
   Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('feeding') })
     .then(async (response) => {
       if (response.ok) {
@@ -957,6 +1002,13 @@ function feedNow() {
     })
     .catch(() => {
       showToast(currentLang === 'en' ? 'Feed error' : 'Помилка годування');
+    })
+    .finally(() => {
+      if (manualFeedAnimationTimer) clearTimeout(manualFeedAnimationTimer);
+      manualFeedAnimationTimer = setTimeout(() => {
+        manualFeedInProgress = false;
+        renderFeedNowButtonState();
+      }, 1800);
     });
 }
 
