@@ -97,6 +97,9 @@ void loadApiSettingsFromPreferences() {
     dispOff = 600;
   }
   apiHandlers.setDisplayOffAfterSec(static_cast<uint16_t>(dispOff));
+
+  float batteryCalibration = preferences.getFloat("battCal", 0.518f);
+  battery.setCalibrationFactor(batteryCalibration);
 }
 
 void initializeRuntimeState() {

@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
+#include <math.h>
 #include "wifi_manager.h"
 #include "web_pages.h"
 
@@ -54,6 +55,7 @@ void ApiHandlers::setupRoutes() {
   server.on("/api/setDeepSleep", HTTP_POST, [this]() { handleSetDeepSleep(); });
   server.on("/api/setTimezone", HTTP_POST, [this]() { handleSetTimezone(); });
   server.on("/api/setFeedInterval", HTTP_POST, [this]() { handleSetFeedInterval(); });
+  server.on("/api/setBatteryCalibration", HTTP_POST, [this]() { handleSetBatteryCalibration(); });
 }
 
 void ApiHandlers::handleRoot() {
@@ -174,6 +176,7 @@ void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
   doc["deepSleepWakeButtonOnly"] = false;
   doc["batteryVoltage"] = battery.getVoltage();
   doc["batteryPercent"] = static_cast<int>(battery.getPercent());
+  doc["batteryCalibration"] = battery.getCalibrationFactor();
 
   appendFeedTimes(doc["feedTimes"].to<JsonArray>());
   appendLegacyFeedTimes(doc);
@@ -424,6 +427,38 @@ void ApiHandlers::handleSetFeedInterval() {
     invalidateCache();
     Serial.printf("Manual feed interval: %d min\n", scheduler.getMinFeedIntervalMinutes());
   }
+  server.send(200, "text/plain", "ok");
+}
+
+void ApiHandlers::handleSetBatteryCalibration() {
+  if (!isTrustedMutationRequest(server)) return;
+  noteClientActivity();
+
+  if (!server.hasArg("measuredVoltage")) {
+    server.send(400, "text/plain", "measuredVoltage is required");
+    return;
+  }
+
+  float measuredVoltage = server.arg("measuredVoltage").toFloat();
+  if (!isfinite(measuredVoltage) || measuredVoltage <= 0.0f) {
+    server.send(400, "text/plain", "invalid measuredVoltage");
+    return;
+  }
+
+  battery.update();
+  float currentVoltage = battery.getVoltage();
+  if (!isfinite(currentVoltage) || currentVoltage <= 0.0f) {
+    server.send(500, "text/plain", "unable to read battery voltage");
+    return;
+  }
+
+  float oldCalibration = battery.getCalibrationFactor();
+  float newCalibration = oldCalibration * (measuredVoltage / currentVoltage);
+  battery.setCalibrationFactor(newCalibration);
+  preferences.putFloat("battCal", battery.getCalibrationFactor());
+  battery.update();
+
+  invalidateCache();
   server.send(200, "text/plain", "ok");
 }
 

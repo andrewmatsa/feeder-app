@@ -554,26 +554,51 @@ button:active {
 R"rawliteral(
 .toast {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translate(-50%, -10px);
-  transform-origin: center;
-  background: #111;
-  color: #fff;
-  padding: 14px 26px;
-  border-radius: 999px;
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(15,23,42,0.58), rgba(15,23,42,0.42));
+  color: rgba(248,250,252,0.96);
+  padding: 12px 16px;
+  border-radius: 0 0 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.16);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.3px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   z-index: 1000;
   opacity: 0;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform: translateY(-14px) scale(0.985);
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
+}
+.toast-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.35);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.toast-text {
+  display: inline-block;
 }
 .toast.show {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translateY(0) scale(1);
 }
 )rawliteral"
 #include "shared/common_section_styles.inc"
@@ -672,10 +697,12 @@ R"rawliteral(
 .power-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   cursor: pointer;
   user-select: none;
   margin: 12px 0;
+  width: 100%;
 }
 .power-toggle input {
   position: absolute;
@@ -685,6 +712,8 @@ R"rawliteral(
 .power-toggle-box {
   width: 26px;
   height: 26px;
+  order: 2;
+  margin-left: auto;
   border-radius: 8px;
   background: #e6e9ef;
   border: 1px solid #d5d9e0;
@@ -709,9 +738,27 @@ R"rawliteral(
   opacity: 1;
 }
 .power-toggle-text {
+  order: 1;
   font-size: 13px;
   color: #333;
   font-weight: 500;
+}
+.power-toggle-label {
+  order: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.power-toggle-inline-icon {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #4A5568;
+  flex: 0 0 auto;
 }
 .power-toggle:hover .power-toggle-box {
   border-color: #b8c2d1;
@@ -751,7 +798,10 @@ body {
 </style>
 </head>
 <body>
-<div id="toast" class="toast">Збережено</div>
+<div id="toast" class="toast">
+  <span class="toast-icon" aria-hidden="true">i</span>
+  <span id="toastText" class="toast-text">Збережено</span>
+</div>
 <div class="hero-header">
 )rawliteral"
 #include "shared/hero_illustration.inc"
@@ -878,7 +928,12 @@ R"rawliteral(
   <label class="power-toggle">
     <input type="checkbox" id="powerSaveMode">
     <span class="power-toggle-box"></span>
-    <span class="power-toggle-text" id="wifiLblPowerEco">Режим економії енергії</span>
+    <span class="power-toggle-label">
+      <svg class="power-toggle-inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M13 2L6 13h5l-1 9 8-12h-5l0-8z"></path>
+      </svg>
+      <span class="power-toggle-text" id="wifiLblPowerEco">Режим економії енергії</span>
+    </span>
   </label>
   <div class="note-text" id="wifiNotePower"></div>
   <div class="row" id="deepSleepIdleRow" style="margin-top: 12px;">
@@ -886,29 +941,17 @@ R"rawliteral(
     <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="300">
   </div>
   <div class="note-text" id="wifiNotePowerOff" style="margin-top: 12px;"></div>
-  <div class="button-row" style="margin-top: 8px;">
-    <button type="button" onclick="savePowerMode()" id="btnSavePowerEco">Зберегти режим енергії</button>
-  </div>
-  <div class="row" id="feedIntervalRow" style="margin-top: 16px;">
-    <label for="feedIntervalMin" id="labelFeedIntervalMin">Мінімальний інтервал між годуваннями (хв, 1–1440):</label>
-    <input type="number" id="feedIntervalMin" min="1" max="1440" value="5">
-  </div>
-  <div class="note-text" id="wifiNoteFeedInterval" style="font-size: 12px; color: #6b7280;"></div>
-  <div class="button-row" style="margin-top: 8px;">
-    <button type="button" onclick="saveFeedInterval()" id="btnSaveFeedInterval">Зберегти інтервал годування</button>
-  </div>
-  <div class="row" id="timezoneRow" style="margin-top: 16px;">
-    <label for="timezoneOffsetMin" id="labelTimezoneOffset">Часовий пояс (UTC):</label>
-    <select id="timezoneOffsetMin"></select>
-  </div>
-  <div class="note-text" id="wifiNoteTimezone" style="font-size: 12px; color: #6b7280;"></div>
-  <div class="button-row" style="margin-top: 8px;">
-    <button type="button" onclick="saveTimezone()" id="btnSaveTimezone">Зберегти часовий пояс</button>
-  </div>
   <label class="power-toggle" style="margin-top: 16px;">
     <input type="checkbox" id="displayEnabled">
     <span class="power-toggle-box"></span>
-    <span class="power-toggle-text" id="wifiLblDisplayToggle">Увімкнути OLED дисплей</span>
+    <span class="power-toggle-label">
+      <svg class="power-toggle-inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="5.5" width="17" height="11" rx="2"></rect>
+        <path d="M9 19h6"></path>
+        <path d="M12 16.5v2.5"></path>
+      </svg>
+      <span class="power-toggle-text" id="wifiLblDisplayToggle">Увімкнути OLED дисплей</span>
+    </span>
   </label>
   <div class="note-text" id="wifiNoteOled">Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.</div>
   <div class="row" id="displayOffRow" style="margin-top: 12px;">
@@ -916,8 +959,82 @@ R"rawliteral(
     <input type="number" id="displayOffSec" min="5" max="600" value="20">
   </div>
   <div class="note-text" id="wifiNoteDisplayOff" style="font-size: 12px; color: #6b7280;"></div>
-  <div class="button-row">
-    <button type="button" id="btnWifiSaveDisplay" onclick="saveDisplayMode()">Зберегти дисплей</button>
+  <div class="button-row" style="margin-top: 12px;">
+    <button type="button" id="btnSaveEnergySettings" onclick="saveEnergySettings()">Зберегти налаштування економії енергії</button>
+  </div>
+</div>
+
+<div class="card auth-gated-card" style="display:none;">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M5 11h14"></path>
+        <path d="M7 11v2a5 5 0 0 0 10 0v-2"></path>
+        <path d="M9 6.5l1.2 3"></path>
+        <path d="M15 6.5l-1.2 3"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="feedIntervalSectionTitle">Інтервал годування</div>
+      <div class="section-subtitle" id="feedIntervalSectionSubtitle">Окреме обмеження частоти запуску годувань</div>
+    </div>
+  </div>
+  <div class="row" id="feedIntervalRow">
+    <label for="feedIntervalMin" id="labelFeedIntervalMin">Мінімальний інтервал між годуваннями (хв, 1–1440):</label>
+    <input type="number" id="feedIntervalMin" min="1" max="1440" value="5">
+  </div>
+  <div class="note-text" id="wifiNoteFeedInterval" style="font-size: 12px; color: #6b7280;"></div>
+  <div class="button-row" style="margin-top: 12px;">
+    <button type="button" id="btnSaveFeedInterval" onclick="saveFeedInterval()">Зберегти інтервал годування</button>
+  </div>
+</div>
+
+<div class="card auth-gated-card" style="display:none;">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <rect x="3.5" y="5.5" width="17" height="11" rx="2"></rect>
+        <path d="M9 19h6"></path>
+        <path d="M12 16.5v2.5"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="batteryCalSectionTitle">Калібрування батареї</div>
+      <div class="section-subtitle" id="batteryCalSectionSubtitle">Ручне підлаштування напруги за мультиметром</div>
+    </div>
+  </div>
+  <div class="note-text" id="batteryCalCurrentLabel">Поточна напруга з сенсора: <strong id="batteryCalCurrentVoltage">--</strong> В</div>
+  <div class="row" id="batteryCalMeasuredRow" style="margin-top: 12px;">
+    <label for="batteryMeasuredVoltage" id="labelBatteryMeasuredVoltage">Фактична напруга з мультиметра (В):</label>
+    <input type="number" id="batteryMeasuredVoltage" min="0" max="30" step="0.01" value="">
+  </div>
+  <div class="note-text" id="batteryCalNote" style="font-size: 12px; color: #6b7280;"></div>
+  <div class="button-row" style="margin-top: 12px;">
+    <button type="button" id="btnSaveBatteryCalibration" onclick="saveBatteryCalibration()">Застосувати калібрування</button>
+  </div>
+</div>
+
+<div class="card auth-gated-card" style="display:none;">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 7v5"></path>
+        <path d="M12 12l3 2"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="timezoneSectionTitle">Часовий пояс</div>
+      <div class="section-subtitle" id="timezoneSectionSubtitle">Окремо керуйте локальним часом пристрою</div>
+    </div>
+  </div>
+  <div class="row" id="timezoneRow">
+    <label for="timezoneOffsetMin" id="labelTimezoneOffset">Часовий пояс (UTC):</label>
+    <select id="timezoneOffsetMin"></select>
+  </div>
+  <div class="note-text" id="wifiNoteTimezone" style="font-size: 12px; color: #6b7280;"></div>
+  <div class="button-row" style="margin-top: 8px;">
+    <button type="button" onclick="saveTimezone()" id="btnSaveTimezone">Зберегти часовий пояс</button>
   </div>
 </div>
 
@@ -1059,8 +1176,6 @@ function applyWiFiLanguage() {
   if (noteOled) noteOled.textContent = wifiIsEn()
     ? 'Turn off the display to save power. All features remain available in the web interface.'
     : 'Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.';
-  const btnDisp = document.getElementById('btnWifiSaveDisplay');
-  if (btnDisp) btnDisp.textContent = wifiIsEn() ? 'Save display' : 'Зберегти дисплей';
   const lblDispOff = document.getElementById('lblDisplayOffSec');
   if (lblDispOff) lblDispOff.textContent = wifiIsEn()
     ? 'Seconds until OLED turns off (power save, 5–600):'
@@ -1089,6 +1204,24 @@ function applyWiFiLanguage() {
   if (sectionSubtitles[3]) sectionSubtitles[3].textContent = wifiIsEn() ? 'Enter SSID and password to connect' : 'Введіть SSID та пароль для підключення';
   if (sectionTitles[4]) sectionTitles[4].textContent = wifiIsEn() ? 'Power settings' : 'Налаштування енергії';
   if (sectionSubtitles[4]) sectionSubtitles[4].textContent = wifiIsEn() ? 'Optimize power consumption' : 'Оптимізуйте споживання живлення';
+  const timezoneSectionTitle = document.getElementById('timezoneSectionTitle');
+  if (timezoneSectionTitle) timezoneSectionTitle.textContent = wifiIsEn() ? 'Time zone' : 'Часовий пояс';
+  const timezoneSectionSubtitle = document.getElementById('timezoneSectionSubtitle');
+  if (timezoneSectionSubtitle) timezoneSectionSubtitle.textContent = wifiIsEn()
+    ? 'Manage the device local time separately'
+    : 'Окремо керуйте локальним часом пристрою';
+  const feedIntervalSectionTitle = document.getElementById('feedIntervalSectionTitle');
+  if (feedIntervalSectionTitle) feedIntervalSectionTitle.textContent = wifiIsEn() ? 'Feeding interval' : 'Інтервал годування';
+  const feedIntervalSectionSubtitle = document.getElementById('feedIntervalSectionSubtitle');
+  if (feedIntervalSectionSubtitle) feedIntervalSectionSubtitle.textContent = wifiIsEn()
+    ? 'Separate limit for how often feeding can run'
+    : 'Окреме обмеження частоти запуску годувань';
+  const batteryCalSectionTitle = document.getElementById('batteryCalSectionTitle');
+  if (batteryCalSectionTitle) batteryCalSectionTitle.textContent = wifiIsEn() ? 'Battery calibration' : 'Калібрування батареї';
+  const batteryCalSectionSubtitle = document.getElementById('batteryCalSectionSubtitle');
+  if (batteryCalSectionSubtitle) batteryCalSectionSubtitle.textContent = wifiIsEn()
+    ? 'Manual voltage adjustment using multimeter reading'
+    : 'Ручне підлаштування напруги за мультиметром';
   if (tabs[0]) tabs[0].textContent = wifiIsEn() ? 'Home' : 'Головна';
   if (tabs[1]) tabs[1].textContent = wifiIsEn() ? 'Info' : 'Інформація';
   if (tabs[2]) tabs[2].textContent = wifiIsEn() ? 'Settings' : 'Налаштування';
@@ -1114,10 +1247,6 @@ function applyWiFiLanguage() {
       ? 'Idle seconds before deep sleep (10–3600):'
       : 'Секунд бездіяльності до глибокого сну (10–3600):';
   }
-  const btnEco = document.getElementById('btnSavePowerEco');
-  if (btnEco) {
-    btnEco.textContent = wifiIsEn() ? 'Save power mode' : 'Зберегти режим енергії';
-  }
   const labelFeedInterval = document.getElementById('labelFeedIntervalMin');
   if (labelFeedInterval) {
     labelFeedInterval.textContent = wifiIsEn()
@@ -1133,6 +1262,32 @@ function applyWiFiLanguage() {
   const btnFeedInterval = document.getElementById('btnSaveFeedInterval');
   if (btnFeedInterval) {
     btnFeedInterval.textContent = wifiIsEn() ? 'Save feeding interval' : 'Зберегти інтервал годування';
+  }
+  const batteryCalCurrentLabel = document.getElementById('batteryCalCurrentLabel');
+  if (batteryCalCurrentLabel) {
+    batteryCalCurrentLabel.innerHTML = wifiIsEn()
+      ? 'Current sensor voltage: <strong id="batteryCalCurrentVoltage">--</strong> V'
+      : 'Поточна напруга з сенсора: <strong id="batteryCalCurrentVoltage">--</strong> В';
+  }
+  const labelBatteryMeasured = document.getElementById('labelBatteryMeasuredVoltage');
+  if (labelBatteryMeasured) {
+    labelBatteryMeasured.textContent = wifiIsEn()
+      ? 'Actual voltage from multimeter (V):'
+      : 'Фактична напруга з мультиметра (В):';
+  }
+  const batteryCalNote = document.getElementById('batteryCalNote');
+  if (batteryCalNote) {
+    batteryCalNote.textContent = wifiIsEn()
+      ? 'Enter the multimeter value and apply. The firmware computes and saves calibration automatically.'
+      : 'Введіть значення з мультиметра і застосуйте. Прошивка автоматично перерахує та збереже калібрування.';
+  }
+  const btnBatteryCalibration = document.getElementById('btnSaveBatteryCalibration');
+  if (btnBatteryCalibration) {
+    btnBatteryCalibration.textContent = wifiIsEn() ? 'Apply calibration' : 'Застосувати калібрування';
+  }
+  const btnEnergy = document.getElementById('btnSaveEnergySettings');
+  if (btnEnergy) {
+    btnEnergy.textContent = wifiIsEn() ? 'Save power settings' : 'Зберегти налаштування економії енергії';
   }
   const labelTimezone = document.getElementById('labelTimezoneOffset');
   if (labelTimezone) {
@@ -1206,42 +1361,68 @@ function forgetWiFi(){
     .catch(error => showProtectedActionError(error, wifiIsEn() ? 'WiFi remove error' : 'Помилка видалення WiFi'));
 }
 
-function savePowerMode(){
-  const enabled = document.getElementById('powerSaveMode').checked;
-  const el = document.getElementById('deepSleepIdleSec');
-  let idleSec = el ? parseInt(el.value, 10) : 300;
+function saveEnergySettings(){
+  const powerModeEl = document.getElementById('powerSaveMode');
+  const displayToggleEl = document.getElementById('displayEnabled');
+  const powerEnabled = !!(powerModeEl && powerModeEl.checked);
+  const displayEnabled = !!(displayToggleEl && displayToggleEl.checked);
+
+  const idleEl = document.getElementById('deepSleepIdleSec');
+  let idleSec = idleEl ? parseInt(idleEl.value, 10) : 300;
   if (!Number.isFinite(idleSec)) idleSec = 300;
   idleSec = Math.max(10, Math.min(3600, idleSec));
-  if (el) el.value = idleSec;
-  postForm('/api/setPowerMode', { enabled: enabled ? 'true' : 'false', idleSec })
-    .then(expectOk)
-    .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
-    .catch(error => showProtectedActionError(error, wifiIsEn() ? 'Save error' : 'Помилка збереження'));
-}
+  if (idleEl) idleEl.value = idleSec;
 
-function saveDisplayMode(){
-  const enabled = document.getElementById('displayEnabled').checked;
-  const secEl = document.getElementById('displayOffSec');
-  let sec = secEl ? parseInt(secEl.value, 10) : 20;
-  if (!Number.isFinite(sec)) sec = 20;
-  sec = Math.max(5, Math.min(600, sec));
-  if (secEl) secEl.value = sec;
-  postForm('/api/setDisplayMode', { enabled: enabled ? 'true' : 'false', sec })
-    .then(expectOk)
-    .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
+  const displayEl = document.getElementById('displayOffSec');
+  let displaySec = displayEl ? parseInt(displayEl.value, 10) : 20;
+  if (!Number.isFinite(displaySec)) displaySec = 20;
+  displaySec = Math.max(5, Math.min(600, displaySec));
+  if (displayEl) displayEl.value = displaySec;
+
+  Promise.all([
+    postForm('/api/setPowerMode', { enabled: powerEnabled ? 'true' : 'false', idleSec }).then(expectOk),
+    postForm('/api/setDisplayMode', { enabled: displayEnabled ? 'true' : 'false', sec: displaySec }).then(expectOk),
+  ])
+    .then(() => {
+      showToast(wifiIsEn() ? 'Saved' : 'Збережено');
+      updateStatus();
+    })
     .catch(error => showProtectedActionError(error, wifiIsEn() ? 'Save error' : 'Помилка збереження'));
 }
 
 function saveFeedInterval(){
-  const el = document.getElementById('feedIntervalMin');
-  let minutes = el ? parseInt(el.value, 10) : 5;
-  if (!Number.isFinite(minutes)) minutes = 5;
-  minutes = Math.max(1, Math.min(1440, minutes));
-  if (el) el.value = minutes;
-  postForm('/api/setFeedInterval', { minutes })
+  const feedIntervalEl = document.getElementById('feedIntervalMin');
+  let feedIntervalMinutes = feedIntervalEl ? parseInt(feedIntervalEl.value, 10) : 5;
+  if (!Number.isFinite(feedIntervalMinutes)) feedIntervalMinutes = 5;
+  feedIntervalMinutes = Math.max(1, Math.min(1440, feedIntervalMinutes));
+  if (feedIntervalEl) feedIntervalEl.value = feedIntervalMinutes;
+
+  postForm('/api/setFeedInterval', { minutes: feedIntervalMinutes })
     .then(expectOk)
-    .then(()=>{ showToast(wifiIsEn() ? 'Saved' : 'Збережено'); updateStatus(); })
+    .then(() => {
+      showToast(wifiIsEn() ? 'Saved' : 'Збережено');
+      updateStatus();
+    })
     .catch(error => showProtectedActionError(error, wifiIsEn() ? 'Save error' : 'Помилка збереження'));
+}
+
+function saveBatteryCalibration(){
+  const measuredEl = document.getElementById('batteryMeasuredVoltage');
+  let measuredVoltage = measuredEl ? parseFloat(measuredEl.value) : NaN;
+  if (!Number.isFinite(measuredVoltage)) {
+    showToast(wifiIsEn() ? 'Enter multimeter voltage' : 'Введіть напругу з мультиметра');
+    return;
+  }
+  measuredVoltage = Math.max(0.1, Math.min(30.0, measuredVoltage));
+  if (measuredEl) measuredEl.value = measuredVoltage.toFixed(2);
+
+  postForm('/api/setBatteryCalibration', { measuredVoltage: measuredVoltage.toFixed(3) })
+    .then(expectOk)
+    .then(() => {
+      showToast(wifiIsEn() ? 'Battery calibration saved' : 'Калібрування батареї збережено');
+      updateStatus();
+    })
+    .catch(error => showProtectedActionError(error, wifiIsEn() ? 'Calibration save error' : 'Помилка збереження калібрування'));
 }
 
 function saveTimezone(){
@@ -1326,6 +1507,20 @@ function updateStatus(){
     const feedIntervalEl = document.getElementById('feedIntervalMin');
     if (feedIntervalEl && typeof j.minFeedIntervalMin === 'number') {
       feedIntervalEl.value = j.minFeedIntervalMin;
+    }
+    const batteryCalCurrentEl = document.getElementById('batteryCalCurrentVoltage');
+    if (batteryCalCurrentEl) {
+      if (typeof j.batteryVoltage === 'number' && Number.isFinite(j.batteryVoltage)) {
+        batteryCalCurrentEl.textContent = j.batteryVoltage.toFixed(2);
+      } else {
+        batteryCalCurrentEl.textContent = '--';
+      }
+    }
+    const batteryMeasuredEl = document.getElementById('batteryMeasuredVoltage');
+    if (batteryMeasuredEl && (!batteryMeasuredEl.value || batteryMeasuredEl.value.trim() === '')) {
+      if (typeof j.batteryVoltage === 'number' && Number.isFinite(j.batteryVoltage)) {
+        batteryMeasuredEl.value = j.batteryVoltage.toFixed(2);
+      }
     }
     populateTimezoneOptions(typeof j.timezoneOffsetMin === 'number' ? j.timezoneOffsetMin : 120);
     syncPowerEcoUiFromCheckbox();

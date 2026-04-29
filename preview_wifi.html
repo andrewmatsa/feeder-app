@@ -71,7 +71,41 @@ body {
 .section-subtitle {
   font-size: 12px;
   color: #9099A6;
-  margin-top: 4px;
+  margin-top: 2px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+}
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #EEF1F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4A5568;
+}
+.section-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.section-icon svg .filled {
+  fill: currentColor;
+  stroke: none;
 }
 .card {
   padding: 16px;
@@ -91,11 +125,13 @@ input[type=text], input[type=password] {
   box-sizing: border-box;
 }
 input[type=number] {
+  width: 100%;
   padding: 10px;
   border-radius: 10px;
   border: 1px solid #d5d9e0;
   background: #f9fafc;
   font-size: 13px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
 }
 select {
@@ -118,7 +154,8 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
 }
 #deepSleepIdleSec,
-#displayOffSec {
+#displayOffSec,
+#feedIntervalMin {
   width: 100px;
   max-width: 100%;
   margin-top: 6px;
@@ -260,10 +297,12 @@ button:hover {
 .power-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   cursor: pointer;
   user-select: none;
   margin: 12px 0;
+  width: 100%;
 }
 .power-toggle input {
   position: absolute;
@@ -273,6 +312,8 @@ button:hover {
 .power-toggle-box {
   width: 26px;
   height: 26px;
+  order: 2;
+  margin-left: auto;
   border-radius: 8px;
   background: #e6e9ef;
   border: 1px solid #d5d9e0;
@@ -297,9 +338,27 @@ button:hover {
   opacity: 1;
 }
 .power-toggle-text {
+  order: 1;
   font-size: 13px;
   color: #333;
   font-weight: 500;
+}
+.power-toggle-label {
+  order: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.power-toggle-inline-icon {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #4A5568;
+  flex: 0 0 auto;
 }
 .power-toggle:hover .power-toggle-box {
   border-color: #b8c2d1;
@@ -318,31 +377,61 @@ button:hover {
 }
 .preview-toast {
   position: fixed;
-  bottom: 88px;
-  left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  background: #111;
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(15,23,42,0.58), rgba(15,23,42,0.42));
+  color: rgba(248,250,252,0.96);
+  padding: 12px 16px;
+  border-radius: 0 0 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.16);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform: translateY(-14px) scale(0.985);
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 1100;
   max-width: 90vw;
-  text-align: center;
+}
+.preview-toast-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.35);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.preview-toast-text {
+  display: inline-block;
 }
 .preview-toast.show {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0) scale(1);
 }
 label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; font-size: 13px; }
 </style>
 </head>
 <body>
-<div id="previewToast" class="preview-toast" aria-live="polite"></div>
+<div id="previewToast" class="preview-toast" aria-live="polite">
+  <span class="preview-toast-icon" aria-hidden="true">i</span>
+  <span id="previewToastText" class="preview-toast-text"></span>
+</div>
 <div class="hero-header">
   <div class="app-illustration">
     <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stylized fish">
@@ -369,8 +458,19 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
 </div>
 
 <div class="card">
-  <h3 id="wifiH3Lang">Interface language</h3>
-  <div class="section-subtitle" id="wifiLangSubtitle">Choose the web interface language</div>
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M2 12h20"></path>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="wifiH3Lang">Interface language</div>
+      <div class="section-subtitle" id="wifiLangSubtitle">Choose the web interface language</div>
+    </div>
+  </div>
   <div class="lang-section-row">
     <button type="button" id="wifiLangUkBtn" class="lang-btn">UK</button>
     <button type="button" id="wifiLangEnBtn" class="lang-btn">EN</button>
@@ -378,7 +478,20 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
 </div>
 
 <div class="card">
-  <h3 id="wifiH3Connect">Connect to WiFi</h3>
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M2.5 9.2C7.03 4.66 16.97 4.66 21.5 9.2"></path>
+        <path d="M5.8 12.5C9.12 9.19 14.88 9.19 18.2 12.5"></path>
+        <path d="M9.4 15.9C11.15 14.15 12.85 14.15 14.6 15.9"></path>
+        <circle class="filled" cx="12" cy="19.2" r="1.2"></circle>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="wifiH3Connect">Connect to WiFi</div>
+      <div class="section-subtitle" id="wifiConnectSubtitle">Enter network credentials</div>
+    </div>
+  </div>
   <label id="wifiLblSsid">SSID:</label>
   <input type="text" id="wifiInSsid" placeholder="Network name" value="MyWiFiNetwork">
   <label id="wifiLblPass">Password:</label>
@@ -387,19 +500,45 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
 </div>
 
 <div class="card">
-  <h3 id="wifiH3Current">Current connection</h3>
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 16v-4"></path>
+        <circle class="filled" cx="12" cy="8" r="1"></circle>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="wifiH3Current">Current connection</div>
+      <div class="section-subtitle" id="wifiCurrentSubtitle">Current WiFi status and IP</div>
+    </div>
+  </div>
   <p id="wifiPSsid">SSID: MyWiFiNetwork</p>
   <p id="wifiPIp">IP: 192.168.1.100</p>
   <button type="button" id="wifiBtnForget">Forget network</button>
 </div>
 
 <div class="card">
-  <h3 id="wifiH3Power">Power settings</h3>
-  <p class="preview-section-sub" id="wifiPowerSub">Optimize power consumption</p>
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M13 2L6 13h5l-1 9 8-12h-5l0-8z"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="wifiH3Power">Power settings</div>
+      <div class="section-subtitle" id="wifiPowerSub">Optimize power consumption</div>
+    </div>
+  </div>
   <label class="power-toggle">
     <input type="checkbox" id="powerSaveMode">
     <span class="power-toggle-box"></span>
-    <span class="power-toggle-text" id="wifiLblPowerSave">Power saving mode</span>
+    <span class="power-toggle-label">
+      <svg class="power-toggle-inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M13 2L6 13h5l-1 9 8-12h-5l0-8z"></path>
+      </svg>
+      <span class="power-toggle-text" id="wifiLblPowerSave">Power saving mode</span>
+    </span>
   </label>
   <div class="note-text" id="wifiNotePower"></div>
   <div id="deepSleepIdleRow" style="margin-top:12px;">
@@ -407,21 +546,17 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
     <input type="number" id="deepSleepIdleSec" min="10" max="3600" value="300">
   </div>
   <div class="note-text" id="wifiNotePowerOff" style="margin-top:12px;"></div>
-  <div class="button-row" style="margin-top: 8px;">
-    <button type="button" id="wifiBtnSavePower" onclick="previewSavePowerMode()">Save power mode</button>
-  </div>
-  <div id="timezoneRow" style="margin-top:12px;">
-    <label for="timezoneOffsetMin" id="labelTimezoneOffset" class="field-num-label">Time zone (UTC offset):</label>
-    <select id="timezoneOffsetMin"></select>
-  </div>
-  <div class="note-text" id="wifiNoteTimezone" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
-  <div class="button-row" style="margin-top: 8px;">
-    <button type="button" id="wifiBtnSaveTimezone" onclick="previewSaveTimezone()">Save time zone</button>
-  </div>
   <label class="power-toggle" style="margin-top: 16px;">
     <input type="checkbox" id="displayEnabled">
     <span class="power-toggle-box"></span>
-    <span class="power-toggle-text" id="wifiLblDisplay">Enable OLED display</span>
+    <span class="power-toggle-label">
+      <svg class="power-toggle-inline-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="5.5" width="17" height="11" rx="2"></rect>
+        <path d="M9 19h6"></path>
+        <path d="M12 16.5v2.5"></path>
+      </svg>
+      <span class="power-toggle-text" id="wifiLblDisplay">Enable OLED display</span>
+    </span>
   </label>
   <div class="note-text" id="wifiNoteDisplay">Turn off the display to save power. All features remain available in the web UI.</div>
   <div id="displayOffRow" style="margin-top:12px;">
@@ -429,10 +564,84 @@ label { display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; fo
     <input type="number" id="displayOffSec" min="5" max="600" value="20">
   </div>
   <div class="note-text" id="wifiNoteDisplayOff" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
-  <div class="button-row">
-    <button type="button" id="wifiBtnSaveDisplay" onclick="previewSaveDisplayMode()">Save display</button>
+  <div class="button-row" style="margin-top: 12px;">
+    <button type="button" id="wifiBtnSaveEnergy" onclick="previewSaveEnergySettings()">Save power settings</button>
   </div>
   <p class="preview-lang-hint" style="margin-top:12px;margin-bottom:0;" id="wifiPreviewPowerHint">Preview only — not sent to the device. Values are stored in <code>localStorage</code> for this page.</p>
+</div>
+
+<div class="card">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M5 11h14"></path>
+        <path d="M7 11v2a5 5 0 0 0 10 0v-2"></path>
+        <path d="M9 6.5l1.2 3"></path>
+        <path d="M15 6.5l-1.2 3"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="wifiH3FeedInterval">Feeding interval</div>
+      <div class="section-subtitle" id="wifiFeedIntervalSub">Separate limit for how often feeding can run</div>
+    </div>
+  </div>
+  <div id="feedIntervalRow" style="margin-top:12px;">
+    <label for="feedIntervalMin" id="labelFeedIntervalMin" class="field-num-label">Minimum interval between feedings (min, 1-1440):</label>
+    <input type="number" id="feedIntervalMin" min="1" max="1440" value="5">
+  </div>
+  <div class="note-text" id="wifiNoteFeedInterval" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
+  <div class="button-row" style="margin-top: 12px;">
+    <button type="button" id="wifiBtnSaveFeedInterval" onclick="previewSaveFeedInterval()">Save feeding interval</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <rect x="3.5" y="5.5" width="17" height="11" rx="2"></rect>
+        <path d="M9 19h6"></path>
+        <path d="M12 16.5v2.5"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="wifiH3BatteryCal">Battery calibration</div>
+      <div class="section-subtitle" id="wifiBatteryCalSub">Manual voltage adjustment using multimeter reading</div>
+    </div>
+  </div>
+  <div class="note-text" id="wifiBatteryCalCurrentLabel">Current sensor voltage: <strong id="wifiBatteryCalCurrentValue">--</strong> V</div>
+  <div id="batteryMeasuredRow" style="margin-top:12px;">
+    <label for="batteryMeasuredVoltage" id="labelBatteryMeasuredVoltage" class="field-num-label">Actual voltage from multimeter (V):</label>
+    <input type="number" id="batteryMeasuredVoltage" min="0" max="30" step="0.01" value="">
+  </div>
+  <div class="note-text" id="wifiNoteBatteryCal" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
+  <div class="button-row" style="margin-top: 12px;">
+    <button type="button" id="wifiBtnSaveBatteryCal" onclick="previewSaveBatteryCalibration()">Apply calibration</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 7v5"></path>
+        <path d="M12 12l3 2"></path>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="wifiH3Timezone">Time zone</div>
+      <div class="section-subtitle" id="wifiTimezoneSub">Manage the device local time separately</div>
+    </div>
+  </div>
+  <div id="timezoneRow">
+    <label for="timezoneOffsetMin" id="labelTimezoneOffset" class="field-num-label">Time zone (UTC offset):</label>
+    <select id="timezoneOffsetMin"></select>
+  </div>
+  <div class="note-text" id="wifiNoteTimezone" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
+  <div class="button-row" style="margin-top: 8px;">
+    <button type="button" id="wifiBtnSaveTimezone" onclick="previewSaveTimezone()">Save time zone</button>
+  </div>
 </div>
 
 <div class="bottom-tabs">
@@ -494,8 +703,12 @@ function applyWiFiLanguage() {
   if (langSub) langSub.textContent = wifiIsEn() ? 'Choose the web interface language' : 'Оберіть мову веб-інтерфейсу';
   var h1 = document.getElementById('wifiH3Connect');
   if (h1) h1.textContent = wifiIsEn() ? 'Connect to WiFi' : 'Підключення до WiFi';
+  var s1 = document.getElementById('wifiConnectSubtitle');
+  if (s1) s1.textContent = wifiIsEn() ? 'Enter network credentials' : 'Введіть дані мережі для підключення';
   var h2 = document.getElementById('wifiH3Current');
   if (h2) h2.textContent = wifiIsEn() ? 'Current connection' : 'Поточне підключення';
+  var s2 = document.getElementById('wifiCurrentSubtitle');
+  if (s2) s2.textContent = wifiIsEn() ? 'Current WiFi status and IP' : 'Поточний стан WiFi та IP';
   var ls = document.getElementById('wifiLblSsid');
   if (ls) ls.textContent = 'SSID:';
   var lp = document.getElementById('wifiLblPass');
@@ -516,6 +729,24 @@ function applyWiFiLanguage() {
   if (hPow) hPow.textContent = wifiIsEn() ? 'Power settings' : 'Налаштування енергії';
   var subPow = document.getElementById('wifiPowerSub');
   if (subPow) subPow.textContent = wifiIsEn() ? 'Optimize power consumption' : 'Оптимізуйте споживання живлення';
+  var hFi = document.getElementById('wifiH3FeedInterval');
+  if (hFi) hFi.textContent = wifiIsEn() ? 'Feeding interval' : 'Інтервал годування';
+  var subFi = document.getElementById('wifiFeedIntervalSub');
+  if (subFi) subFi.textContent = wifiIsEn()
+    ? 'Separate limit for how often feeding can run'
+    : 'Окреме обмеження частоти запуску годувань';
+  var hBc = document.getElementById('wifiH3BatteryCal');
+  if (hBc) hBc.textContent = wifiIsEn() ? 'Battery calibration' : 'Калібрування батареї';
+  var subBc = document.getElementById('wifiBatteryCalSub');
+  if (subBc) subBc.textContent = wifiIsEn()
+    ? 'Manual voltage adjustment using multimeter reading'
+    : 'Ручне підлаштування напруги за мультиметром';
+  var hTz = document.getElementById('wifiH3Timezone');
+  if (hTz) hTz.textContent = wifiIsEn() ? 'Time zone' : 'Часовий пояс';
+  var sTz = document.getElementById('wifiTimezoneSub');
+  if (sTz) sTz.textContent = wifiIsEn()
+    ? 'Manage the device local time separately'
+    : 'Окремо керуйте локальним часом пристрою';
   var lblPower = document.getElementById('wifiLblPowerSave');
   if (lblPower) lblPower.textContent = wifiIsEn() ? 'Power saving mode' : 'Режим економії енергії';
   var ld = document.getElementById('wifiLblDisplay');
@@ -530,6 +761,30 @@ function applyWiFiLanguage() {
     : '<strong>Режим економії вимкнено:</strong> без глибокого сну. З увімкненим OLED — дисплей постійно.';
   var li = document.getElementById('labelDeepSleepIdle');
   if (li) li.textContent = wifiIsEn() ? 'Idle seconds before deep sleep (10–3600):' : 'Секунд бездіяльності до глибокого сну (10–3600):';
+  var lfi = document.getElementById('labelFeedIntervalMin');
+  if (lfi) lfi.textContent = wifiIsEn()
+    ? 'Minimum interval between feedings (min, 1-1440):'
+    : 'Мінімальний інтервал між годуваннями (хв, 1–1440):';
+  var nfi = document.getElementById('wifiNoteFeedInterval');
+  if (nfi) nfi.textContent = wifiIsEn()
+    ? 'This limits how soon another manual or scheduled feed can start after the previous one. Default 5 min.'
+    : 'Це обмежує, як швидко після попереднього можна запускати нове ручне або заплановане годування. За замовчуванням 5 хв.';
+  var bfi = document.getElementById('wifiBtnSaveFeedInterval');
+  if (bfi) bfi.textContent = wifiIsEn() ? 'Save feeding interval' : 'Зберегти інтервал годування';
+  var bcl = document.getElementById('wifiBatteryCalCurrentLabel');
+  if (bcl) bcl.innerHTML = wifiIsEn()
+    ? 'Current sensor voltage: <strong id="wifiBatteryCalCurrentValue">--</strong> V'
+    : 'Поточна напруга з сенсора: <strong id="wifiBatteryCalCurrentValue">--</strong> В';
+  var lblBc = document.getElementById('labelBatteryMeasuredVoltage');
+  if (lblBc) lblBc.textContent = wifiIsEn()
+    ? 'Actual voltage from multimeter (V):'
+    : 'Фактична напруга з мультиметра (В):';
+  var nbc = document.getElementById('wifiNoteBatteryCal');
+  if (nbc) nbc.textContent = wifiIsEn()
+    ? 'Enter the multimeter value and apply. Calibration is stored locally for preview.'
+    : 'Введіть значення з мультиметра і застосуйте. Для прев’ю калібрування зберігається локально.';
+  var bbc = document.getElementById('wifiBtnSaveBatteryCal');
+  if (bbc) bbc.textContent = wifiIsEn() ? 'Apply calibration' : 'Застосувати калібрування';
   var ndDisp = document.getElementById('wifiNoteDisplay');
   if (ndDisp) ndDisp.textContent = wifiIsEn()
     ? 'Turn off the display to save power. All features remain available in the web UI.'
@@ -542,8 +797,8 @@ function applyWiFiLanguage() {
   if (noteDispOff) noteDispOff.textContent = wifiIsEn()
     ? 'With power saving on, the display stays on this long after a button press or web use, then blanks. Default 20 s.'
     : 'У режимі економії дисплей лишається увімкненим стільки секунд після кнопки або вебу, потім гасне. За замовчуванням 20 с.';
-  var bp = document.getElementById('wifiBtnSavePower');
-  if (bp) bp.textContent = wifiIsEn() ? 'Save power mode' : 'Зберегти режим енергії';
+  var bEnergy = document.getElementById('wifiBtnSaveEnergy');
+  if (bEnergy) bEnergy.textContent = wifiIsEn() ? 'Save power settings' : 'Зберегти налаштування економії енергії';
   var ltz = document.getElementById('labelTimezoneOffset');
   if (ltz) ltz.textContent = wifiIsEn() ? 'Time zone (UTC offset):' : 'Часовий пояс (зсув UTC):';
   var ntz = document.getElementById('wifiNoteTimezone');
@@ -552,8 +807,6 @@ function applyWiFiLanguage() {
     : 'Оберіть локальний зсув UTC для годинника, розкладу та відліку до наступного годування. Якщо у вашому регіоні змінюється літній/зимовий час, оновлюйте це вручну.';
   var btz = document.getElementById('wifiBtnSaveTimezone');
   if (btz) btz.textContent = wifiIsEn() ? 'Save time zone' : 'Зберегти часовий пояс';
-  var bd = document.getElementById('wifiBtnSaveDisplay');
-  if (bd) bd.textContent = wifiIsEn() ? 'Save display' : 'Зберегти дисплей';
   var ph = document.getElementById('wifiPreviewPowerHint');
   if (ph) ph.innerHTML = wifiIsEn()
     ? 'Preview only — not sent to the device. Values are stored in <code>localStorage</code> for this section.'
@@ -568,34 +821,30 @@ function applyWiFiLanguage() {
   if (ukBtn) ukBtn.classList.toggle('active', !wifiIsEn());
   if (enBtn) enBtn.classList.toggle('active', wifiIsEn());
   previewSyncPowerEcoUi();
+  previewRefreshBatteryCalibrationDisplay();
 }
 function setWiFiLanguage(lang) {
   wifiLang = lang === 'en' ? 'en' : 'uk';
   localStorage.setItem('aqua_lang', wifiLang);
   applyWiFiLanguage();
 }
+let previewToastHideTimer = null;
+
 function showPreviewToast(msg) {
   var t = document.getElementById('previewToast');
+  var tt = document.getElementById('previewToastText');
   if (!t) return;
-  t.textContent = msg;
+  if (tt) tt.textContent = msg;
+  else t.textContent = msg;
+  if (previewToastHideTimer) {
+    clearTimeout(previewToastHideTimer);
+    previewToastHideTimer = null;
+  }
   t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 2200);
-}
-function previewSavePowerMode() {
-  var on = document.getElementById('powerSaveMode').checked;
-  var el = document.getElementById('deepSleepIdleSec');
-  var idle = el ? parseInt(el.value, 10) : 300;
-  if (!Number.isFinite(idle)) idle = 300;
-  idle = Math.max(10, Math.min(3600, idle));
-  if (el) el.value = idle;
-  try {
-    localStorage.setItem('preview_powerSave', on ? '1' : '0');
-    localStorage.setItem('preview_dsIdle', String(idle));
-  } catch (e) {}
-  previewSyncPowerEcoUi();
-  showPreviewToast(wifiIsEn()
-    ? 'Power mode saved (preview only)'
-    : 'Режим енергії збережено (лише прев’ю)');
+  previewToastHideTimer = setTimeout(function() {
+    t.classList.remove('show');
+    previewToastHideTimer = null;
+  }, 3800);
 }
 function previewSyncPowerEcoUi() {
   var on = document.getElementById('powerSaveMode') && document.getElementById('powerSaveMode').checked;
@@ -621,21 +870,85 @@ function previewSaveTimezone() {
     ? 'Time zone saved (preview only)'
     : 'Часовий пояс збережено (лише прев’ю)');
 }
-function previewSaveDisplayMode() {
-  var on = document.getElementById('displayEnabled').checked;
+
+function previewSaveEnergySettings() {
+  var powerOn = document.getElementById('powerSaveMode').checked;
+  var idleEl = document.getElementById('deepSleepIdleSec');
+  var idle = idleEl ? parseInt(idleEl.value, 10) : 300;
+  if (!Number.isFinite(idle)) idle = 300;
+  idle = Math.max(10, Math.min(3600, idle));
+  if (idleEl) idleEl.value = idle;
+
+  var displayOn = document.getElementById('displayEnabled').checked;
   var secEl = document.getElementById('displayOffSec');
   var sec = secEl ? parseInt(secEl.value, 10) : 20;
   if (!Number.isFinite(sec)) sec = 20;
   sec = Math.max(5, Math.min(600, sec));
   if (secEl) secEl.value = sec;
+
   try {
-    localStorage.setItem('preview_display', on ? '1' : '0');
+    localStorage.setItem('preview_powerSave', powerOn ? '1' : '0');
+    localStorage.setItem('preview_dsIdle', String(idle));
+    localStorage.setItem('preview_display', displayOn ? '1' : '0');
     localStorage.setItem('preview_displayOffSec', String(sec));
   } catch (e) {}
+
+  previewSyncPowerEcoUi();
   showPreviewToast(wifiIsEn()
-    ? 'Display settings saved (preview only)'
-    : 'Налаштування дисплею збережено (лише прев’ю)');
+    ? 'Power settings saved (preview only)'
+    : 'Налаштування енергії збережено (лише прев’ю)');
 }
+
+function previewSaveFeedInterval() {
+  var feedIntervalEl = document.getElementById('feedIntervalMin');
+  var feedInterval = feedIntervalEl ? parseInt(feedIntervalEl.value, 10) : 5;
+  if (!Number.isFinite(feedInterval)) feedInterval = 5;
+  feedInterval = Math.max(1, Math.min(1440, feedInterval));
+  if (feedIntervalEl) feedIntervalEl.value = feedInterval;
+  try {
+    localStorage.setItem('preview_feedIntervalMin', String(feedInterval));
+  } catch (e) {}
+  showPreviewToast(wifiIsEn()
+    ? 'Feeding interval saved (preview only)'
+    : 'Інтервал годування збережено (лише прев’ю)');
+}
+
+function previewRefreshBatteryCalibrationDisplay() {
+  var currentRaw = localStorage.getItem('preview_battSensorVoltage');
+  var current = currentRaw !== null ? parseFloat(currentRaw) : 6.57;
+  if (!Number.isFinite(current) || current <= 0) current = 6.57;
+  var currentEl = document.getElementById('wifiBatteryCalCurrentValue');
+  if (currentEl) currentEl.textContent = current.toFixed(2);
+  var measuredEl = document.getElementById('batteryMeasuredVoltage');
+  if (measuredEl && (!measuredEl.value || measuredEl.value.trim() === '')) {
+    measuredEl.value = current.toFixed(2);
+  }
+}
+
+function previewSaveBatteryCalibration() {
+  var measuredEl = document.getElementById('batteryMeasuredVoltage');
+  var measured = measuredEl ? parseFloat(measuredEl.value) : NaN;
+  if (!Number.isFinite(measured) || measured <= 0) {
+    showPreviewToast(wifiIsEn() ? 'Enter multimeter voltage' : 'Введіть напругу з мультиметра');
+    return;
+  }
+  measured = Math.max(0.1, Math.min(30, measured));
+  var currentRaw = localStorage.getItem('preview_battSensorVoltage');
+  var current = currentRaw !== null ? parseFloat(currentRaw) : 6.57;
+  if (!Number.isFinite(current) || current <= 0) current = measured;
+  var calibration = measured / current;
+
+  try {
+    localStorage.setItem('preview_battCalFactor', calibration.toFixed(4));
+    localStorage.setItem('preview_battSensorVoltage', measured.toFixed(2));
+  } catch (e) {}
+  if (measuredEl) measuredEl.value = measured.toFixed(2);
+  previewRefreshBatteryCalibrationDisplay();
+  showPreviewToast(wifiIsEn()
+    ? 'Battery calibration saved (preview only)'
+    : 'Калібрування батареї збережено (лише прев’ю)');
+}
+
 function loadPreviewPowerDisplay() {
   try {
     var p = localStorage.getItem('preview_powerSave');
@@ -656,6 +969,16 @@ function loadPreviewPowerDisplay() {
         dsEl.value = 300;
       }
     }
+    var fi = localStorage.getItem('preview_feedIntervalMin');
+    var fiEl = document.getElementById('feedIntervalMin');
+    if (fiEl) {
+      if (fi !== null) {
+        var fv = parseInt(fi, 10);
+        if (Number.isFinite(fv)) fiEl.value = Math.max(1, Math.min(1440, fv));
+      } else {
+        fiEl.value = 5;
+      }
+    }
     var tz = localStorage.getItem('preview_timezoneOffsetMin');
     populatePreviewTimezoneOptions(tz !== null ? parseInt(tz, 10) : 120);
     var dos = localStorage.getItem('preview_displayOffSec');
@@ -668,8 +991,12 @@ function loadPreviewPowerDisplay() {
         displayOffEl.value = 20;
       }
     }
+    if (localStorage.getItem('preview_battSensorVoltage') === null) {
+      localStorage.setItem('preview_battSensorVoltage', '6.57');
+    }
   } catch (e) {}
   previewSyncPowerEcoUi();
+  previewRefreshBatteryCalibrationDisplay();
   var psCh = document.getElementById('powerSaveMode');
   if (psCh) psCh.addEventListener('change', previewSyncPowerEcoUi);
 }

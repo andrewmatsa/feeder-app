@@ -34,6 +34,7 @@ public:
   void handleSetDeepSleep();
   void handleSetTimezone();
   void handleSetFeedInterval();
+  void handleSetBatteryCalibration();
   
   void setPowerSaveMode(bool enabled) { powerSaveMode = enabled; }
   bool getPowerSaveMode() const { return powerSaveMode; }

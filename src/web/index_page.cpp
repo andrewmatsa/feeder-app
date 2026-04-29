@@ -13,7 +13,22 @@ const char* pageIndex = R"rawliteral(
 R"rawliteral(
 .row {margin-bottom: 8px;}
 label {display: block; font-weight: 600; margin-bottom: 4px; color: #2c3e50; font-size: 13px;}
-input[type=range], input[type=number], select {width: 95%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px;}
+input[type=range], select {width: 95%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px;}
+input[type=number] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d5d9e0;
+  background: #f9fafc;
+  font-size: 13px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+input[type=number]:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
 input[type=checkbox] {transform: scale(1.1); margin-right: 6px;}
 button {
   display: inline-flex;
@@ -208,6 +223,38 @@ R"rawliteral(
   font-size: 12px;
   color: #888;
 }
+.low-battery-alert {
+  width: 100%;
+  margin-top: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(198, 40, 40, 0.35);
+  background: rgba(211, 47, 47, 0.12);
+  color: #b71c1c;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.15px;
+}
+.low-battery-alert.is-visible {
+  display: inline-flex;
+}
+.low-battery-alert-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
 .battery-info-row {
   display: flex;
   justify-content: center;
@@ -362,6 +409,10 @@ R"rawliteral(
       <div class="next-feed-title">До наступного годування</div>
     </div>
   </div>
+  <div id="lowBatteryAlert" class="low-battery-alert" role="status" aria-live="polite">
+    <span class="low-battery-alert-icon" aria-hidden="true">!</span>
+    <span id="lowBatteryAlertText">Низький рівень заряду</span>
+  </div>
 </div>
 
 <div class="card">
@@ -407,7 +458,7 @@ R"rawliteral(
   </div>
   <div class="flex-row">
     <span>Кількість повторів</span>
-    <input id="feedRepeats" type="number" min="1" max="20" value="1">
+    <input id="feedRepeats" type="number" min="1" max="20" value="1" style="width:96px; min-width:96px;">
   </div>
   <button type="button" id="btnSaveRepeats" onclick="saveRepeats()" style="margin-top: 0;">Зберегти</button>
   <button type="button" id="btnFeedNow" onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Годувати зараз</button>
@@ -448,6 +499,7 @@ const I18N = {
     appSubtitle: 'Розумна годівниця',
     batteryTitle: 'Стан батареї',
     batteryVoltagePrefix: 'Напруга:',
+    lowBatteryAlert: 'Низький рівень заряду',
     nextFeedTitle: 'До наступного годування',
     manualControlTitle: 'Ручне керування',
     manualControlSubtitle: 'Керуйте серво-приводом вручну',
@@ -518,6 +570,7 @@ const I18N = {
     appSubtitle: 'Smart feeder',
     batteryTitle: 'Battery status',
     batteryVoltagePrefix: 'Voltage:',
+    lowBatteryAlert: 'Low battery level',
     nextFeedTitle: 'Until next feeding',
     manualControlTitle: 'Manual control',
     manualControlSubtitle: 'Control the servo manually',
@@ -602,6 +655,8 @@ function applyLanguage() {
   if (batteryTitle) batteryTitle.textContent = t('batteryTitle');
   if (batterySubtitle) batterySubtitle.innerHTML = `${t('batteryVoltagePrefix')} <span id="batteryVoltage">--</span> V`;
   if (nextFeedTitle) nextFeedTitle.textContent = t('nextFeedTitle');
+  const lowBatteryAlertText = document.getElementById('lowBatteryAlertText');
+  if (lowBatteryAlertText) lowBatteryAlertText.textContent = t('lowBatteryAlert');
   const deepSleepBanner = document.getElementById('deepSleepHelpBanner');
   if (deepSleepBanner) deepSleepBanner.innerHTML = t('deepSleepHelpBanner');
   if (sections[0]) sections[0].textContent = t('manualControlTitle');
@@ -949,7 +1004,7 @@ function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true
       <span>${t('feedBlockTime')}</span>
       <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}" style="width:96px; min-width:96px; padding: 4px;">
       <span>${t('feedBlockRepeats')}</span>
-      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}" style="width:44px; min-width:44px; padding: 4px;">
+      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}" style="width:96px; min-width:96px;">
       <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('feedRemoveTitle')}">×</button>
     </div>
   `;
@@ -1061,6 +1116,8 @@ function formatDurationMinutes(minutes) {
   return currentLang === 'en' ? `${hours} h ${mins} m` : `${hours} год ${mins} хв`;
 }
 
+let hasNextFeedGaugeIntroAnimated = false;
+
 function updateNextFeedingProgress(status) {
   const percentTextEl = document.getElementById('nextFeedPercent');
   const fillPath = document.getElementById('nextFeedFill');
@@ -1118,9 +1175,23 @@ function updateNextFeedingProgress(status) {
   const percent = interval > 0 ? Math.max(0, Math.min(100, (clampedMinutes / interval) * 100)) : 0;
 
   const offset = circumference - (percent / 100) * circumference;
-  fillPath.style.strokeDashoffset = offset;
+  if (!hasNextFeedGaugeIntroAnimated) {
+    fillPath.style.transition = 'none';
+    fillPath.style.strokeDashoffset = circumference;
+    void fillPath.getBoundingClientRect();
+    fillPath.style.transition = 'stroke-dashoffset 1.15s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease';
+    requestAnimationFrame(() => {
+      fillPath.style.strokeDashoffset = offset;
+    });
+    hasNextFeedGaugeIntroAnimated = true;
+  } else {
+    fillPath.style.transition = 'stroke-dashoffset 0.6s ease, stroke 0.3s ease';
+    fillPath.style.strokeDashoffset = offset;
+  }
   percentTextEl.textContent = formatDurationMinutes(minutesUntilNext);
 }
+
+let hasBatteryGaugeIntroAnimated = false;
 
 function updateBatteryGauge(percent) {
   const gaugeFill = document.getElementById('gaugeFill');
@@ -1137,6 +1208,7 @@ function updateBatteryGauge(percent) {
     if (gaugeWrapper) {
       gaugeWrapper.removeAttribute('data-low-battery');
     }
+    updateLowBatteryAlert(null);
     return;
   }
 
@@ -1146,14 +1218,26 @@ function updateBatteryGauge(percent) {
   const offset = circumference - (safePercent / 100) * circumference;
 
   gaugeFill.style.strokeDasharray = circumference;
-  gaugeFill.style.strokeDashoffset = offset;
+  if (!hasBatteryGaugeIntroAnimated) {
+    gaugeFill.style.transition = 'none';
+    gaugeFill.style.strokeDashoffset = circumference;
+    void gaugeFill.getBoundingClientRect();
+    gaugeFill.style.transition = 'stroke-dashoffset 1.15s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease';
+    requestAnimationFrame(() => {
+      gaugeFill.style.strokeDashoffset = offset;
+    });
+    hasBatteryGaugeIntroAnimated = true;
+  } else {
+    gaugeFill.style.transition = 'stroke-dashoffset 0.6s ease, stroke 0.3s ease';
+    gaugeFill.style.strokeDashoffset = offset;
+  }
   percentLabel.textContent = `${safePercent}%`;
 
   let color = '#FF5E5E';
   if (safePercent >= 75) {
     color = '#4CAF50';
   } else if (safePercent >= 35) {
-    color = '#FF9800';
+    color = '#FFB300';
   } else {
     color = '#D32F2F';
   }
@@ -1168,6 +1252,19 @@ function updateBatteryGauge(percent) {
     } else {
       gaugeWrapper.removeAttribute('data-low-battery');
     }
+  }
+  updateLowBatteryAlert(safePercent);
+}
+
+const LOW_BATTERY_ALERT_THRESHOLD = 20;
+
+function updateLowBatteryAlert(percent) {
+  const alertEl = document.getElementById('lowBatteryAlert');
+  if (!alertEl) return;
+  if (Number.isFinite(percent) && percent <= LOW_BATTERY_ALERT_THRESHOLD) {
+    alertEl.classList.add('is-visible');
+  } else {
+    alertEl.classList.remove('is-visible');
   }
 }
 
