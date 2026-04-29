@@ -642,6 +642,35 @@ let currentLang = getStoredUiLang();
 function t(key) {
   return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.uk[key] || key);
 }
+
+let heroTailBurstTimer = null;
+let heroEscapeTimer = null;
+
+function initHeroFishTailBurst() {
+  const fish = document.querySelector('.hero-svg-fish');
+  const tail = document.querySelector('.hero-fish-tail');
+  const illustration = fish ? fish.closest('.app-illustration') : null;
+  if (!fish || !tail || !illustration || fish.dataset.tailBurstReady === '1') return;
+  fish.dataset.tailBurstReady = '1';
+
+  fish.addEventListener('click', () => {
+    if (illustration.classList.contains('is-escaping')) return;
+    illustration.classList.add('is-escaping');
+    tail.classList.remove('tail-burst');
+    void tail.offsetWidth;
+    tail.classList.add('tail-burst');
+    if (heroTailBurstTimer) clearTimeout(heroTailBurstTimer);
+    heroTailBurstTimer = setTimeout(() => {
+      tail.classList.remove('tail-burst');
+      heroTailBurstTimer = null;
+    }, 950);
+    if (heroEscapeTimer) clearTimeout(heroEscapeTimer);
+    heroEscapeTimer = setTimeout(() => {
+      illustration.classList.remove('is-escaping');
+      heroEscapeTimer = null;
+    }, 2150);
+  });
+}
 function applyLanguage() {
   const sections = document.querySelectorAll('.section-title');
   const subtitles = document.querySelectorAll('.section-subtitle');
@@ -1359,6 +1388,7 @@ function statusUpdate(){
 setInterval(statusUpdate,30000); // зменшено з 5 до 30 секунд
 window.onload=function(){
   applyLanguage();
+  initHeroFishTailBurst();
   statusUpdate();
   setActiveBottomTab({ matchRootToHome: true });
 };
