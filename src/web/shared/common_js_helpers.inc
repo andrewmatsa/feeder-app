@@ -7,14 +7,26 @@ function isStoredUiLangEn() {
   return getStoredUiLang() === 'en';
 }
 
+let toastHideTimer = null;
+
 function showToastMessage(text) {
   const toast = document.getElementById('toast');
   if (!toast) return;
-  toast.innerText = text;
+  const toastText = document.getElementById('toastText');
+  if (toastText) {
+    toastText.textContent = text;
+  } else {
+    toast.textContent = text;
+  }
+  if (toastHideTimer) {
+    clearTimeout(toastHideTimer);
+    toastHideTimer = null;
+  }
   toast.classList.add('show');
-  setTimeout(() => {
+  toastHideTimer = setTimeout(() => {
     toast.classList.remove('show');
-  }, 2000);
+    toastHideTimer = null;
+  }, 3800);
 }
 
 function setActiveBottomTab(options = {}) {

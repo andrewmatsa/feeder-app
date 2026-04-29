@@ -105,27 +105,51 @@ R"rawliteral(
 .flex-row input, .flex-row select {width: auto; min-width: 20px; font-size: 12px;}
 .toast {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #111;
-  color: #fff;
-  padding: 14px 26px;
-  border-radius: 999px;
-  box-shadow: 0 18px 34px rgba(0,0,0,0.22);
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(15,23,42,0.58), rgba(15,23,42,0.42));
+  color: rgba(248,250,252,0.96);
+  padding: 12px 16px;
+  border-radius: 0 0 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.16);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.3px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   z-index: 1000;
   opacity: 0;
-  transform-origin: center;
-  transform: translate(-50%, -10px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform: translateY(-14px) scale(0.985);
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
+}
+.toast-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.35);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.toast-text {
+  display: inline-block;
 }
 .toast.show {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translateY(0) scale(1);
 }
 #btnFeedNow {
   position: relative;
@@ -292,7 +316,10 @@ R"rawliteral(
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.3.1"></script>
 </head>
 <body>
-<div id="toast" class="toast">Збережено</div>
+<div id="toast" class="toast">
+  <span class="toast-icon" aria-hidden="true">i</span>
+  <span id="toastText" class="toast-text">Збережено</span>
+</div>
 <div class="hero-header">
 )rawliteral"
 #include "shared/hero_illustration.inc"
