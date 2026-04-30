@@ -15,11 +15,14 @@ const float BatteryMonitor::CHARGING_RISE_THRESHOLD_V_PER_MIN = 0.012f;
 const float BatteryMonitor::CHARGING_FALL_THRESHOLD_V_PER_MIN = -0.01f;
 const int BatteryMonitor::CHARGING_RISE_SAMPLES_REQUIRED = 3;
 const int BatteryMonitor::CHARGING_FALL_SAMPLES_REQUIRED = 3;
+const unsigned long BatteryMonitor::CHARGING_TREND_MIN_INTERVAL_MS = 5000;
+const float BatteryMonitor::CHARGING_MIN_DELTA_V = 0.004f;
+const int BatteryMonitor::CHARGING_NEUTRAL_SAMPLES_TO_CLEAR = 12;
 
 BatteryMonitor::BatteryMonitor(int pin)
   : pin(pin), batteryVoltage(0.0), batteryPercent(0.0), calibrationFactor(DEFAULT_BATTERY_CALIBRATION),
     chargingLikely(false), trendInitialized(false), trendVoltage(0.0f), lastTrendSampleMs(0),
-    risingTrendSamples(0), fallingTrendSamples(0) {
+    risingTrendSamples(0), fallingTrendSamples(0), neutralTrendSamples(0) {
 }
 
 void BatteryMonitor::begin() {
@@ -78,7 +81,7 @@ void BatteryMonitor::update() {
   }
 
   unsigned long dtMs = nowMs - lastTrendSampleMs;
-  if (dtMs < 500) {
+  if (dtMs < CHARGING_TREND_MIN_INTERVAL_MS) {
     return;
   }
 
@@ -88,21 +91,32 @@ void BatteryMonitor::update() {
   trendVoltage = batteryVoltage;
   lastTrendSampleMs = nowMs;
 
-  if (slopeVPerMin >= CHARGING_RISE_THRESHOLD_V_PER_MIN) {
+  const bool deltaTooSmall = fabsf(deltaV) < CHARGING_MIN_DELTA_V;
+  if (!deltaTooSmall && slopeVPerMin >= CHARGING_RISE_THRESHOLD_V_PER_MIN) {
     risingTrendSamples++;
     fallingTrendSamples = 0;
-  } else if (slopeVPerMin <= CHARGING_FALL_THRESHOLD_V_PER_MIN) {
+    neutralTrendSamples = 0;
+  } else if (!deltaTooSmall && slopeVPerMin <= CHARGING_FALL_THRESHOLD_V_PER_MIN) {
     fallingTrendSamples++;
     risingTrendSamples = 0;
+    neutralTrendSamples = 0;
   } else {
     if (risingTrendSamples > 0) risingTrendSamples--;
     if (fallingTrendSamples > 0) fallingTrendSamples--;
+    if (neutralTrendSamples < CHARGING_NEUTRAL_SAMPLES_TO_CLEAR) neutralTrendSamples++;
   }
 
   if (risingTrendSamples >= CHARGING_RISE_SAMPLES_REQUIRED) {
     chargingLikely = true;
+    neutralTrendSamples = 0;
   } else if (fallingTrendSamples >= CHARGING_FALL_SAMPLES_REQUIRED) {
     chargingLikely = false;
+    neutralTrendSamples = 0;
+  } else if (chargingLikely && neutralTrendSamples >= CHARGING_NEUTRAL_SAMPLES_TO_CLEAR) {
+    // Prevent sticky "charging" status when voltage is flat/noisy but adapter is unplugged.
+    chargingLikely = false;
+    risingTrendSamples = 0;
+    fallingTrendSamples = 0;
   }
 }
 

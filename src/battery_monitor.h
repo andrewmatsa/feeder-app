@@ -24,6 +24,7 @@ private:
   unsigned long lastTrendSampleMs;
   int risingTrendSamples;
   int fallingTrendSamples;
+  int neutralTrendSamples;
   
   static const int BATTERY_SAMPLES = 16;
   static const float ADC_REFERENCE_VOLTAGE;
@@ -38,6 +39,9 @@ private:
   static const float CHARGING_FALL_THRESHOLD_V_PER_MIN;
   static const int CHARGING_RISE_SAMPLES_REQUIRED;
   static const int CHARGING_FALL_SAMPLES_REQUIRED;
+  static const unsigned long CHARGING_TREND_MIN_INTERVAL_MS;
+  static const float CHARGING_MIN_DELTA_V;
+  static const int CHARGING_NEUTRAL_SAMPLES_TO_CLEAR;
   
   float voltageToPercent(float v);
 };

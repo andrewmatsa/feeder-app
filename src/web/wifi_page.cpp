@@ -135,6 +135,26 @@ body {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
   padding: 22px 18px 18px;
 }
+.lang-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.lang-btn {
+  width: auto;
+  flex: 0 0 auto;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.lang-btn.active {
+  background: #111;
+  color: #fff;
+}
 h1 {
   margin: 0 0 6px;
   font-size: 24px;
@@ -211,16 +231,74 @@ button {
       </div>
     </div>
     <div class="card">
-      <h1>Unlock settings</h1>
-      <p>Enter the access point password to continue to WiFi connection setup.</p>
-      <label for="password">Access point password</label>
+      <div class="lang-row">
+        <button type="button" id="langUkBtn" class="lang-btn" onclick="setLang('uk')">UK</button>
+        <button type="button" id="langEnBtn" class="lang-btn" onclick="setLang('en')">EN</button>
+      </div>
+      <h1 id="title">Unlock settings</h1>
+      <p id="desc">Enter the access point password to continue to WiFi connection setup.</p>
+      <label id="passwordLabel" for="password">Access point password</label>
       <input id="password" type="password" placeholder="12345678">
-      <button type="button" onclick="login()">Unlock settings</button>
-      <div class="note">After login you will see a separate WiFi connection screen for entering your home network credentials.</div>
+      <button type="button" id="unlockBtn" onclick="login()">Unlock settings</button>
+      <div id="noteText" class="note">After login you will see a separate WiFi connection screen for entering your home network credentials.</div>
       <div id="msg"></div>
     </div>
   </div>
 <script>
+let apLang = localStorage.getItem('aqua_lang') === 'en' ? 'en' : 'uk';
+const AP_I18N = {
+  uk: {
+    subtitle: 'Вхід у WiFi налаштування',
+    title: 'Розблокувати налаштування',
+    desc: 'Введіть пароль точки доступу, щоб перейти до налаштування домашнього WiFi.',
+    passwordLabel: 'Пароль точки доступу',
+    passwordPlaceholder: '12345678',
+    unlockBtn: 'Розблокувати',
+    note: 'Після входу ви побачите окремий екран підключення WiFi для введення даних домашньої мережі.',
+    wrongPassword: 'Невірний пароль',
+    loginFailed: 'Помилка входу'
+  },
+  en: {
+    subtitle: 'WiFi access login',
+    title: 'Unlock settings',
+    desc: 'Enter the access point password to continue to WiFi connection setup.',
+    passwordLabel: 'Access point password',
+    passwordPlaceholder: '12345678',
+    unlockBtn: 'Unlock settings',
+    note: 'After login you will see a separate WiFi connection screen for entering your home network credentials.',
+    wrongPassword: 'Wrong password',
+    loginFailed: 'Login failed'
+  }
+};
+function apT(key) {
+  const dict = AP_I18N[apLang] || AP_I18N.uk;
+  return dict[key] || key;
+}
+function applyApLang() {
+  const subtitle = document.querySelector('.app-subtitle');
+  if (subtitle) subtitle.textContent = apT('subtitle');
+  const title = document.getElementById('title');
+  if (title) title.textContent = apT('title');
+  const desc = document.getElementById('desc');
+  if (desc) desc.textContent = apT('desc');
+  const passwordLabel = document.getElementById('passwordLabel');
+  if (passwordLabel) passwordLabel.textContent = apT('passwordLabel');
+  const passwordInput = document.getElementById('password');
+  if (passwordInput) passwordInput.placeholder = apT('passwordPlaceholder');
+  const unlockBtn = document.getElementById('unlockBtn');
+  if (unlockBtn) unlockBtn.textContent = apT('unlockBtn');
+  const noteText = document.getElementById('noteText');
+  if (noteText) noteText.textContent = apT('note');
+  const ukBtn = document.getElementById('langUkBtn');
+  const enBtn = document.getElementById('langEnBtn');
+  if (ukBtn) ukBtn.classList.toggle('active', apLang === 'uk');
+  if (enBtn) enBtn.classList.toggle('active', apLang === 'en');
+}
+function setLang(lang) {
+  apLang = lang === 'en' ? 'en' : 'uk';
+  localStorage.setItem('aqua_lang', apLang);
+  applyApLang();
+}
 function login() {
   const password = document.getElementById('password').value;
   const msg = document.getElementById('msg');
@@ -234,18 +312,18 @@ function login() {
     body: new URLSearchParams({ password }).toString(),
   }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await response.text() || 'Login failed');
+      throw new Error(await response.text() || apT('loginFailed'));
     }
     window.location.href = '/wifi';
   }).catch((error) => {
-    msg.textContent = error.message === 'invalid password' ? 'Wrong password' : error.message;
+    msg.textContent = error.message === 'invalid password' ? apT('wrongPassword') : error.message;
   });
 }
 document.getElementById('password').addEventListener('keydown', (event) => {
   if (event.key === 'Enter') login();
 });
 let _hTbt=null,_hEt=null;
-document.addEventListener('DOMContentLoaded',()=>{const f=document.querySelector('.hero-svg-fish'),t=document.querySelector('.hero-fish-tail'),i=f&&f.closest('.app-illustration');if(!f||!t||!i||f.dataset.tbi)return;f.dataset.tbi='1';f.addEventListener('click',()=>{if(i.classList.contains('is-escaping'))return;i.classList.add('is-escaping');t.classList.remove('tail-burst');void t.offsetWidth;t.classList.add('tail-burst');if(_hTbt)clearTimeout(_hTbt);_hTbt=setTimeout(()=>{t.classList.remove('tail-burst');_hTbt=null;},950);if(_hEt)clearTimeout(_hEt);_hEt=setTimeout(()=>{i.classList.remove('is-escaping');_hEt=null;},2150);});});
+document.addEventListener('DOMContentLoaded',()=>{applyApLang();const f=document.querySelector('.hero-svg-fish'),t=document.querySelector('.hero-fish-tail'),i=f&&f.closest('.app-illustration');if(!f||!t||!i||f.dataset.tbi)return;f.dataset.tbi='1';f.addEventListener('click',()=>{if(i.classList.contains('is-escaping'))return;i.classList.add('is-escaping');t.classList.remove('tail-burst');void t.offsetWidth;t.classList.add('tail-burst');if(_hTbt)clearTimeout(_hTbt);_hTbt=setTimeout(()=>{t.classList.remove('tail-burst');_hTbt=null;},950);if(_hEt)clearTimeout(_hEt);_hEt=setTimeout(()=>{i.classList.remove('is-escaping');_hEt=null;},2150);});});
 </script>
 </body>
 </html>
@@ -386,6 +464,27 @@ body {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
   padding: 22px 18px 18px;
 }
+.lang-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.lang-btn {
+  width: auto;
+  flex: 0 0 auto;
+  min-width: 58px;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.lang-btn.active {
+  background: #111;
+  color: #fff;
+}
 h1 {
   margin: 0 0 6px;
   font-size: 24px;
@@ -470,14 +569,18 @@ button {
       </div>
     </div>
     <div class="card">
-      <h1>Connect home WiFi</h1>
-      <p>Enter your home WiFi credentials. After a successful connection you will get access to the full WiFi settings page.</p>
-      <label for="ssid">WiFi network name</label>
+      <div class="lang-row">
+        <button type="button" id="langUkBtn" class="lang-btn" onclick="setConnectLang('uk')">UK</button>
+        <button type="button" id="langEnBtn" class="lang-btn" onclick="setConnectLang('en')">EN</button>
+      </div>
+      <h1 id="title">Connect home WiFi</h1>
+      <p id="desc">Enter your home WiFi credentials. After a successful connection you will get access to the full WiFi settings page.</p>
+      <label id="ssidLabel" for="ssid">WiFi network name</label>
       <input id="ssid" type="text" placeholder="MyHomeWiFi">
-      <label for="password">WiFi password</label>
+      <label id="passwordLabel" for="password">WiFi password</label>
       <input id="password" type="password" placeholder="Enter WiFi password">
-      <button type="button" onclick="connectWifi()">Connect and unlock</button>
-      <div class="hint">If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open <strong>http://fish.local/</strong>.</div>
+      <button type="button" id="connectBtn" onclick="connectWifi()">Connect and unlock</button>
+      <div id="hintText" class="hint">If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open <strong>http://fish.local/</strong>.</div>
       <div id="msg"></div>
       <div id="postConnectActions" class="post-connect-actions">
         <button type="button" id="openFishLocalBtn" onclick="openProvisionedWifiPage()">Open fish.local</button>
@@ -487,6 +590,92 @@ button {
 <script>
 let provisionedWifiPageUrl = 'http://fish.local/';
 let provisionStatusPoll = null;
+let connectLang = localStorage.getItem('aqua_lang') === 'en' ? 'en' : 'uk';
+const CONNECT_I18N = {
+  uk: {
+    subtitle: 'Підключення WiFi',
+    title: 'Підключіть домашній WiFi',
+    desc: 'Введіть дані домашнього WiFi. Після успішного підключення відкриється повна сторінка налаштувань WiFi.',
+    ssidLabel: 'Назва WiFi мережі',
+    ssidPlaceholder: 'МійДомашнійWiFi',
+    passwordLabel: 'Пароль WiFi',
+    passwordPlaceholder: 'Введіть пароль WiFi',
+    connectBtn: 'Підключити і розблокувати',
+    hint: 'Після успішного підключення відʼєднайтеся від точки доступу AquaFeed, підʼєднайте телефон до домашнього WiFi і відкрийте <strong>http://fish.local/</strong>.',
+    openFishLocalBtn: 'Відкрити fish.local',
+    enterSsid: 'Введіть назву WiFi мережі',
+    connecting: 'Підключення...',
+    connectedPrefix: 'Підключено до ',
+    connectedFollowUp: 'Відʼєднайтеся від точки доступу AquaFeed, підʼєднайте телефон до домашнього WiFi і відкрийте http://fish.local/',
+    connectedIpPrefix: ' або http://',
+    connectedIpSuffix: '/',
+    failed: 'Не вдалося підключитися до цього WiFi. Перевірте SSID/пароль і спробуйте ще раз.',
+    progressPrefix: 'Підключення до ',
+    progressSuffix: '...\nЗалиште цю сторінку відкритою, доки пристрій не повідомить про успішне підключення.',
+    fetchLost: 'Точка доступу вимкнулась до отримання фінальної відповіді браузером.\nЯкщо пристрій підключився до вашого домашнього WiFi, відʼєднайтеся від точки доступу AquaFeed, підʼєднайте телефон до домашнього WiFi і відкрийте http://fish.local/',
+    wifiConnectionFailed: 'Не вдалося підключитися до цього WiFi. Перевірте SSID/пароль і спробуйте ще раз.',
+    genericConnectFailed: 'Не вдалося підключитися до WiFi'
+  },
+  en: {
+    subtitle: 'WiFi connection',
+    title: 'Connect home WiFi',
+    desc: 'Enter your home WiFi credentials. After a successful connection you will get access to the full WiFi settings page.',
+    ssidLabel: 'WiFi network name',
+    ssidPlaceholder: 'MyHomeWiFi',
+    passwordLabel: 'WiFi password',
+    passwordPlaceholder: 'Enter WiFi password',
+    connectBtn: 'Connect and unlock',
+    hint: 'If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open <strong>http://fish.local/</strong>.',
+    openFishLocalBtn: 'Open fish.local',
+    enterSsid: 'Enter WiFi network name',
+    connecting: 'Connecting...',
+    connectedPrefix: 'Connected to ',
+    connectedFollowUp: 'Disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and open http://fish.local/',
+    connectedIpPrefix: ' or http://',
+    connectedIpSuffix: '/',
+    failed: 'Could not connect to this WiFi. Check SSID/password and try again.',
+    progressPrefix: 'Connecting to ',
+    progressSuffix: '...\nKeep this page open until the device reports Connected.',
+    fetchLost: 'The setup access point disconnected before the browser received the final reply.\nIf the device joined your home WiFi, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and open http://fish.local/',
+    wifiConnectionFailed: 'Could not connect to this WiFi. Check SSID/password and try again.',
+    genericConnectFailed: 'WiFi connection failed'
+  }
+};
+function ct(key) {
+  const dict = CONNECT_I18N[connectLang] || CONNECT_I18N.uk;
+  return dict[key] || key;
+}
+function applyConnectLang() {
+  const subtitle = document.querySelector('.app-subtitle');
+  if (subtitle) subtitle.textContent = ct('subtitle');
+  const title = document.getElementById('title');
+  if (title) title.textContent = ct('title');
+  const desc = document.getElementById('desc');
+  if (desc) desc.textContent = ct('desc');
+  const ssidLabel = document.getElementById('ssidLabel');
+  if (ssidLabel) ssidLabel.textContent = ct('ssidLabel');
+  const ssid = document.getElementById('ssid');
+  if (ssid) ssid.placeholder = ct('ssidPlaceholder');
+  const passwordLabel = document.getElementById('passwordLabel');
+  if (passwordLabel) passwordLabel.textContent = ct('passwordLabel');
+  const password = document.getElementById('password');
+  if (password) password.placeholder = ct('passwordPlaceholder');
+  const connectBtn = document.getElementById('connectBtn');
+  if (connectBtn) connectBtn.textContent = ct('connectBtn');
+  const hint = document.getElementById('hintText');
+  if (hint) hint.innerHTML = ct('hint');
+  const openBtn = document.getElementById('openFishLocalBtn');
+  if (openBtn) openBtn.textContent = ct('openFishLocalBtn');
+  const ukBtn = document.getElementById('langUkBtn');
+  const enBtn = document.getElementById('langEnBtn');
+  if (ukBtn) ukBtn.classList.toggle('active', connectLang === 'uk');
+  if (enBtn) enBtn.classList.toggle('active', connectLang === 'en');
+}
+function setConnectLang(lang) {
+  connectLang = lang === 'en' ? 'en' : 'uk';
+  localStorage.setItem('aqua_lang', connectLang);
+  applyConnectLang();
+}
 
 function setProvisionedWifiPageUrl(url) {
   provisionedWifiPageUrl = url || 'http://fish.local/';
@@ -522,7 +711,7 @@ function applyProvisionStatus(data) {
     stopProvisionStatusPolling();
     msg.style.color = '#2e7d32';
     setProvisionedWifiPageUrl('http://fish.local/');
-    msg.textContent = 'Connected to ' + (data.ssid || 'WiFi') + '.\nDisconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and open http://fish.local/' + (data.ip ? ' or http://' + data.ip + '/' : '');
+    msg.textContent = ct('connectedPrefix') + (data.ssid || 'WiFi') + '.\n' + ct('connectedFollowUp') + (data.ip ? ct('connectedIpPrefix') + data.ip + ct('connectedIpSuffix') : '');
     togglePostConnectActions(true);
     return;
   }
@@ -530,13 +719,13 @@ function applyProvisionStatus(data) {
   if (data.status === 'failed') {
     stopProvisionStatusPolling();
     msg.style.color = '#c62828';
-    msg.textContent = 'Could not connect to this WiFi. Check SSID/password and try again.';
+    msg.textContent = ct('failed');
     togglePostConnectActions(false);
     return;
   }
 
   msg.style.color = '#b26a00';
-  msg.textContent = 'Connecting to ' + (data.ssid || 'WiFi') + '...\nKeep this page open until the device reports Connected.';
+  msg.textContent = ct('progressPrefix') + (data.ssid || 'WiFi') + ct('progressSuffix');
 }
 
 function pollProvisionStatus() {
@@ -561,13 +750,13 @@ function connectWifi() {
   const msg = document.getElementById('msg');
   if (!ssid) {
     togglePostConnectActions(false);
-    msg.textContent = 'Enter WiFi network name';
+    msg.textContent = ct('enterSsid');
     return;
   }
   setProvisionedWifiPageUrl('http://fish.local/');
   togglePostConnectActions(false);
   msg.style.color = '#b26a00';
-  msg.textContent = 'Connecting...';
+  msg.textContent = ct('connecting');
   fetch('/api/provisionWiFi', {
     method: 'POST',
     headers: {
@@ -582,7 +771,7 @@ function connectWifi() {
       data = JSON.parse(text);
     } catch (_) {}
     if (!response.ok || !data || !data.ok) {
-      throw new Error((data && data.message) || text || 'WiFi connection failed');
+      throw new Error((data && data.message) || text || ct('genericConnectFailed'));
     }
     startProvisionStatusPolling();
   }).catch((error) => {
@@ -590,19 +779,20 @@ function connectWifi() {
     if (error && error.message === 'Failed to fetch') {
       msg.style.color = '#b26a00';
       setProvisionedWifiPageUrl('http://fish.local/');
-      msg.textContent = 'The setup access point disconnected before the browser received the final reply.\nIf the device joined your home WiFi, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and open http://fish.local/';
+      msg.textContent = ct('fetchLost');
       togglePostConnectActions(true);
       return;
     }
     togglePostConnectActions(false);
     msg.textContent = error.message === 'wifi connection failed'
-      ? 'Could not connect to this WiFi. Check SSID/password and try again.'
+      ? ct('wifiConnectionFailed')
       : error.message;
   });
 }
 document.getElementById('password').addEventListener('keydown', (event) => {
   if (event.key === 'Enter') connectWifi();
 });
+applyConnectLang();
 pollProvisionStatus();
 let _hTbt2=null,_hEt2=null;
 document.addEventListener('DOMContentLoaded',()=>{const f=document.querySelector('.hero-svg-fish'),t=document.querySelector('.hero-fish-tail'),i=f&&f.closest('.app-illustration');if(!f||!t||!i||f.dataset.tbi)return;f.dataset.tbi='1';f.addEventListener('click',()=>{if(i.classList.contains('is-escaping'))return;i.classList.add('is-escaping');t.classList.remove('tail-burst');void t.offsetWidth;t.classList.add('tail-burst');if(_hTbt2)clearTimeout(_hTbt2);_hTbt2=setTimeout(()=>{t.classList.remove('tail-burst');_hTbt2=null;},950);if(_hEt2)clearTimeout(_hEt2);_hEt2=setTimeout(()=>{i.classList.remove('is-escaping');_hEt2=null;},2150);});});
