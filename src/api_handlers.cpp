@@ -69,7 +69,7 @@ void ApiHandlers::handleRoot() {
     server.send(302, "text/plain", "");
     return;
   }
-  server.send(200, "text/html", pageIndex);
+  server.send_P(200, "text/html", pageIndex);
 }
 
 void ApiHandlers::handleInfo() {
@@ -78,7 +78,7 @@ void ApiHandlers::handleInfo() {
     handleWiFi(server);
     return;
   }
-  server.send(200, "text/html", pageInfo);
+  server.send_P(200, "text/html", pageInfo);
 }
 
 void ApiHandlers::appendFeedTimes(JsonArray feedTimesArray) const {
@@ -89,6 +89,7 @@ void ApiHandlers::appendFeedTimes(JsonArray feedTimesArray) const {
     feedTime["h"] = feedTimes[i].hour;
     feedTime["m"] = feedTimes[i].minute;
     feedTime["r"] = feedTimes[i].repeats;
+    feedTime["d"] = feedTimes[i].day;
   }
 }
 
@@ -282,10 +283,12 @@ int ApiHandlers::parseFeedTimesJson(const String& jsonData, FeedTime* target, in
     JsonVariantConst minuteValue = item["m"].isNull() ? item["minute"] : item["m"];
     JsonVariantConst repeatsValue = item["r"].isNull() ? item["repeats"] : item["r"];
 
+    JsonVariantConst dayValue = item["d"].isNull() ? item["day"] : item["d"];
     int h = constrain(hourValue.isNull() ? 10 : hourValue.as<int>(), 0, 23);
     int m = constrain(minuteValue.isNull() ? 0 : minuteValue.as<int>(), 0, 59);
     int r = max(1, repeatsValue.isNull() ? 1 : repeatsValue.as<int>());
-    target[count++] = {h, m, r, false};
+    int d = constrain(dayValue.isNull() ? -1 : dayValue.as<int>(), -1, 6);
+    target[count++] = {h, m, r, d, false};
   }
   return count;
 }
@@ -315,7 +318,7 @@ void ApiHandlers::handleSetFeedTimes() {
     int count = parseFeedTimesJson(jsonData, newFeedTimes, FeedingScheduler::MAX_FEED_TIMES);
 
     if (count == 0) {
-      newFeedTimes[0] = {10, 0, 1, false};
+      newFeedTimes[0] = {10, 0, 1, -1, false};
       count = 1;
     }
 

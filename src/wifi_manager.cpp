@@ -220,14 +220,14 @@ void setupWiFiHandlers(WebServer& server, Preferences& preferences) {
 // === WiFi Handlers ===
 void handleWiFi(WebServer& server) {
   if (isAPMode && !hasValidApSession(server)) {
-    server.send(200, "text/html", pageWiFiLocked);
+    server.send_P(200, "text/html", pageWiFiLocked);
     return;
   }
   if (isAPMode) {
-    server.send(200, "text/html", pageWiFiConnect);
+    server.send_P(200, "text/html", pageWiFiConnect);
     return;
   }
-  server.send(200,"text/html",pageWiFi);
+  server.send_P(200, "text/html", pageWiFi);
 }
 
 void handleApLogin(WebServer& server) {

@@ -16,7 +16,7 @@ FeedingScheduler::FeedingScheduler()
     minFeedIntervalMinutes(DEFAULT_MIN_FEED_INTERVAL_MINUTES),
     preferencesRef(nullptr) {
   for(int i = 0; i < MAX_FEED_TIMES; i++) {
-    feedTimes[i] = {0, 0, 1, false};
+    feedTimes[i] = {0, 0, 1, -1, false};
   }
 }
 
@@ -74,13 +74,13 @@ void FeedingScheduler::loadFromPreferences(Preferences& preferences) {
     if(storedM1 < 0) storedM1 = 0;
     if(storedR1 < 0) storedR1 = 1;
     
-    feedTimes[feedTimesCount++] = {storedH1, storedM1, storedR1, false};
+    feedTimes[feedTimesCount++] = {storedH1, storedM1, storedR1, -1, false};
     
     if(preferences.isKey("feedHour2") && preferences.isKey("feedMinute2")) {
       int storedH2 = preferences.getInt("feedHour2", storedH1);
       int storedM2 = preferences.getInt("feedMinute2", storedM1);
       int storedR2 = preferences.getInt("feedRepeats2", storedR1);
-      feedTimes[feedTimesCount++] = {storedH2, storedM2, storedR2, false};
+      feedTimes[feedTimesCount++] = {storedH2, storedM2, storedR2, -1, false};
     }
   } else {
     char key[20];
@@ -91,8 +91,10 @@ void FeedingScheduler::loadFromPreferences(Preferences& preferences) {
       feedTimes[i].minute = preferences.getInt(key, 0);
       sprintf(key, "feedR%d", i);
       feedTimes[i].repeats = preferences.getInt(key, 1);
+      sprintf(key, "feedD%d", i);
+      feedTimes[i].day = preferences.getInt(key, -1);
       feedTimes[i].done = false;
-      Serial.printf("  Loaded [%d]: %02d:%02d (repeats=%d)\n", i, feedTimes[i].hour, feedTimes[i].minute, feedTimes[i].repeats);
+      Serial.printf("  Loaded [%d]: %02d:%02d (repeats=%d, day=%d)\n", i, feedTimes[i].hour, feedTimes[i].minute, feedTimes[i].repeats, feedTimes[i].day);
     }
   }
   
@@ -124,7 +126,9 @@ void FeedingScheduler::saveToPreferences(Preferences& preferences) {
     preferences.putInt(key, feedTimes[i].minute);
     sprintf(key, "feedR%d", i);
     preferences.putInt(key, feedTimes[i].repeats);
-    Serial.printf("  Saved [%d]: %02d:%02d (repeats=%d)\n", i, feedTimes[i].hour, feedTimes[i].minute, feedTimes[i].repeats);
+    sprintf(key, "feedD%d", i);
+    preferences.putInt(key, feedTimes[i].day);
+    Serial.printf("  Saved [%d]: %02d:%02d (repeats=%d, day=%d)\n", i, feedTimes[i].hour, feedTimes[i].minute, feedTimes[i].repeats, feedTimes[i].day);
   }
   
   preferences.putInt("feedHour1", feedHour1);
@@ -159,8 +163,8 @@ void FeedingScheduler::setLegacyFeedTimes(int h1, int m1, int r1, int h2, int m2
   feedHour2 = h2; feedMinute2 = m2; feedRepeats2 = r2;
   
   feedTimesCount = 2;
-  feedTimes[0] = {feedHour1, feedMinute1, feedRepeats1, false};
-  feedTimes[1] = {feedHour2, feedMinute2, feedRepeats2, false};
+  feedTimes[0] = {feedHour1, feedMinute1, feedRepeats1, -1, false};
+  feedTimes[1] = {feedHour2, feedMinute2, feedRepeats2, -1, false};
 }
 
 void FeedingScheduler::getLegacyFeedTimes(int& h1, int& m1, int& r1, int& h2, int& m2, int& r2) const {
@@ -177,16 +181,25 @@ NextFeedInfo FeedingScheduler::computeNextFeed() {
   }
   
   const int nowTotal = localTime.tm_hour * 60 + localTime.tm_min;
+  const int nowDay = localTime.tm_wday;
   int bestDiff = (24 * 60) + 1;
   bool found = false;
   
-  auto considerSlot = [&](int hour, int minute) {
+  auto considerSlot = [&](int hour, int minute, int day) {
     if (hour < 0 || minute < 0) return;
     hour = constrain(hour, 0, 23);
     minute = constrain(minute, 0, 59);
+    day = constrain(day, -1, 6);
     int slotTotal = hour * 60 + minute;
-    int diff = slotTotal - nowTotal;
-    if (diff <= 0) diff += 24 * 60;
+    int dayOffset = 0;
+    if (day >= 0) {
+      dayOffset = day - nowDay;
+      if (dayOffset < 0) dayOffset += 7;
+    }
+    int diff = dayOffset * 24 * 60 + (slotTotal - nowTotal);
+    if (diff <= 0) {
+      diff += (day >= 0) ? (7 * 24 * 60) : (24 * 60);
+    }
     if (diff < bestDiff) {
       bestDiff = diff;
       info.minutesUntil = diff;
@@ -197,12 +210,12 @@ NextFeedInfo FeedingScheduler::computeNextFeed() {
   };
   
   for (int i = 0; i < feedTimesCount; ++i) {
-    considerSlot(feedTimes[i].hour, feedTimes[i].minute);
+    considerSlot(feedTimes[i].hour, feedTimes[i].minute, feedTimes[i].day);
   }
   
   if (!found) {
-    considerSlot(feedHour1, feedMinute1);
-    considerSlot(feedHour2, feedMinute2);
+    considerSlot(feedHour1, feedMinute1, -1);
+    considerSlot(feedHour2, feedMinute2, -1);
   }
   
   return info;
@@ -283,6 +296,7 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
   
   int curHour = localTime.tm_hour;
   int curMinute = localTime.tm_min;
+  int curDay = localTime.tm_wday;
   
   if (wasScheduleAlreadyExecuted(currentEpochMinute)) {
     for (int i = 0; i < feedTimesCount; i++) {
@@ -334,10 +348,11 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
   int repeatsToRun = 0;
   
   for(int i = 0; i < feedTimesCount; i++) {
-    if (curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
+    bool dayMatches = (feedTimes[i].day < 0) || (feedTimes[i].day == curDay);
+    if (dayMatches && curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
       repeatsToRun += max(1, feedTimes[i].repeats);
       feedTimes[i].done = true;
-      Serial.printf("Auto feeding queued (slot %d) %02d:%02d, repeats: %d\n", i+1, curHour, curMinute, feedTimes[i].repeats);
+      Serial.printf("Auto feeding queued (slot %d) day=%d %02d:%02d, repeats: %d\n", i+1, feedTimes[i].day, curHour, curMinute, feedTimes[i].repeats);
     }
   }
 

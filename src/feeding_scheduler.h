@@ -8,6 +8,7 @@ struct FeedTime {
   int hour;
   int minute;
   int repeats;
+  int day;   // -1 everyday, 0 Sunday ... 6 Saturday
   bool done;
 };
 

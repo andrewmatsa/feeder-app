@@ -29,7 +29,6 @@ input[type=number]:focus {
   border-color: #1976D2;
   box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
 }
-input[type=checkbox] {transform: scale(1.1); margin-right: 6px;}
 button {
   display: inline-flex;
   align-items: center;
@@ -101,10 +100,11 @@ button.remove-btn:active {
   margin: 10px 0 4px;
 }
 .feed-block {
-  margin-bottom: 8px;
-  padding: 8px;
+  margin-bottom: 6px;
+  padding: 7px 10px;
   background: rgba(0, 0, 0, 0.03);
   border-radius: 6px;
+  border-left: 3px solid #8e24aa;
 }
 )rawliteral"
 #include "shared/common_card_styles.inc"
@@ -116,18 +116,120 @@ R"rawliteral(
   margin-bottom: 6px;
   flex-wrap: wrap;
 }
-.flex-row span {font-weight: 500; color: #555; font-size: 12px;}
+.flex-row span {font-weight: 500; color: #555; font-size: 13px;}
 .flex-row input, .flex-row select {width: auto; min-width: 20px; font-size: 12px;}
-.feed-block .flex-row {
-  flex-wrap: nowrap;
+.feed-block .feed-row {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 6px 12px;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0;
+}
+.feed-time-wrap {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  justify-self: start;
 }
 .feed-block .feed-time {
-  width: 84px;
-  min-width: 84px;
+  width: 66px;
+  min-width: 66px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 5px;
+  border: 1px solid #d5d9e0;
+  border-radius: 6px;
+  background: #f9fafc;
+  color: #1f2937;
+}
+.feed-center {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-self: center;
+}
+.feed-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+.feed-field > span {
+  font-size: 13px;
+  color: #6b7280;
+  min-width: 0;
 }
 .feed-block .feed-repeats {
-  width: 64px;
-  min-width: 64px;
+  display: none;
+}
+.feed-block .feed-day {
+  width: 90px;
+  min-width: 90px;
+  font-size: 13px;
+  padding: 2px 4px;
+}
+.feed-repeats-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.feed-repeats-value {
+  min-width: 18px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+.feed-repeats-stepper .repeats-stepper-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+}
+.feed-right {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+}
+.repeats-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.repeats-stepper-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.repeats-stepper-btn:active {
+  transform: scale(0.96);
+}
+#feedRepeatsValue {
+  min-width: 22px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
 }
 .toast {
   position: fixed;
@@ -180,10 +282,18 @@ R"rawliteral(
 #btnFeedNow {
   position: relative;
   overflow: hidden;
+  margin-top: 14px;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 14px;
+  background: linear-gradient(45deg, #f44336, #d32f2f);
+  box-shadow: 0 10px 22px rgba(211, 47, 47, 0.28);
   transition: transform 0.18s ease, box-shadow 0.25s ease, opacity 0.2s ease;
 }
 #btnFeedNow:not(:disabled):hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(211, 47, 47, 0.34);
 }
 #btnFeedNow.is-feeding {
   animation: feedNowPulse 1.1s ease-in-out infinite;
@@ -461,32 +571,6 @@ R"rawliteral(
   <div class="section-header">
     <div class="section-icon">
       <svg viewBox="0 0 24 24">
-        <line x1="8" y1="5" x2="8" y2="19"></line>
-        <line x1="16" y1="5" x2="16" y2="19"></line>
-        <circle cx="8" cy="10" r="2.5"></circle>
-        <circle cx="16" cy="14" r="2.5"></circle>
-      </svg>
-    </div>
-    <div>
-      <div class="section-title">Ручне керування</div>
-      <div class="section-subtitle">Керуйте серво-приводом вручну</div>
-    </div>
-  </div>
-  <div class="row">
-    <label>Кут серво: <span id="angleLabel">0</span>°</label>
-    <input id="angleSlider" type="range" min="0" max="180" value="0">
-  </div>
-  <div class="row">
-    <label>Швидкість серво: <span id="speedValue">20</span></label>
-    <input id="speedSlider" type="range" min="1" max="20" step="0.1" value="20" oninput="updateSpeed(this.value)">
-  </div>
-  <button type="button" id="btnSaveSpeed" onclick="saveSpeed()">Зберегти швидкість</button>
-</div>
-
-<div class="card">
-  <div class="section-header">
-    <div class="section-icon">
-      <svg viewBox="0 0 24 24">
         <path d="M5 11h14"></path>
         <path d="M7 11v2a5 5 0 0 0 10 0v-2"></path>
         <path d="M9 6.5l1.2 3"></path>
@@ -499,11 +583,14 @@ R"rawliteral(
     </div>
   </div>
   <div class="flex-row">
-    <span>Кількість повторів</span>
-    <input id="feedRepeats" type="number" min="1" max="20" value="1" style="width:96px; min-width:96px;">
+    <span class="repeats-label">Кількість повторів</span>
+    <div class="repeats-stepper" role="group" aria-label="Repeats stepper">
+      <button type="button" class="repeats-stepper-btn" id="feedRepeatsMinus" onclick="adjustFeedRepeats(-1)">-</button>
+      <span id="feedRepeatsValue" aria-live="polite">1</span>
+      <button type="button" class="repeats-stepper-btn" id="feedRepeatsPlus" onclick="adjustFeedRepeats(1)">+</button>
+    </div>
   </div>
-  <button type="button" id="btnSaveRepeats" onclick="saveRepeats()" style="margin-top: 0;">Зберегти</button>
-  <button type="button" id="btnFeedNow" onclick="feedNow()" style="margin-top: 12px; background: linear-gradient(45deg, #f44336, #d32f2f);">Годувати зараз</button>
+  <button type="button" id="btnFeedNow" onclick="feedNow()">Годувати зараз</button>
 </div>
 
 <div class="card">
@@ -528,6 +615,32 @@ R"rawliteral(
   </div>
   <button type="button" class="add-btn" id="btnAddFeeding" onclick="addFeedTime()">+ Додати годування</button>
   <button type="button" id="btnSaveAllTimes" onclick="saveFeedTimes()" style="margin-top: 8px;">Зберегти всі часи</button>
+</div>
+
+<div class="card">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
+        <line x1="8" y1="5" x2="8" y2="19"></line>
+        <line x1="16" y1="5" x2="16" y2="19"></line>
+        <circle cx="8" cy="10" r="2.5"></circle>
+        <circle cx="16" cy="14" r="2.5"></circle>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title">Ручне керування</div>
+      <div class="section-subtitle">Керуйте серво-приводом вручну</div>
+    </div>
+  </div>
+  <div class="row">
+    <label>Кут серво: <span id="angleLabel">0</span>°</label>
+    <input id="angleSlider" type="range" min="0" max="180" value="0">
+  </div>
+  <div class="row">
+    <label>Швидкість серво: <span id="speedValue">20</span></label>
+    <input id="speedSlider" type="range" min="1" max="20" step="0.1" value="20" oninput="updateSpeed(this.value)">
+  </div>
+  <button type="button" id="btnSaveSpeed" onclick="saveSpeed()">Зберегти швидкість</button>
 </div>
 
 <script>
@@ -592,10 +705,14 @@ const I18N = {
     wifiSaveError: 'Помилка збереження WiFi',
     feedBlockTime: 'Час:',
     feedBlockRepeats: 'Повторів:',
+    feedDayField: 'День:',
+    dayEveryday: 'Щодня',
+    dayMon: 'Пн', dayTue: 'Вт', dayWed: 'Ср', dayThu: 'Чт', dayFri: 'Пт', daySat: 'Сб', daySun: 'Нд',
     feedRemoveTitle: 'Видалити',
     feedAdded: 'Годування додано',
     feedRemoved: 'Годування видалено',
     feedTimesSaved: 'Часи збережено',
+    toastSaved: 'Збережено',
     nextFeedDash: '— год — хв',
     toastAngleUpdated: 'Кут змінено',
     toastSpeedSaved: 'Швидкість збережено',
@@ -665,10 +782,14 @@ const I18N = {
     wifiSaveError: 'WiFi save error',
     feedBlockTime: 'Time:',
     feedBlockRepeats: 'Repeats:',
+    feedDayField: 'Day:',
+    dayEveryday: 'Everyday',
+    dayMon: 'Mon', dayTue: 'Tue', dayWed: 'Wed', dayThu: 'Thu', dayFri: 'Fri', daySat: 'Sat', daySun: 'Sun',
     feedRemoveTitle: 'Remove',
     feedAdded: 'Feeding slot added',
     feedRemoved: 'Feeding slot removed',
     feedTimesSaved: 'Schedule saved',
+    toastSaved: 'Saved',
     nextFeedDash: '— h — m',
     toastAngleUpdated: 'Angle updated',
     toastSpeedSaved: 'Speed saved',
@@ -710,12 +831,12 @@ function applyLanguage() {
   updateLowBatteryAlert(Number.isFinite(currentBatteryPercent) ? currentBatteryPercent : null, batteryChargingNow);
   const deepSleepBanner = document.getElementById('deepSleepHelpBanner');
   if (deepSleepBanner) deepSleepBanner.innerHTML = t('deepSleepHelpBanner');
-  if (sections[0]) sections[0].textContent = t('manualControlTitle');
-  if (subtitles[0]) subtitles[0].textContent = t('manualControlSubtitle');
-  if (sections[1]) sections[1].textContent = t('manualFeedTitle');
-  if (subtitles[1]) subtitles[1].textContent = t('manualFeedSubtitle');
-  if (sections[2]) sections[2].textContent = t('autoFeedTitle');
-  if (subtitles[2]) subtitles[2].textContent = t('autoFeedSubtitle');
+  if (sections[0]) sections[0].textContent = t('manualFeedTitle');
+  if (subtitles[0]) subtitles[0].textContent = t('manualFeedSubtitle');
+  if (sections[1]) sections[1].textContent = t('autoFeedTitle');
+  if (subtitles[1]) subtitles[1].textContent = t('autoFeedSubtitle');
+  if (sections[2]) sections[2].textContent = t('manualControlTitle');
+  if (subtitles[3]) subtitles[3].textContent = t('manualControlSubtitle');
   const nextFeedingInlineLabel = document.getElementById('nextFeedingInlineLabel');
   if (nextFeedingInlineLabel) nextFeedingInlineLabel.textContent = `${t('nextFeedingInlineLabel')} ${t('nextFeedDash')}`;
   if (labels[0]) labels[0].innerHTML = `${t('servoAngle')} <span id="angleLabel">0</span>°`;
@@ -725,27 +846,29 @@ function applyLanguage() {
   if (sleepCountdownLabel && !sleepCountdownLabel.dataset.dynamic) sleepCountdownLabel.textContent = `${t('sleepPrefix')} --`;
   if (sleepReasonLabel && !sleepReasonLabel.dataset.dynamic) sleepReasonLabel.textContent = `${t('sleepReasonPrefix')} --`;
   const btnSaveSpeed = document.getElementById('btnSaveSpeed');
-  const btnSaveRepeats = document.getElementById('btnSaveRepeats');
   const btnAddFeeding = document.getElementById('btnAddFeeding');
   const btnSaveAllTimes = document.getElementById('btnSaveAllTimes');
   if (btnSaveSpeed) btnSaveSpeed.textContent = t('saveSpeed');
-  if (btnSaveRepeats) btnSaveRepeats.textContent = t('save');
   if (btnAddFeeding) btnAddFeeding.textContent = t('addFeeding');
   if (btnSaveAllTimes) btnSaveAllTimes.textContent = t('saveAllTimes');
   renderFeedNowButtonState();
   renderManualFeedHint(manualFeedCooldownLocal);
-  const repeatsLabel = document.querySelector('.flex-row span');
+  const repeatsLabel = document.querySelector('.repeats-label');
   if (repeatsLabel) repeatsLabel.textContent = t('repeats');
   if (tabs[0]) tabs[0].textContent = t('tabHome');
   if (tabs[1]) tabs[1].textContent = t('tabInfo');
   if (tabs[2]) tabs[2].textContent = t('tabSettings');
-  document.querySelectorAll('.feed-block .flex-row').forEach(row => {
-    const spans = row.querySelectorAll('span');
-    if (spans.length >= 2) {
-      spans[0].textContent = t('feedBlockTime');
-      spans[1].textContent = t('feedBlockRepeats');
+  document.querySelectorAll('.feed-block').forEach(block => {
+    const repeatsLabel = block.querySelector('.feed-repeats-label');
+    if (repeatsLabel) repeatsLabel.textContent = t('feedBlockRepeats');
+    const dayLabel = block.querySelector('.feed-day-label');
+    if (dayLabel) dayLabel.textContent = t('feedDayField');
+    const daySelect = block.querySelector('.feed-day');
+    if (daySelect) {
+      const selectedDay = clampFeedValue(daySelect.value, -1, 6, -1);
+      daySelect.innerHTML = renderFeedDayOptions(selectedDay);
     }
-    const removeBtn = row.querySelector('.remove-btn');
+    const removeBtn = block.querySelector('.remove-btn');
     if (removeBtn) removeBtn.title = t('feedRemoveTitle');
   });
   const toastEl = document.getElementById('toast');
@@ -910,8 +1033,7 @@ function feedNow(){
   manualFeedInProgress = true;
   renderFeedNowButtonState();
 
-  const repeatsEl = document.getElementById('feedRepeats');
-  const repeats = repeatsEl ? repeatsEl.value : 1;
+  const repeats = getFeedRepeatsValue();
   postForm('/api/feedNow', { repeats })
     .then(async (response) => {
       if (response.ok) {
@@ -940,7 +1062,45 @@ function feedNow(){
     });
 }
 function saveSpeed(){ const s=document.getElementById('speedSlider').value; postForm('/api/setSpeed', { speed: s }).then(expectOk).then(()=>{statusUpdate(); showToast(t('toastSpeedSaved'));}).catch(error => showActionError(error)); }
-function saveRepeats(){ const r=document.getElementById('feedRepeats').value; postForm('/api/setRepeats', { repeats: r }).then(expectOk).then(()=>{statusUpdate(); showToast(t('toastDefault'));}).catch(error => showActionError(error)); }
+function getFeedRepeatsValue() {
+  const el = document.getElementById('feedRepeatsValue');
+  if (!el) return 1;
+  return clampFeedValue(el.textContent, 1, 20, 1);
+}
+function setFeedRepeatsValue(val) {
+  const el = document.getElementById('feedRepeatsValue');
+  if (!el) return;
+  el.textContent = String(clampFeedValue(val, 1, 20, 1));
+}
+function adjustFeedRepeats(delta) {
+  setFeedRepeatsValue(getFeedRepeatsValue() + Number(delta || 0));
+  saveRepeats();
+}
+function saveRepeats() {
+  const r = getFeedRepeatsValue();
+  postForm('/api/setRepeats', { repeats: r }).then(expectOk).then(() => { showToast(t('toastSaved')); }).catch(error => showActionError(error));
+}
+function renderFeedDayOptions(selectedDay) {
+  const current = clampFeedValue(selectedDay, -1, 6, -1);
+  const options = [
+    { value: -1, label: t('dayEveryday') },
+    { value: 1, label: t('dayMon') }, { value: 2, label: t('dayTue') },
+    { value: 3, label: t('dayWed') }, { value: 4, label: t('dayThu') },
+    { value: 5, label: t('dayFri') }, { value: 6, label: t('daySat') },
+    { value: 0, label: t('daySun') },
+  ];
+  return options.map(o => `<option value="${o.value}" ${o.value === current ? 'selected' : ''}>${o.label}</option>`).join('');
+}
+function adjustAutoFeedRepeats(blockId, delta) {
+  const block = document.getElementById(blockId);
+  if (!block) return;
+  const input = block.querySelector('.feed-repeats');
+  const label = block.querySelector('.feed-repeats-value');
+  if (!input || !label) return;
+  const next = clampFeedValue(clampFeedValue(input.value, 1, 20, 1) + Number(delta || 0), 1, 20, 1);
+  input.value = String(next);
+  label.textContent = String(next);
+}
 function scanWiFi(){
   showToast(t('wifiScanning'));
   fetch('/api/scanWiFi')
@@ -1042,29 +1202,41 @@ function parseFeedTimeValue(value) {
   };
 }
 
-function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true) {
+function addFeedTime(hour = 10, minute = 0, repeats = 1, showNotification = true, day = -1) {
   const container = document.getElementById('feedTimesContainer');
-  if (!container) {
-    console.error('feedTimesContainer not found');
-    return;
-  }
+  if (!container) return;
   const blockId = 'feedBlock_' + feedTimeCounter++;
   const block = document.createElement('div');
   block.className = 'feed-block';
   block.id = blockId;
+  const safeRepeats = clampFeedValue(repeats, 1, 20, 1);
   block.innerHTML = `
-    <div class="flex-row">
-      <span>${t('feedBlockTime')}</span>
-      <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}" style="padding: 4px;">
-      <span>${t('feedBlockRepeats')}</span>
-      <input type="number" class="feed-repeats" min="1" max="20" value="${clampFeedValue(repeats, 1, 20, 1)}">
-      <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('feedRemoveTitle')}">×</button>
+    <div class="feed-row">
+      <div class="feed-time-wrap">
+        <input type="time" class="feed-time" step="60" value="${formatFeedTimeValue(hour, minute)}">
+      </div>
+      <div class="feed-center">
+        <label class="feed-field">
+          <span class="feed-repeats-label">${t('feedBlockRepeats')}</span>
+          <input type="hidden" class="feed-repeats" value="${safeRepeats}">
+          <div class="feed-repeats-stepper">
+            <button type="button" class="repeats-stepper-btn" onclick="adjustAutoFeedRepeats('${blockId}',-1)">-</button>
+            <span class="feed-repeats-value">${safeRepeats}</span>
+            <button type="button" class="repeats-stepper-btn" onclick="adjustAutoFeedRepeats('${blockId}',1)">+</button>
+          </div>
+        </label>
+        <label class="feed-field">
+          <span class="feed-day-label">${t('feedDayField')}</span>
+          <select class="feed-day">${renderFeedDayOptions(day)}</select>
+        </label>
+      </div>
+      <div class="feed-right">
+        <button class="remove-btn" onclick="removeFeedTime('${blockId}')" title="${t('feedRemoveTitle')}">×</button>
+      </div>
     </div>
   `;
   container.appendChild(block);
-  if (showNotification) {
-    showToast(t('feedAdded'));
-  }
+  if (showNotification) showToast(t('feedAdded'));
 }
 
 function removeFeedTime(blockId) {
@@ -1082,7 +1254,9 @@ function saveFeedTimes(){
     const timeValue = block.querySelector('.feed-time').value;
     const { hour, minute } = parseFeedTimeValue(timeValue);
     const repeats = clampFeedValue(block.querySelector('.feed-repeats').value, 1, 20, 1);
-    feedTimes.push({ hour, minute, repeats });
+    const dayInput = block.querySelector('.feed-day');
+    const day = dayInput ? clampFeedValue(dayInput.value, -1, 6, -1) : -1;
+    feedTimes.push({ hour, minute, repeats, day, enabled: true });
   });
   const data = JSON.stringify(feedTimes);
   postForm('/api/setFeedTimes', { data }).then(expectOk).then(()=>{statusUpdate(); showToast(t('feedTimesSaved'));}).catch(error => showActionError(error));
@@ -1100,11 +1274,11 @@ function loadFeedTimes(feedTimes) {
         readFeedTimeField(ft, 'h', 'hour', 10),
         readFeedTimeField(ft, 'm', 'minute', 0),
         readFeedTimeField(ft, 'r', 'repeats', 1),
-        false
+        false,
+        readFeedTimeField(ft, 'd', 'day', -1)
       );
     });
   } else {
-    // Якщо немає збережених годувань, додаємо одне стандартне
     addFeedTime(10, 0, 1, false);
   }
 }
@@ -1404,7 +1578,7 @@ function statusUpdate(){
     lastSentAngle = String(j.currentAngle);
     lastQueuedAngle = String(j.currentAngle);
     document.getElementById('speedSlider').value=j.speed; updateSpeed(j.speed);
-    document.getElementById('feedRepeats').value=j.feedRepeats;
+    if (j.feedRepeats !== undefined) setFeedRepeatsValue(j.feedRepeats);
     const wifiSSIDInput = document.getElementById('wifiSSID');
     if(wifiSSIDInput && j.wifiSSID) {
       wifiSSIDInput.value = j.wifiSSID;
