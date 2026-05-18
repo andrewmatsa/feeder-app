@@ -1,14 +1,13 @@
 """Authentication router using Supabase Auth."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from gotrue.types import User
 from pydantic import BaseModel, EmailStr
 
 try:
-    from .dependencies import get_current_user
+    from .dependencies import UserClaims, get_current_user
     from .supabase_client import get_supabase
 except ImportError:
-    from dependencies import get_current_user
+    from dependencies import UserClaims, get_current_user
     from supabase_client import get_supabase
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -107,7 +106,7 @@ async def refresh_token(request: RefreshRequest):
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(current_user: User = Depends(get_current_user)):
+async def logout(current_user: UserClaims = Depends(get_current_user)):
     supabase = get_supabase()
     try:
         supabase.auth.sign_out()
@@ -116,8 +115,8 @@ async def logout(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user: User = Depends(get_current_user)):
+async def me(current_user: UserClaims = Depends(get_current_user)):
     return UserResponse(
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         email=current_user.email,
     )

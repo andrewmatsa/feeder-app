@@ -29,6 +29,16 @@ export interface StatusResponse {
   sleepCountdownSeconds: number
   displayAwake: boolean
   timestamp: string
+  cpuFrequency?: number | null
+  memoryFreeHeap?: number | null
+  memoryUsedHeap?: number | null
+  memoryTotalHeap?: number | null
+  memoryMaxAllocHeap?: number | null
+  memoryMinFreeHeap?: number | null
+  cacheSize?: number | null
+  cacheAge?: number | null
+  cacheValid?: boolean | null
+  uptimeSeconds?: number | null
 }
 
 export interface FeedRequest {
@@ -49,5 +59,24 @@ export interface AngleRequest {
 
 export interface PowerModeRequest {
   enabled: boolean
+}
+
+export interface DisplaySettingsRequest {
+  powerSaveMode: boolean
+  deepSleepIdleSec: number
+  displayEnabled: boolean
+  displayOffAfterSec: number
+}
+
+export interface MinIntervalRequest {
+  minFeedIntervalMin: number
+}
+
+export interface CalibrateRequest {
+  actualVoltage: number
+}
+
+export interface TimezoneRequest {
+  offsetHours: number
 }
 

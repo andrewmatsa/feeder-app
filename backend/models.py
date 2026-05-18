@@ -29,6 +29,25 @@ class PowerModeRequest(BaseModel):
     enabled: bool = Field(description="Enable or disable power saving mode")
 
 
+class DisplaySettingsRequest(BaseModel):
+    powerSaveMode: bool
+    deepSleepIdleSec: int = Field(ge=10, le=3600)
+    displayEnabled: bool
+    displayOffAfterSec: int = Field(ge=5, le=300)
+
+
+class MinIntervalRequest(BaseModel):
+    minFeedIntervalMin: int = Field(ge=1, le=1440)
+
+
+class CalibrateRequest(BaseModel):
+    actualVoltage: float = Field(ge=2.5, le=4.5)
+
+
+class TimezoneRequest(BaseModel):
+    offsetHours: int = Field(ge=-12, le=14)
+
+
 class StatusResponse(BaseModel):
     angle: int
     speed: int
@@ -54,6 +73,17 @@ class StatusResponse(BaseModel):
     sleepCountdownSeconds: int = -1
     displayAwake: bool = True
     timestamp: str
+    # System info
+    cpuFrequency: int | None = None
+    memoryFreeHeap: int | None = None
+    memoryUsedHeap: int | None = None
+    memoryTotalHeap: int | None = None
+    memoryMaxAllocHeap: int | None = None
+    memoryMinFreeHeap: int | None = None
+    cacheSize: int | None = None
+    cacheAge: int | None = None
+    cacheValid: bool | None = None
+    uptimeSeconds: int | None = None
 
 
 class CommandResponse(BaseModel):
