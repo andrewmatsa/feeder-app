@@ -18,3 +18,7 @@ CORS_ORIGINS = os.getenv(
 ESP32_BASE_URL = os.getenv("ESP32_BASE_URL", "http://fish-eat.local")
 APP_VERSION = VERSIONS["appVersion"]
 FIRMWARE_VERSION = VERSIONS["firmwareVersion"]
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
