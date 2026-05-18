@@ -46,3 +46,6 @@ Thumbs.db
 .claude/
 .agents/
 skills-lock.json
+
+# Git worktrees (created by Claude Code)
+feeder-app/
