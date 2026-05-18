@@ -90,7 +90,39 @@ npm install
 npm run dev
 ```
 
-By default the frontend expects the backend on `http://localhost:8000`.
+With Docker (recommended below), API calls go through the Vite proxy on port `5173` — do not set `VITE_API_URL` in the frontend container.
+
+Without Docker, either use the proxy (`npm run dev`, no `VITE_API_URL`) or set `VITE_API_URL=http://localhost:8000` in `frontend/.env.local`.
+
+## Docker (dev)
+
+The stack runs backend + frontend in containers. The browser talks only to `http://localhost:5173`; Vite proxies `/api` and `/auth` to the backend service.
+
+1. Copy env for the backend:
+
+```bash
+cp backend/env.docker.example backend/.env
+```
+
+Edit `backend/.env`:
+
+- **Supabase** — required for login and **Мої акваріуми** (`/api/v1/devices`).
+- **`ESP32_BASE_URL`** — LAN IP of the feeder (e.g. `http://192.168.1.50`). `fish.local` usually does not resolve inside Docker; use the device IP from the serial monitor.
+
+2. Start:
+
+```bash
+docker compose up --build
+```
+
+3. Open:
+
+- SPA: [http://localhost:5173](http://localhost:5173) — register/login → **Мої акваріуми**
+- API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+```text
+Browser :5173  --/api, /auth-->  frontend (Vite)  --proxy-->  backend :8000  --ESP32_BASE_URL-->  feeder (LAN)
+```
 
 ## Test Pages
 

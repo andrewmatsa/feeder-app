@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 try:
     from .auth import router as auth_router
+    from .devices import router as devices_router
     from .config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
     from .dependencies import UserClaims, get_current_user
     from .device_client import close_http_client, request_firmware
@@ -32,6 +33,7 @@ try:
     )
 except ImportError:
     from auth import router as auth_router
+    from devices import router as devices_router
     from config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
     from dependencies import UserClaims, get_current_user
     from device_client import close_http_client, request_firmware
@@ -70,6 +72,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(devices_router)
 
 
 @app.on_event("shutdown")

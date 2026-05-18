@@ -1,15 +1,18 @@
 -- AquaFeed Supabase Schema
 -- Run this in: Supabase Dashboard → SQL Editor
 
--- Devices table: links users to their ESP32 feeders
+-- Devices table: links users to their ESP32 feeders (one row per aquarium)
 CREATE TABLE IF NOT EXISTS public.devices (
     id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    name        TEXT NOT NULL DEFAULT 'My Feeder',
+    -- User-facing label, e.g. "Вітальня", "Спальня" (unique per account)
+    name        TEXT NOT NULL,
+    sort_order  INT NOT NULL DEFAULT 0,
     -- MAC address stored during WiFi provisioning (e.g. "aa:bb:cc:dd:ee:ff")
     mac_address TEXT UNIQUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_seen   TIMESTAMPTZ
+    last_seen   TIMESTAMPTZ,
+    CONSTRAINT devices_user_name_unique UNIQUE (user_id, name)
 );
 
 -- Feed events log: every feeding action stored here

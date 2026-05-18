@@ -89,3 +89,27 @@ class StatusResponse(BaseModel):
 class CommandResponse(BaseModel):
     success: bool
     message: str
+
+
+class DeviceResponse(BaseModel):
+    id: str
+    name: str
+    macAddress: str | None = None
+    sortOrder: int = 0
+    createdAt: str
+    lastSeen: str | None = None
+
+
+class CreateDeviceRequest(BaseModel):
+    name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=40,
+        description="Display name for the aquarium, e.g. Вітальня",
+    )
+    macAddress: str | None = None
+
+
+class UpdateDeviceRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=40)
+    sortOrder: int | None = Field(default=None, ge=0)

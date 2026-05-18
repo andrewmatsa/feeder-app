@@ -10,6 +10,12 @@ import type {
   MinIntervalRequest,
   CalibrateRequest,
   TimezoneRequest,
+  Device,
+  CreateDeviceRequest,
+  UpdateDeviceRequest,
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
 } from '../types'
 
 const TOKEN_KEY = 'aquafeed_token'
@@ -28,19 +34,29 @@ export const authStorage = {
   },
 }
 
+// Docker dev: leave VITE_API_URL unset — browser calls same origin, Vite proxies /api and /auth.
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? ''
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 10000,
 })
 
-apiClient.interceptors.request.use(config => {
+export function setAccessToken(token: string | null) {
+  if (token) {
+    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`
+  } else {
+    delete apiClient.defaults.headers.common.Authorization
+  }
+}
+
+apiClient.interceptors.request.use((config) => {
   const token = authStorage.getToken()
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// Token refresh state — prevents concurrent refresh races
 let refreshPromise: Promise<string> | null = null
 
 async function refreshAccessToken(): Promise<string> {
@@ -64,7 +80,7 @@ interface RetryableRequest extends InternalAxiosRequestConfig {
 }
 
 apiClient.interceptors.response.use(
-  response => response,
+  (response) => response,
   async (error) => {
     const originalRequest = error.config as RetryableRequest
     if (error.response?.status !== 401 || originalRequest._retry) {
@@ -74,22 +90,82 @@ apiClient.interceptors.response.use(
     originalRequest._retry = true
 
     try {
-      // If a refresh is already in flight, wait for it instead of firing again
       if (!refreshPromise) {
-        refreshPromise = refreshAccessToken().finally(() => { refreshPromise = null })
+        refreshPromise = refreshAccessToken().finally(() => {
+          refreshPromise = null
+        })
       }
       const newToken = await refreshPromise
       originalRequest.headers.Authorization = `Bearer ${newToken}`
       return apiClient(originalRequest)
     } catch {
       authStorage.clear()
-      window.location.reload()
+      window.location.href = '/login'
       return Promise.reject(error)
     }
-  }
+  },
 )
 
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const detail = err.response?.data?.detail
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail)) return detail.map((d) => d.msg ?? String(d)).join(', ')
+  }
+  if (err instanceof Error) return err.message
+  return fallback
+}
+
 export const api = {
+  async login(request: LoginRequest): Promise<AuthResponse> {
+    const response = await apiClient.post<AuthResponse>('/auth/login', request)
+    authStorage.save(response.data.access_token, response.data.refresh_token)
+    setAccessToken(response.data.access_token)
+    return response.data
+  },
+
+  async register(request: RegisterRequest): Promise<AuthResponse> {
+    const response = await apiClient.post<AuthResponse>('/auth/register', request)
+    authStorage.save(response.data.access_token, response.data.refresh_token)
+    setAccessToken(response.data.access_token)
+    return response.data
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await apiClient.post('/auth/logout')
+    } catch {
+      // ignore
+    } finally {
+      authStorage.clear()
+      setAccessToken(null)
+    }
+  },
+
+  async listDevices(): Promise<Device[]> {
+    const response = await apiClient.get<Device[]>('/api/v1/devices')
+    return response.data
+  },
+
+  async createDevice(request: CreateDeviceRequest = {}): Promise<Device> {
+    const response = await apiClient.post<Device>('/api/v1/devices', request)
+    return response.data
+  },
+
+  async getDevice(deviceId: string): Promise<Device> {
+    const response = await apiClient.get<Device>(`/api/v1/devices/${deviceId}`)
+    return response.data
+  },
+
+  async updateDevice(deviceId: string, request: UpdateDeviceRequest): Promise<Device> {
+    const response = await apiClient.patch<Device>(`/api/v1/devices/${deviceId}`, request)
+    return response.data
+  },
+
+  async deleteDevice(deviceId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/devices/${deviceId}`)
+  },
+
   async getStatus(): Promise<StatusResponse> {
     const response = await apiClient.get<StatusResponse>('/api/status')
     return response.data

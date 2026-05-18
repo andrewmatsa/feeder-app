@@ -8,6 +8,8 @@ venv/
 env/
 ENV/
 .venv
+.venv312/
+backend/.venv312/
 
 # Node
 node_modules/

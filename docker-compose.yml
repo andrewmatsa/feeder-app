@@ -7,7 +7,11 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - MOCK_DEVICE=true
+      MOCK_DEVICE: ${MOCK_DEVICE:-true}
+      ESP32_BASE_URL: ${ESP32_BASE_URL:-http://host.docker.internal}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend:/app
       - ./versions.json:/versions.json:ro
@@ -21,8 +25,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      # Vite proxy forwards /api and /auth to backend via Docker network
-      - BACKEND_URL=http://backend:8000
+      BACKEND_URL: http://backend:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules

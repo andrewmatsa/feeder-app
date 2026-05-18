@@ -19,6 +19,12 @@ class UserClaims(BaseModel):
     role: str = "authenticated"
 
 
+async def get_bearer_token(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> str:
+    return credentials.credentials
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> UserClaims:
@@ -38,7 +44,7 @@ async def get_current_user(
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

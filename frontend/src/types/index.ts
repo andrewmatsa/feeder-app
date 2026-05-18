@@ -29,16 +29,6 @@ export interface StatusResponse {
   sleepCountdownSeconds: number
   displayAwake: boolean
   timestamp: string
-  cpuFrequency?: number | null
-  memoryFreeHeap?: number | null
-  memoryUsedHeap?: number | null
-  memoryTotalHeap?: number | null
-  memoryMaxAllocHeap?: number | null
-  memoryMinFreeHeap?: number | null
-  cacheSize?: number | null
-  cacheAge?: number | null
-  cacheValid?: boolean | null
-  uptimeSeconds?: number | null
 }
 
 export interface FeedRequest {
@@ -80,3 +70,38 @@ export interface TimezoneRequest {
   offsetHours: number
 }
 
+export interface Device {
+  id: string
+  name: string
+  macAddress?: string | null
+  sortOrder: number
+  createdAt: string
+  lastSeen?: string | null
+}
+
+export interface CreateDeviceRequest {
+  name?: string
+  macAddress?: string
+}
+
+export interface UpdateDeviceRequest {
+  name?: string
+  sortOrder?: number
+}
+
+export interface AuthResponse {
+  access_token: string
+  refresh_token: string
+  user_id: string
+  email: string
+}
+
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface RegisterRequest {
+  email: string
+  password: string
+}
