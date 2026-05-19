@@ -74,7 +74,6 @@ export interface Device {
   id: string
   name: string
   macAddress?: string | null
-  sortOrder: number
   createdAt: string
   lastSeen?: string | null
 }
@@ -86,7 +85,6 @@ export interface CreateDeviceRequest {
 
 export interface UpdateDeviceRequest {
   name?: string
-  sortOrder?: number
 }
 
 export interface AuthResponse {
