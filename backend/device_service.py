@@ -199,7 +199,6 @@ class SupabaseDeviceService:
             .table("devices")
             .select("*")
             .eq("user_id", user_id)
-            .order("sort_order")
             .order("created_at")
             .execute()
         )
