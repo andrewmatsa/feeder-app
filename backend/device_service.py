@@ -21,7 +21,6 @@ class DeviceRecord:
     user_id: str
     name: str
     mac_address: str | None
-    sort_order: int
     created_at: datetime
     last_seen: datetime | None
 
@@ -90,7 +89,6 @@ class DeviceService(Protocol):
         device_id: str,
         *,
         name: str | None = None,
-        sort_order: int | None = None,
     ) -> DeviceRecord: ...
 
     def delete_device(self, user_id: str, device_id: str) -> None: ...
@@ -104,7 +102,7 @@ class InMemoryDeviceService:
 
     def list_devices(self, user_id: str) -> list[DeviceRecord]:
         items = [d for d in self._devices.values() if d.user_id == user_id]
-        return sorted(items, key=lambda d: (d.sort_order, d.created_at))
+        return sorted(items, key=lambda d: d.created_at)
 
     def get_device(self, user_id: str, device_id: str) -> DeviceRecord:
         record = self._devices.get(device_id)
@@ -131,7 +129,6 @@ class InMemoryDeviceService:
             user_id=user_id,
             name=display_name,
             mac_address=mac_address,
-            sort_order=len(existing),
             created_at=now,
             last_seen=None,
         )
@@ -144,7 +141,6 @@ class InMemoryDeviceService:
         device_id: str,
         *,
         name: str | None = None,
-        sort_order: int | None = None,
     ) -> DeviceRecord:
         record = self.get_device(user_id, device_id)
         if name is not None:
@@ -155,17 +151,6 @@ class InMemoryDeviceService:
                 user_id=record.user_id,
                 name=display_name,
                 mac_address=record.mac_address,
-                sort_order=record.sort_order,
-                created_at=record.created_at,
-                last_seen=record.last_seen,
-            )
-        if sort_order is not None:
-            record = DeviceRecord(
-                id=record.id,
-                user_id=record.user_id,
-                name=record.name,
-                mac_address=record.mac_address,
-                sort_order=sort_order,
                 created_at=record.created_at,
                 last_seen=record.last_seen,
             )
@@ -199,7 +184,6 @@ class SupabaseDeviceService:
             .table("devices")
             .select("*")
             .eq("user_id", user_id)
-            .order("sort_order")
             .order("created_at")
             .execute()
         )
@@ -237,7 +221,6 @@ class SupabaseDeviceService:
             "user_id": user_id,
             "name": display_name,
             "mac_address": mac_address,
-            "sort_order": len(existing),
         }
         try:
             response = self._client().table("devices").insert(payload).execute()
@@ -255,7 +238,6 @@ class SupabaseDeviceService:
         device_id: str,
         *,
         name: str | None = None,
-        sort_order: int | None = None,
     ) -> DeviceRecord:
         existing = self.list_devices(user_id)
         if name is not None:
@@ -266,8 +248,6 @@ class SupabaseDeviceService:
         payload: dict = {}
         if name is not None:
             payload["name"] = name
-        if sort_order is not None:
-            payload["sort_order"] = sort_order
         if not payload:
             return self.get_device(user_id, device_id)
 
@@ -299,7 +279,6 @@ def _row_to_record(row: dict) -> DeviceRecord:
         user_id=str(row["user_id"]),
         name=row["name"],
         mac_address=row.get("mac_address"),
-        sort_order=int(row.get("sort_order") or 0),
         created_at=_parse_datetime(row["created_at"]),
         last_seen=_parse_datetime(row["last_seen"]) if row.get("last_seen") else None,
     )

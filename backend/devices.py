@@ -17,7 +17,6 @@ class DeviceResponse(BaseModel):
     id: str
     name: str
     macAddress: str | None = None
-    sortOrder: int = 0
     createdAt: str
     lastSeen: str | None = None
 
@@ -33,7 +32,6 @@ class CreateDeviceRequest(BaseModel):
 
 class UpdateDeviceRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=40)
-    sortOrder: int | None = Field(default=None, ge=0)
 
 
 def _to_response(record: DeviceRecord) -> DeviceResponse:
@@ -41,7 +39,6 @@ def _to_response(record: DeviceRecord) -> DeviceResponse:
         id=record.id,
         name=record.name,
         macAddress=record.mac_address,
-        sortOrder=record.sort_order,
         createdAt=record.created_at.isoformat(),
         lastSeen=record.last_seen.isoformat() if record.last_seen else None,
     )
@@ -99,7 +96,6 @@ async def update_device(
         user_id,
         device_id,
         name=request.name,
-        sort_order=request.sortOrder,
     )
     return _to_response(record)
 
