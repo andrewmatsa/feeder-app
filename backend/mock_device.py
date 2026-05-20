@@ -29,6 +29,7 @@ DEFAULT_SETTINGS: dict = {
     "batteryVoltage": 3.85,
     "batteryPercent": 72,
     "isCharging": True,
+    "lightLux": 620,
     "wifiSSID": "HomeNetwork",
     "wifiIP": "192.168.1.42",
     "feedTimes": [
@@ -150,6 +151,7 @@ def mock_status(device_id: str | None = None) -> StatusResponse:
         cacheAge=245,
         cacheValid=True,
         uptimeSeconds=8100,
+        lightLux=s.get("lightLux"),
     )
 
 

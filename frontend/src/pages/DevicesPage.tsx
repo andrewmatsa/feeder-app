@@ -66,7 +66,27 @@ export function DevicesPage() {
   }
 
   if (loading) {
-    return <div className="loading">Завантаження…</div>
+    return (
+      <section className="devices-section">
+        <div className="devices-toolbar">
+          <h2>Мої акваріуми</h2>
+          <span className="sk" style={{ width: 140, height: 36, borderRadius: 999 }} />
+        </div>
+        <div className="device-grid">
+          {[1, 2].map((i) => (
+            <div key={i} className="device-card">
+              <span className="sk" style={{ width: '55%', height: 18, marginBottom: 10 }} />
+              <span className="sk" style={{ width: '38%', height: 13, marginBottom: 20 }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span className="sk" style={{ width: 82, height: 36, borderRadius: 999 }} />
+                <span className="sk" style={{ width: 116, height: 36, borderRadius: 999 }} />
+                <span className="sk" style={{ width: 76, height: 36, borderRadius: 999 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
   }
 
   return (

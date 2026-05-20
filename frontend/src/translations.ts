@@ -23,6 +23,23 @@ export interface Translations {
   feedCooldownLabel: string
   feeding: string
 
+  foodShowSection: string
+  foodSettingsSub: string
+
+  lightSensor: string
+  lightSensorSub: string
+  lightLuxLabel: string
+  lightOn: string
+  lightOff: string
+  lightSettingsSub: string
+  lightShowGauge: string
+  lightThresholdLabel: string
+  lightThresholdHint: string
+  feedJournal: string
+  feedJournalSub: string
+  feedJournalEmpty: string
+  feedJournalSource: (s: string) => string
+
   schedule: string
   scheduleSub: string
   nextFeedIn: (h: number, m: number) => string
@@ -141,6 +158,22 @@ export interface Translations {
   foodNoSchedule: string
   foodFeedingsPerDay: (n: number) => string
 
+  tabStats: string
+  statsFeedings: string
+  statsFeedingsToday: string
+  statsAvgPerDay: string
+  statsLight: string
+  statsLightToday: string
+  statsLightHours: (h: number, m: number) => string
+  statsRecommendations: string
+  recNoFeedingsToday: string
+  recFeedMore: string
+  recFeedTooMuch: string
+  recNoLight: string
+  recLightTooShort: string
+  recLightGood: string
+  recAllGood: string
+
   loginSignIn: string
   loginRegister: string
   loginEmail: string
@@ -188,6 +221,23 @@ const uk: Translations = {
   feedNowCooldown: s => `Годувати зараз (${s} с)`,
   feedCooldownLabel: 'Наступне годування',
   feeding: 'Годую...',
+
+  foodShowSection: 'Показувати запас корму',
+  foodSettingsSub: 'Відображення секції запасу корму',
+
+  lightSensor: 'Сенсор світла',
+  lightSensorSub: 'Поточна освітленість',
+  lightLuxLabel: 'Освітленість:',
+  lightOn: 'Ввімкнено',
+  lightOff: 'Вимкнено',
+  lightSettingsSub: 'Показ та чутливість сенсора',
+  lightShowGauge: 'Показувати gauge сенсора',
+  lightThresholdLabel: 'Поріг «Ввімкнено» (лк):',
+  lightThresholdHint: 'Якщо значення сенсора вище порогу — вважається що світло ввімкнено.',
+  feedJournal: 'Журнал годувань',
+  feedJournalSub: 'Останні 20 годувань',
+  feedJournalEmpty: 'Немає записів',
+  feedJournalSource: s => s === 'manual' ? 'Вручну' : s === 'scheduled' ? 'Розклад' : s,
 
   schedule: 'Автоматичне годування',
   scheduleSub: 'Налаштуйте розклад годувань',
@@ -307,6 +357,22 @@ const uk: Translations = {
   foodNoSchedule: 'Немає активного розкладу',
   foodFeedingsPerDay: n => `${n} годівель/добу`,
 
+  tabStats: 'Статистика',
+  statsFeedings: 'Годування (останні 7 днів)',
+  statsFeedingsToday: 'Сьогодні годувань',
+  statsAvgPerDay: 'Середнє / день',
+  statsLight: 'Тривалість світла (хв)',
+  statsLightToday: 'Світло сьогодні',
+  statsLightHours: (h, m) => h > 0 ? `${h} год ${m} хв` : `${m} хв`,
+  statsRecommendations: 'Рекомендації',
+  recNoFeedingsToday: 'Сьогодні годувань ще немає — час погодувати рибок!',
+  recFeedMore: 'Годування відбуваються рідко. Рекомендується 2–4 рази на день.',
+  recFeedTooMuch: 'Забагато годувань — надлишок корму погіршує якість води.',
+  recNoLight: 'Сьогодні світло не вмикалось — рибкам потрібен денний цикл.',
+  recLightTooShort: 'Світло горить менше 8 годин. Рекомендується 8–12 годин на день.',
+  recLightGood: 'Тривалість світла оптимальна. Так тримати!',
+  recAllGood: 'Все в нормі! Рибки щасливі.',
+
   loginSignIn: 'Увійти',
   loginRegister: 'Реєстрація',
   loginEmail: 'Email',
@@ -354,6 +420,23 @@ const en: Translations = {
   feedNowCooldown: s => `Feed Now (${s} s)`,
   feedCooldownLabel: 'Next feeding',
   feeding: 'Feeding...',
+
+  foodShowSection: 'Show food supply section',
+  foodSettingsSub: 'Show or hide the food supply widget',
+
+  lightSensor: 'Light Sensor',
+  lightSensorSub: 'Current light level',
+  lightLuxLabel: 'Illuminance:',
+  lightOn: 'On',
+  lightOff: 'Off',
+  lightSettingsSub: 'Display and sensitivity settings',
+  lightShowGauge: 'Show light sensor gauge',
+  lightThresholdLabel: '"On" threshold (lx):',
+  lightThresholdHint: 'Light is considered on when sensor value exceeds this threshold.',
+  feedJournal: 'Feed Journal',
+  feedJournalSub: 'Last 20 feedings',
+  feedJournalEmpty: 'No records',
+  feedJournalSource: s => s === 'manual' ? 'Manual' : s === 'scheduled' ? 'Schedule' : s,
 
   schedule: 'Automatic Feeding',
   scheduleSub: 'Configure feeding schedule',
@@ -472,6 +555,22 @@ const en: Translations = {
   foodNotSet: 'Set food amount to track supply',
   foodNoSchedule: 'No active schedule',
   foodFeedingsPerDay: n => `${n} feedings/day`,
+
+  tabStats: 'Statistics',
+  statsFeedings: 'Feedings (last 7 days)',
+  statsFeedingsToday: 'Feedings today',
+  statsAvgPerDay: 'Avg / day',
+  statsLight: 'Light duration (min)',
+  statsLightToday: 'Light today',
+  statsLightHours: (h, m) => h > 0 ? `${h}h ${m}m` : `${m}m`,
+  statsRecommendations: 'Recommendations',
+  recNoFeedingsToday: 'No feedings yet today — time to feed your fish!',
+  recFeedMore: 'Feedings are infrequent. 2–4 times per day is recommended.',
+  recFeedTooMuch: 'Too many feedings — excess food degrades water quality.',
+  recNoLight: 'Light has not been on today — fish need a daily light cycle.',
+  recLightTooShort: 'Light has been on for less than 8 hours. 8–12 hours per day is recommended.',
+  recLightGood: 'Light duration is optimal. Keep it up!',
+  recAllGood: 'All looks good! Happy fish.',
 
   loginSignIn: 'Sign in',
   loginRegister: 'Register',

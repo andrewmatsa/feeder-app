@@ -75,6 +75,7 @@ def map_firmware_status(payload: dict[str, Any]) -> StatusResponse:
         sleepCountdownSeconds=to_int(payload.get("sleepCountdownSeconds"), -1),
         displayAwake=bool(payload.get("displayAwake", True)),
         timestamp=datetime.now().isoformat(),
+        lightLux=to_optional_non_negative_int(payload.get("lightLux")),
     )
 
 

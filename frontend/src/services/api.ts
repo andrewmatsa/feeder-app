@@ -8,10 +8,14 @@ import type {
   AuthResponse,
   CalibrateRequest,
   CreateDeviceRequest,
+  CreateLightEventRequest,
   CreateUserRequest,
   Device,
+  DeviceFeedEvent,
+  DeviceStats,
   DisplaySettingsRequest,
   FeedRequest,
+  LightStats,
   LoginRequest,
   MinIntervalRequest,
   PowerModeRequest,
@@ -268,6 +272,32 @@ export const api = {
   async listAdminFeedEvents(limit = 50, offset = 0): Promise<AdminFeedEvent[]> {
     const response = await apiClient.get<AdminFeedEvent[]>('/api/v1/admin/feed-events', {
       params: { limit, offset },
+    })
+    return response.data
+  },
+
+  async getDeviceFeedEvents(deviceId: string, limit = 20): Promise<DeviceFeedEvent[]> {
+    const response = await apiClient.get<DeviceFeedEvent[]>(
+      `/api/v1/devices/${deviceId}/feed-events`,
+      { params: { limit } },
+    )
+    return response.data
+  },
+
+  async getDeviceStats(deviceId: string, days = 7): Promise<DeviceStats> {
+    const response = await apiClient.get<DeviceStats>(`/api/v1/devices/${deviceId}/stats`, {
+      params: { days },
+    })
+    return response.data
+  },
+
+  async createLightEvent(deviceId: string, request: CreateLightEventRequest): Promise<void> {
+    await apiClient.post(`/api/v1/devices/${deviceId}/light-events`, request)
+  },
+
+  async getLightStats(deviceId: string, days = 14): Promise<LightStats> {
+    const response = await apiClient.get<LightStats>(`/api/v1/devices/${deviceId}/light-stats`, {
+      params: { days },
     })
     return response.data
   },

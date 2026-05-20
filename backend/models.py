@@ -84,6 +84,8 @@ class StatusResponse(BaseModel):
     cacheAge: int | None = None
     cacheValid: bool | None = None
     uptimeSeconds: int | None = None
+    # Light sensor
+    lightLux: int | None = None
 
 
 class CommandResponse(BaseModel):
