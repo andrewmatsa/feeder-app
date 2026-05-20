@@ -18,10 +18,7 @@ public:
               FeedingScheduler& scheduler);
   
   void setupRoutes();
-  
-  void handleRoot();
-  void handleInfo();
-  
+
   void handleStatus();
   void handleSetAngle();
   void handleFeedNow();
@@ -83,7 +80,6 @@ private:
   String buildStatusJson();
   void populateStatusDocument(JsonDocument& doc);
   void appendFeedTimes(JsonArray feedTimesArray) const;
-  void appendLegacyFeedTimes(JsonDocument& doc) const;
   void appendRuntimeStatus(JsonDocument& doc, const NextFeedInfo& nextFeed) const;
   void appendMemoryStatus(JsonDocument& doc) const;
   String getCurrentTimeString() const;

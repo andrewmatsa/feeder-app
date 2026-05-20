@@ -4,7 +4,6 @@
 #include <WiFi.h>
 #include <math.h>
 #include "wifi_manager.h"
-#include "web_pages.h"
 
 ApiHandlers::ApiHandlers(WebServer& server, Preferences& preferences,
                          ServoController& servo, BatteryMonitor& battery,
@@ -41,8 +40,9 @@ void ApiHandlers::setDisplayOffAfterSec(uint16_t sec) {
 
 void ApiHandlers::setupRoutes() {
   configureRequestSecurity(server);
-  server.on("/", HTTP_GET, [this]() { handleRoot(); });
-  server.on("/info", HTTP_GET, [this]() { handleInfo(); });
+  server.on("/", HTTP_GET, [this]() {
+    server.send(200, "application/json", "{\"device\":\"AquaFeed\",\"api\":\"/api/status\"}");
+  });
   server.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
   server.on("/api/setAngle", HTTP_POST, [this]() { handleSetAngle(); });
   server.on("/api/feedNow", HTTP_POST, [this]() { handleFeedNow(); });
@@ -58,29 +58,6 @@ void ApiHandlers::setupRoutes() {
   server.on("/api/setBatteryCalibration", HTTP_POST, [this]() { handleSetBatteryCalibration(); });
 }
 
-void ApiHandlers::handleRoot() {
-  noteClientActivity();
-  if (isAPMode) {
-    handleWiFi(server);
-    return;
-  }
-  if (WiFi.status() != WL_CONNECTED) {
-    server.sendHeader("Location", "/wifi", true);
-    server.send(302, "text/plain", "");
-    return;
-  }
-  server.send_P(200, "text/html", pageIndex);
-}
-
-void ApiHandlers::handleInfo() {
-  noteClientActivity();
-  if (isAPMode || !isApSessionAuthorized(server)) {
-    handleWiFi(server);
-    return;
-  }
-  server.send_P(200, "text/html", pageInfo);
-}
-
 void ApiHandlers::appendFeedTimes(JsonArray feedTimesArray) const {
   const FeedTime* feedTimes = scheduler.getFeedTimes();
   int feedTimesCount = scheduler.getFeedTimesCount();
@@ -91,17 +68,6 @@ void ApiHandlers::appendFeedTimes(JsonArray feedTimesArray) const {
     feedTime["r"] = feedTimes[i].repeats;
     feedTime["d"] = feedTimes[i].day;
   }
-}
-
-void ApiHandlers::appendLegacyFeedTimes(JsonDocument& doc) const {
-  int h1, m1, r1, h2, m2, r2;
-  scheduler.getLegacyFeedTimes(h1, m1, r1, h2, m2, r2);
-  doc["feedHour1"] = h1;
-  doc["feedMinute1"] = m1;
-  doc["feedHour2"] = h2;
-  doc["feedMinute2"] = m2;
-  doc["feedRepeats1"] = r1;
-  doc["feedRepeats2"] = r2;
 }
 
 String ApiHandlers::getCurrentTimeString() const {
@@ -181,7 +147,6 @@ void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
   doc["isCharging"] = battery.isCharging();
 
   appendFeedTimes(doc["feedTimes"].to<JsonArray>());
-  appendLegacyFeedTimes(doc);
   appendRuntimeStatus(doc, nextFeed);
   appendMemoryStatus(doc);
 }
@@ -236,8 +201,6 @@ void ApiHandlers::handleFeedNow() {
   }
 
   server.send(200, "text/plain", "feeding");
-  delay(10);
-
   servo.feedSequence(repeatsForFeed);
   scheduler.recordManualFeed();
   invalidateCache();

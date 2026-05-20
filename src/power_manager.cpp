@@ -58,7 +58,14 @@ long PowerManager::computePreciseSecondsUntilNextFeed(const NextFeedInfo& nextIn
 }
 
 long PowerManager::computeSecondsUntilNextFeed() const {
-  return computePreciseSecondsUntilNextFeed(scheduler.computeNextFeed());
+  static NextFeedInfo cached;
+  static uint32_t cachedAtMs = 0;
+  uint32_t nowMs = millis();
+  if (cachedAtMs == 0 || nowMs - cachedAtMs > 10000) {
+    cached = scheduler.computeNextFeed();
+    cachedAtMs = nowMs;
+  }
+  return computePreciseSecondsUntilNextFeed(cached);
 }
 
 bool PowerManager::isDeepSleepWorthwhile(long secondsUntilNextFeed) const {

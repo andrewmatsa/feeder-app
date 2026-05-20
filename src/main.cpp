@@ -11,7 +11,6 @@
 #include "battery_monitor.h"
 #include "feeding_scheduler.h"
 #include "api_handlers.h"
-#include "web_pages.h"
 #include "oled_display.h"
 #include "device_runtime.h"
 #include "power_manager.h"
@@ -44,18 +43,9 @@ void performAutoFeeding(int repeats) {
 
 void printStartupBanner() {
   Serial.begin(115200);
-  delay(500);
-  Serial.flush();
-
-  for (int i = 0; i < 5; i++) {
-    Serial.println("\n\n\n");
-    Serial.println("========================================");
-    Serial.println("=== AquaFeed System Starting ===");
-    Serial.println("========================================");
-    Serial.printf("Boot attempt: %d\n", i + 1);
-    delay(100);
-  }
-  Serial.println("\nSystem initialized successfully!\n");
+  Serial.println("\n========================================");
+  Serial.println("=== AquaFeed System Starting ===");
+  Serial.println("========================================\n");
 }
 
 void initializeHardwareModules() {
@@ -208,6 +198,10 @@ void setup(){
 
 // === Loop ===
 void loop(){
+  static uint32_t lastLoopMs = 0;
+  if (millis() - lastLoopMs < 20) return;
+  lastLoopMs = millis();
+
   server.handleClient();
   updateWiFiProvisioning();
   handleManualButtonPress();

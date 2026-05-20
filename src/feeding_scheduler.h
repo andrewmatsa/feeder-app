@@ -53,11 +53,7 @@ public:
 private:
   FeedTime feedTimes[MAX_FEED_TIMES];
   int feedTimesCount;
-  
-  int feedHour1, feedMinute1, feedRepeats1;
-  int feedHour2, feedMinute2, feedRepeats2;
-  bool feed1Done, feed2Done;
-  
+
   int lastCheckedHour;
   int lastCheckedMinute;
   

@@ -48,12 +48,7 @@ void ServoController::setSpeed(float speed) {
 }
 
 int ServoController::speedToStepDelayMs(float sliderSpeed) {
-  float minSpeed = 19.5;
-  float maxSpeed = 20.0;
-  float normalized = (sliderSpeed - 1) / (20 - 1);
-  float realSpeed = minSpeed + normalized * (maxSpeed - minSpeed);
-  int stepDelay = (int)((20.0 - realSpeed) * 10);
-  return max(stepDelay, 0);
+  return map(constrain((int)sliderSpeed, 1, 20), 1, 20, 200, 2);
 }
 
 void ServoController::moveServoSmooth(int target) {

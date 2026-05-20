@@ -69,6 +69,11 @@ float BatteryMonitor::voltageToPercent(float v) {
 }
 
 void BatteryMonitor::update() {
+  static uint32_t lastUpdateMs = 0;
+  uint32_t nowUpdate = millis();
+  if (nowUpdate - lastUpdateMs < 5000) return;
+  lastUpdateMs = nowUpdate;
+
   batteryVoltage = readVoltage();
   batteryPercent = voltageToPercent(batteryVoltage);
 

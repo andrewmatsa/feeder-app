@@ -28,21 +28,17 @@ void OledDisplay::begin() {
   Serial.println(sclPin);
   
   Wire.begin(sdaPin, sclPin);
-  delay(200);
-  
+
   Serial.println("OLED: Starting U8g2 Software I2C...");
-  
+
   u8g2.begin();
-  delay(150);
-  
+
   Serial.println("OLED: Configuring display...");
-  
+
   u8g2.setFlipMode(0);
   u8g2.setFontMode(1);
   u8g2.setFontDirection(0);
-  
-  delay(100);
-  
+
   Serial.println("OLED: Testing display communication...");
   
   if (checkDisplay()) {

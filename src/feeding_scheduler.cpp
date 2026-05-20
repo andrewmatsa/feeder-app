@@ -6,9 +6,6 @@ int FeedingScheduler::timezoneOffsetMinutes = FeedingScheduler::DEFAULT_TIMEZONE
 
 FeedingScheduler::FeedingScheduler()
   : feedTimesCount(0),
-    feedHour1(10), feedMinute1(0), feedRepeats1(1),
-    feedHour2(20), feedMinute2(0), feedRepeats2(1),
-    feed1Done(false), feed2Done(false),
     lastCheckedHour(-1), lastCheckedMinute(-1),
     lastFedHour(-1), lastFedMinute(-1),
     lastFedEpochMinute(-1),
@@ -98,20 +95,6 @@ void FeedingScheduler::loadFromPreferences(Preferences& preferences) {
     }
   }
   
-  if(feedTimesCount > 0) {
-    feedHour1 = feedTimes[0].hour;
-    feedMinute1 = feedTimes[0].minute;
-    feedRepeats1 = feedTimes[0].repeats;
-  }
-  if(feedTimesCount > 1) {
-    feedHour2 = feedTimes[1].hour;
-    feedMinute2 = feedTimes[1].minute;
-    feedRepeats2 = feedTimes[1].repeats;
-  } else {
-    feedHour2 = 0;
-    feedMinute2 = 0;
-    feedRepeats2 = 1;
-  }
 }
 
 void FeedingScheduler::saveToPreferences(Preferences& preferences) {
@@ -131,12 +114,6 @@ void FeedingScheduler::saveToPreferences(Preferences& preferences) {
     Serial.printf("  Saved [%d]: %02d:%02d (repeats=%d, day=%d)\n", i, feedTimes[i].hour, feedTimes[i].minute, feedTimes[i].repeats, feedTimes[i].day);
   }
   
-  preferences.putInt("feedHour1", feedHour1);
-  preferences.putInt("feedMinute1", feedMinute1);
-  preferences.putInt("feedHour2", feedHour2);
-  preferences.putInt("feedMinute2", feedMinute2);
-  preferences.putInt("feedRepeats1", feedRepeats1);
-  preferences.putInt("feedRepeats2", feedRepeats2);
 }
 
 void FeedingScheduler::setFeedTimes(const FeedTime* times, int count) {
@@ -146,30 +123,21 @@ void FeedingScheduler::setFeedTimes(const FeedTime* times, int count) {
     feedTimes[i].done = false;
   }
   
-  if(feedTimesCount > 0) {
-    feedHour1 = feedTimes[0].hour;
-    feedMinute1 = feedTimes[0].minute;
-    feedRepeats1 = feedTimes[0].repeats;
-  }
-  if(feedTimesCount > 1) {
-    feedHour2 = feedTimes[1].hour;
-    feedMinute2 = feedTimes[1].minute;
-    feedRepeats2 = feedTimes[1].repeats;
-  }
 }
 
 void FeedingScheduler::setLegacyFeedTimes(int h1, int m1, int r1, int h2, int m2, int r2) {
-  feedHour1 = h1; feedMinute1 = m1; feedRepeats1 = r1;
-  feedHour2 = h2; feedMinute2 = m2; feedRepeats2 = r2;
-  
   feedTimesCount = 2;
-  feedTimes[0] = {feedHour1, feedMinute1, feedRepeats1, -1, false};
-  feedTimes[1] = {feedHour2, feedMinute2, feedRepeats2, -1, false};
+  feedTimes[0] = {h1, m1, r1, -1, false};
+  feedTimes[1] = {h2, m2, r2, -1, false};
 }
 
 void FeedingScheduler::getLegacyFeedTimes(int& h1, int& m1, int& r1, int& h2, int& m2, int& r2) const {
-  h1 = feedHour1; m1 = feedMinute1; r1 = feedRepeats1;
-  h2 = feedHour2; m2 = feedMinute2; r2 = feedRepeats2;
+  h1 = feedTimesCount > 0 ? feedTimes[0].hour : 10;
+  m1 = feedTimesCount > 0 ? feedTimes[0].minute : 0;
+  r1 = feedTimesCount > 0 ? feedTimes[0].repeats : 1;
+  h2 = feedTimesCount > 1 ? feedTimes[1].hour : 0;
+  m2 = feedTimesCount > 1 ? feedTimes[1].minute : 0;
+  r2 = feedTimesCount > 1 ? feedTimes[1].repeats : 1;
 }
 
 NextFeedInfo FeedingScheduler::computeNextFeed() {
@@ -212,12 +180,7 @@ NextFeedInfo FeedingScheduler::computeNextFeed() {
   for (int i = 0; i < feedTimesCount; ++i) {
     considerSlot(feedTimes[i].hour, feedTimes[i].minute, feedTimes[i].day);
   }
-  
-  if (!found) {
-    considerSlot(feedHour1, feedMinute1, -1);
-    considerSlot(feedHour2, feedMinute2, -1);
-  }
-  
+
   return info;
 }
 
@@ -229,8 +192,6 @@ bool FeedingScheduler::wasRecentlyFed(int currentHour, int currentMinute) {
       currentEpochMinute >= lastFedEpochMinute) {
     long long diff = currentEpochMinute - lastFedEpochMinute;
     if (diff < minFeedIntervalMinutes) {
-      Serial.printf("Feed blocked: only %lld minutes since last feed at %02d:%02d\n",
-                    diff, lastFedHour, lastFedMinute);
       return true;
     }
     return false;
@@ -249,7 +210,6 @@ bool FeedingScheduler::wasRecentlyFed(int currentHour, int currentMinute) {
   }
   
   if (diff < minFeedIntervalMinutes) {
-    Serial.printf("Feed blocked: only %d minutes since last feed at %02d:%02d\n", diff, lastFedHour, lastFedMinute);
     return true;
   }
   
@@ -304,15 +264,6 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
         feedTimes[i].done = true;
       }
     }
-    if (feedTimesCount == 0) {
-      if (curHour == feedHour1 && curMinute == feedMinute1) {
-        feed1Done = true;
-      }
-      if (curHour == feedHour2 && curMinute == feedMinute2) {
-        feed2Done = true;
-      }
-    }
-    Serial.printf("Scheduled feed for %02d:%02d already executed, skipping duplicate\n", curHour, curMinute);
     return false;
   }
   
@@ -322,25 +273,15 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
         feedTimes[i].done = false;
       }
     }
-    if (feedTimesCount == 0) {
-      if (feedHour1 == lastCheckedHour) {
-        feed1Done = false;
-      }
-      if (feedHour2 == lastCheckedHour) {
-        feed2Done = false;
-      }
-    }
   }
-  
+
   if (lastCheckedHour != -1 && lastCheckedMinute != -1) {
     int timeDiff = (curHour * 60 + curMinute) - (lastCheckedHour * 60 + lastCheckedMinute);
     if (timeDiff < -10 && timeDiff > -1430) {
-      Serial.println("Warning: Time jumped backwards significantly, resetting all feed flags");
+      Serial.println("Warning: Time jumped backwards, resetting feed flags");
       for(int i = 0; i < feedTimesCount; i++) {
         feedTimes[i].done = false;
       }
-      feed1Done = false;
-      feed2Done = false;
     }
   }
   
@@ -365,31 +306,6 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
     persistLastScheduledFeedState();
     updateLastFeedState(localTime, currentEpochMinute);
     fed = true;
-  }
-  
-  if (feedTimesCount == 0) {
-    int legacyRepeatsToRun = 0;
-    if (curHour == feedHour1 && curMinute == feedMinute1 && !feed1Done) {
-      legacyRepeatsToRun += max(1, feedRepeats1);
-      feed1Done = true;
-      Serial.printf("Auto feeding queued (slot 1 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats1);
-    }
-    if (curHour == feedHour2 && curMinute == feedMinute2 && !feed2Done) {
-      legacyRepeatsToRun += max(1, feedRepeats2);
-      feed2Done = true;
-      Serial.printf("Auto feeding queued (slot 2 legacy) %02d:%02d, repeats: %d\n", curHour, curMinute, feedRepeats2);
-    }
-
-    if (legacyRepeatsToRun > 0) {
-      Serial.printf("Auto feeding total legacy %02d:%02d, combined repeats: %d\n", curHour, curMinute, legacyRepeatsToRun);
-      if (feedCallback) {
-        feedCallback(legacyRepeatsToRun);
-      }
-      lastScheduledFeedEpochMinute = currentEpochMinute;
-      persistLastScheduledFeedState();
-      updateLastFeedState(localTime, currentEpochMinute);
-      fed = true;
-    }
   }
   
   lastCheckedHour = curHour;
