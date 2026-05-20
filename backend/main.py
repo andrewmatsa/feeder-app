@@ -7,11 +7,13 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
+    from .admin import router as admin_router
     from .auth import router as auth_router
     from .devices import router as devices_router
+    from .mock_realtime import mock_record_feed, mock_touch_last_seen
     from .config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
     from .dependencies import UserClaims, get_current_user
-    from .device_client import close_http_client, request_firmware
+    from .device_client import close_http_client, get_device_base_url, request_firmware
     from .mappers import encode_schedule, map_firmware_status
     from .mock_device import (
         mock_calibrate, mock_feed, mock_set_angle, mock_set_display_settings,
@@ -32,11 +34,13 @@ try:
         TimezoneRequest,
     )
 except ImportError:
+    from admin import router as admin_router
     from auth import router as auth_router
     from devices import router as devices_router
+    from mock_realtime import mock_record_feed, mock_touch_last_seen
     from config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
     from dependencies import UserClaims, get_current_user
-    from device_client import close_http_client, request_firmware
+    from device_client import close_http_client, get_device_base_url, request_firmware
     from mappers import encode_schedule, map_firmware_status
     from mock_device import (
         mock_calibrate, mock_feed, mock_set_angle, mock_set_display_settings,
@@ -73,6 +77,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(devices_router)
+app.include_router(admin_router)
 
 
 @app.on_event("shutdown")
@@ -96,53 +101,91 @@ async def health_check():
 
 
 @app.get("/api/status", response_model=StatusResponse)
-async def get_status(current_user: UserClaims = Depends(get_current_user)):
+async def get_status(
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_status()
-    response = await request_firmware("/api/status")
+        mock_touch_last_seen(current_user.id, device_id)
+        return mock_status(device_id)
+    response = await request_firmware("/api/status", base_url=get_device_base_url(device_id))
     return map_firmware_status(response.json())
 
 
 @app.post("/api/feed", response_model=CommandResponse)
-async def feed_now(request: FeedRequest, current_user: UserClaims = Depends(get_current_user)):
+async def feed_now(
+    request: FeedRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
+        mock_record_feed(current_user.id, request.repeats, device_id)
         return mock_feed(request.repeats)
-    await request_firmware("/api/feedNow", method="POST", data={"repeats": request.repeats})
+    await request_firmware(
+        "/api/feedNow", method="POST", data={"repeats": request.repeats},
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message=f"Feeding started with {request.repeats} repeats")
 
 
 @app.post("/api/speed", response_model=CommandResponse)
-async def set_speed(request: SpeedRequest, current_user: UserClaims = Depends(get_current_user)):
+async def set_speed(
+    request: SpeedRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_set_speed(request.speed)
-    await request_firmware("/api/setSpeed", method="POST", data={"speed": request.speed})
+        return mock_set_speed(request.speed, device_id)
+    await request_firmware(
+        "/api/setSpeed", method="POST", data={"speed": request.speed},
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message=f"Speed set to {request.speed}")
 
 
 @app.post("/api/schedule", response_model=CommandResponse)
-async def set_schedule(request: ScheduleRequest, current_user: UserClaims = Depends(get_current_user)):
+async def set_schedule(
+    request: ScheduleRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_set_schedule(request.times)
-    await request_firmware("/api/setFeedTimes", method="POST", data={"data": encode_schedule(request.times)})
+        return mock_set_schedule(request.times, device_id)
+    await request_firmware(
+        "/api/setFeedTimes", method="POST", data={"data": encode_schedule(request.times)},
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message="Schedule updated")
 
 
 @app.post("/api/angle", response_model=CommandResponse)
-async def set_angle(request: AngleRequest, current_user: UserClaims = Depends(get_current_user)):
+async def set_angle(
+    request: AngleRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_set_angle(request.angle)
-    await request_firmware("/api/setAngle", method="POST", data={"angle": request.angle})
+        return mock_set_angle(request.angle, device_id)
+    await request_firmware(
+        "/api/setAngle", method="POST", data={"angle": request.angle},
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message=f"Angle set to {request.angle}")
 
 
 @app.post("/api/power-mode", response_model=CommandResponse)
-async def set_power_mode(request: PowerModeRequest, current_user: UserClaims = Depends(get_current_user)):
+async def set_power_mode(
+    request: PowerModeRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_set_power_mode(request.enabled)
+        return mock_set_power_mode(request.enabled, device_id)
     await request_firmware(
         "/api/setPowerMode",
         method="POST",
         data={"enabled": str(request.enabled).lower()},
+        base_url=get_device_base_url(device_id),
     )
     return CommandResponse(
         success=True,
@@ -151,37 +194,66 @@ async def set_power_mode(request: PowerModeRequest, current_user: UserClaims = D
 
 
 @app.post("/api/display-settings", response_model=CommandResponse)
-async def set_display_settings(request: DisplaySettingsRequest, current_user: UserClaims = Depends(get_current_user)):
+async def set_display_settings(
+    request: DisplaySettingsRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
         return mock_set_display_settings(
             request.powerSaveMode, request.deepSleepIdleSec,
             request.displayEnabled, request.displayOffAfterSec,
+            device_id,
         )
-    await request_firmware("/api/setDisplaySettings", method="POST", data=request.model_dump())
+    await request_firmware(
+        "/api/setDisplaySettings", method="POST", data=request.model_dump(),
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message="Display settings updated")
 
 
 @app.post("/api/min-interval", response_model=CommandResponse)
-async def set_min_interval(request: MinIntervalRequest, current_user: UserClaims = Depends(get_current_user)):
+async def set_min_interval(
+    request: MinIntervalRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_set_min_interval(request.minFeedIntervalMin)
-    await request_firmware("/api/setMinInterval", method="POST", data={"minFeedIntervalMin": request.minFeedIntervalMin})
+        return mock_set_min_interval(request.minFeedIntervalMin, device_id)
+    await request_firmware(
+        "/api/setMinInterval", method="POST", data={"minFeedIntervalMin": request.minFeedIntervalMin},
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message=f"Min interval set to {request.minFeedIntervalMin} min")
 
 
 @app.post("/api/calibrate", response_model=CommandResponse)
-async def calibrate_battery(request: CalibrateRequest, current_user: UserClaims = Depends(get_current_user)):
+async def calibrate_battery(
+    request: CalibrateRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_calibrate(request.actualVoltage)
-    await request_firmware("/api/calibrate", method="POST", data={"actualVoltage": request.actualVoltage})
+        return mock_calibrate(request.actualVoltage, device_id)
+    await request_firmware(
+        "/api/calibrate", method="POST", data={"actualVoltage": request.actualVoltage},
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message=f"Battery calibrated to {request.actualVoltage} V")
 
 
 @app.post("/api/timezone", response_model=CommandResponse)
-async def set_timezone(request: TimezoneRequest, current_user: UserClaims = Depends(get_current_user)):
+async def set_timezone(
+    request: TimezoneRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
     if MOCK_DEVICE:
-        return mock_set_timezone(request.offsetHours)
-    await request_firmware("/api/setTimezone", method="POST", data={"offsetHours": request.offsetHours})
+        return mock_set_timezone(request.offsetHours, device_id)
+    await request_firmware(
+        "/api/setTimezone", method="POST", data={"offsetHours": request.offsetHours},
+        base_url=get_device_base_url(device_id),
+    )
     return CommandResponse(success=True, message=f"Timezone set to UTC{request.offsetHours:+d}")
 
 

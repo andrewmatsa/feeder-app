@@ -37,13 +37,18 @@ CREATE POLICY "Users manage own feed events" ON public.feed_events
 
 -- Admin view (optional): create a view that bypasses RLS for admin panel
 -- Usage: query as service_role key only
-CREATE OR REPLACE VIEW public.admin_users AS
+-- NOTE: if re-running after migration 002, DROP the view first (column names changed)
+DROP VIEW IF EXISTS public.admin_users;
+CREATE VIEW public.admin_users AS
     SELECT
         u.id,
         u.email,
         u.created_at,
-        COUNT(d.id) AS device_count,
-        MAX(d.last_seen) AS last_seen
+        COALESCE(p.role, 'user')                             AS role,
+        COUNT(DISTINCT d.id)                                 AS device_count,
+        GREATEST(MAX(d.last_seen), MAX(fe.created_at))       AS last_activity
     FROM auth.users u
-    LEFT JOIN public.devices d ON d.user_id = u.id
-    GROUP BY u.id, u.email, u.created_at;
+    LEFT JOIN public.profiles    p  ON p.id  = u.id
+    LEFT JOIN public.devices     d  ON d.user_id  = u.id
+    LEFT JOIN public.feed_events fe ON fe.user_id = u.id
+    GROUP BY u.id, u.email, u.created_at, p.role;

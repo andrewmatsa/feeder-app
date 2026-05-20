@@ -1,21 +1,26 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import type {
-  StatusResponse,
-  FeedRequest,
-  SpeedRequest,
-  ScheduleRequest,
+  AdminDevice,
+  AdminFeedEvent,
+  AdminStats,
+  AdminUser,
   AngleRequest,
-  PowerModeRequest,
-  DisplaySettingsRequest,
-  MinIntervalRequest,
-  CalibrateRequest,
-  TimezoneRequest,
-  Device,
-  CreateDeviceRequest,
-  UpdateDeviceRequest,
   AuthResponse,
+  CalibrateRequest,
+  CreateDeviceRequest,
+  CreateUserRequest,
+  Device,
+  DisplaySettingsRequest,
+  FeedRequest,
   LoginRequest,
+  MinIntervalRequest,
+  PowerModeRequest,
   RegisterRequest,
+  ScheduleRequest,
+  SpeedRequest,
+  StatusResponse,
+  TimezoneRequest,
+  UpdateDeviceRequest,
 } from '../types'
 
 const TOKEN_KEY = 'aquafeed_token'
@@ -166,44 +171,104 @@ export const api = {
     await apiClient.delete(`/api/v1/devices/${deviceId}`)
   },
 
-  async getStatus(): Promise<StatusResponse> {
-    const response = await apiClient.get<StatusResponse>('/api/status')
+  async getStatus(deviceId?: string): Promise<StatusResponse> {
+    const response = await apiClient.get<StatusResponse>('/api/status', {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
     return response.data
   },
 
-  async feedNow(request: FeedRequest): Promise<void> {
-    await apiClient.post('/api/feed', request)
+  async feedNow(request: FeedRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/feed', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async setSpeed(request: SpeedRequest): Promise<void> {
-    await apiClient.post('/api/speed', request)
+  async setSpeed(request: SpeedRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/speed', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async setSchedule(request: ScheduleRequest): Promise<void> {
-    await apiClient.post('/api/schedule', request)
+  async setSchedule(request: ScheduleRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/schedule', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async setAngle(request: AngleRequest): Promise<void> {
-    await apiClient.post('/api/angle', request)
+  async setAngle(request: AngleRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/angle', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async setPowerMode(request: PowerModeRequest): Promise<void> {
-    await apiClient.post('/api/power-mode', request)
+  async setPowerMode(request: PowerModeRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/power-mode', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async setDisplaySettings(request: DisplaySettingsRequest): Promise<void> {
-    await apiClient.post('/api/display-settings', request)
+  async setDisplaySettings(request: DisplaySettingsRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/display-settings', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async setMinInterval(request: MinIntervalRequest): Promise<void> {
-    await apiClient.post('/api/min-interval', request)
+  async setMinInterval(request: MinIntervalRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/min-interval', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async calibrateBattery(request: CalibrateRequest): Promise<void> {
-    await apiClient.post('/api/calibrate', request)
+  async calibrateBattery(request: CalibrateRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/calibrate', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
   },
 
-  async setTimezone(request: TimezoneRequest): Promise<void> {
-    await apiClient.post('/api/timezone', request)
+  async setTimezone(request: TimezoneRequest, deviceId?: string): Promise<void> {
+    await apiClient.post('/api/timezone', request, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
+  },
+
+  async listAdminUsers(): Promise<AdminUser[]> {
+    const response = await apiClient.get<AdminUser[]>('/api/v1/admin/users')
+    return response.data
+  },
+
+  async createAdminUser(request: CreateUserRequest): Promise<AdminUser> {
+    const response = await apiClient.post<AdminUser>('/api/v1/admin/users', request)
+    return response.data
+  },
+
+  async updateUserRole(userId: string, role: 'admin' | 'user'): Promise<AdminUser> {
+    const response = await apiClient.patch<AdminUser>(`/api/v1/admin/users/${userId}/role`, { role })
+    return response.data
+  },
+
+  async deleteAdminUser(userId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/admin/users/${userId}`)
+  },
+
+  async listUserDevices(userId: string): Promise<AdminDevice[]> {
+    const response = await apiClient.get<AdminDevice[]>(`/api/v1/admin/users/${userId}/devices`)
+    return response.data
+  },
+
+  async deleteUserDevice(userId: string, deviceId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/admin/users/${userId}/devices/${deviceId}`)
+  },
+
+  async getAdminStats(): Promise<AdminStats> {
+    const response = await apiClient.get<AdminStats>('/api/v1/admin/stats')
+    return response.data
+  },
+
+  async listAdminFeedEvents(limit = 50, offset = 0): Promise<AdminFeedEvent[]> {
+    const response = await apiClient.get<AdminFeedEvent[]>('/api/v1/admin/feed-events', {
+      params: { limit, offset },
+    })
+    return response.data
   },
 }

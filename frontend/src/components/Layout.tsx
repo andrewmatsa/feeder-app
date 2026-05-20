@@ -1,21 +1,52 @@
-﻿import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useRef } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { authStorage } from '../services/api'
 import { APP_VERSION } from '../version'
 import '../App.css'
 
 export function Layout() {
-  const { logout } = useAuthStore()
+  const { logout, isAdmin } = useAuthStore()
   const location = useLocation()
   const isAuthenticated = !!authStorage.getToken()
   const onDeviceList = location.pathname === '/devices' || location.pathname === '/devices/new'
+
+  const illustrationRef = useRef<HTMLDivElement>(null)
+  const tailBurstTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const escapeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleFishClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const illustration = illustrationRef.current
+    if (!illustration || illustration.classList.contains('is-escaping')) return
+
+    const tail = illustration.querySelector('.hero-fish-tail') as SVGElement | null
+    illustration.classList.add('is-escaping')
+
+    if (tail) {
+      tail.classList.remove('tail-burst')
+      void (tail as unknown as { offsetWidth: number }).offsetWidth
+      tail.classList.add('tail-burst')
+      if (tailBurstTimer.current) clearTimeout(tailBurstTimer.current)
+      tailBurstTimer.current = setTimeout(() => {
+        tail.classList.remove('tail-burst')
+        tailBurstTimer.current = null
+      }, 950)
+    }
+
+    if (escapeTimer.current) clearTimeout(escapeTimer.current)
+    escapeTimer.current = setTimeout(() => {
+      illustration.classList.remove('is-escaping')
+      escapeTimer.current = null
+    }, 2150)
+  }
 
   return (
     <div className="app">
       <header className="header">
         <div className="header-inner">
-          <Link to="/devices" className="header-brand">
-            <div className="app-illustration">
+          <div className="header-brand">
+            <div className="app-illustration" ref={illustrationRef} onClick={handleFishClick}>
               <svg className="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                 <path className="hero-fish-body" d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
                 <g fill="#8d9ba3">
@@ -37,16 +68,26 @@ export function Layout() {
               <span className="header-title">AquaFeed</span>
               <span className="header-sub">Керування годівницями</span>
             </div>
-          </Link>
+          </div>
 
           {isAuthenticated && (
             <nav className="top-nav">
               <Link to="/devices" className={`nav-link${onDeviceList ? ' active' : ''}`}>
                 Мої акваріуми
               </Link>
-              <button type="button" className="nav-button" onClick={() => void logout()}>
-                Вийти
-              </button>
+              {isAdmin && (
+                <>
+                  <Link
+                    to="/admin"
+                    className={`nav-link${location.pathname.startsWith('/admin') ? ' active' : ''}`}
+                  >
+                    Адмін
+                  </Link>
+                  <button type="button" className="nav-button" onClick={() => void logout()}>
+                    Вийти
+                  </button>
+                </>
+              )}
             </nav>
           )}
         </div>
