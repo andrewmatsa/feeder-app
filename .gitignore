@@ -39,6 +39,8 @@ build/
 .piolibdeps/
 .sconsign.dblite
 .clang_complete
+*.obj
+*.exe
 
 # OS
 .DS_Store

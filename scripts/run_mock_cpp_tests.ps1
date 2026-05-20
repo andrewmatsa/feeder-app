@@ -1,8 +1,8 @@
-# Run PlatformIO native C++ unit tests using MSVC (cl.exe).
-# Usage: .\scripts\run_native_tests.ps1
+# Run C++ mock unit tests using MSVC (cl.exe). No device needed.
+# Usage: .\scripts\run_mock_cpp_tests.ps1
 #
-# If GCC/MinGW is installed, use: pio test -e native
-# This script is a Windows fallback using the already-installed MSVC Build Tools.
+# Tests pure logic (speedToStepDelayMs, voltageToPercent) on the PC.
+# Arduino stubs are provided by test/mock_arduino.h.
 
 $ErrorActionPreference = "Stop"
 
