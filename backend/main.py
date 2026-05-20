@@ -3,6 +3,8 @@
 from datetime import datetime
 import os
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -61,10 +63,17 @@ except ImportError:
         TimezoneRequest,
     )
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await close_http_client()
+
+
 app = FastAPI(
     title="AquaFeed API",
     description="API for controlling the automatic fish feeder",
     version=APP_VERSION,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -78,11 +87,6 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(devices_router)
 app.include_router(admin_router)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await close_http_client()
 
 
 @app.get("/")
