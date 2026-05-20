@@ -29,6 +29,17 @@ export interface StatusResponse {
   sleepCountdownSeconds: number
   displayAwake: boolean
   timestamp: string
+  cpuFrequency?: number | null
+  memoryFreeHeap?: number | null
+  memoryUsedHeap?: number | null
+  memoryTotalHeap?: number | null
+  memoryMaxAllocHeap?: number | null
+  memoryMinFreeHeap?: number | null
+  cacheSize?: number | null
+  cacheAge?: number | null
+  cacheValid?: boolean | null
+  uptimeSeconds?: number | null
+  lightLux?: number | null
 }
 
 export interface FeedRequest {
@@ -130,6 +141,13 @@ export interface AdminStats {
   active_sparkline: number[]
 }
 
+export interface DeviceFeedEvent {
+  id: string
+  created_at: string
+  source: string
+  repeats: number
+}
+
 export interface AdminFeedEvent {
   id: string
   created_at: string
@@ -137,6 +155,37 @@ export interface AdminFeedEvent {
   repeats: number
   user_email: string
   device_name: string
+}
+
+export interface DayFeedStat {
+  date: string
+  count: number
+  total_repeats: number
+}
+
+export interface DeviceStats {
+  feedings_today: number
+  total_repeats_today: number
+  avg_feedings_per_day: number
+  feedings_sparkline: number[]
+  repeats_sparkline: number[]
+  days: DayFeedStat[]
+}
+
+export interface CreateLightEventRequest {
+  started_at: string
+  ended_at: string
+  duration_sec: number
+}
+
+export interface LightDayStat {
+  date: string
+  duration_sec: number
+  duration_min: number
+}
+
+export interface LightStats {
+  days: LightDayStat[]
 }
 
 export interface LoginRequest {

@@ -38,6 +38,19 @@
 @keyframes aq-spin { to { transform: rotate(360deg); } }
 .aq-loading-text { color: #6b7280; font-size: 14px; font-weight: 500; }
 
+/* ── Skeleton shimmer ── */
+@keyframes sk-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.sk {
+  background: linear-gradient(90deg, #f0f2f5 25%, #e4e6ea 50%, #f0f2f5 75%);
+  background-size: 600px 100%;
+  animation: sk-shimmer 1.4s ease infinite;
+  border-radius: 6px;
+  display: block;
+}
+
 /* ── Toast ── */
 .aq-toast {
   position: fixed;
@@ -190,12 +203,13 @@
 .aq-gauges-row {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: 8px;
   align-items: flex-start;
 }
 .aq-gauge-wrap {
-  flex: 0 0 150px;
-  max-width: 150px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 160px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -217,6 +231,8 @@
 }
 .aq-gauge-title { font-size: 14px; font-weight: 600; color: #222; text-align: center; }
 .aq-gauge-sub   { font-size: 13px; color: #888; text-align: center; }
+.aq-light-status { font-weight: 600; }
+.aq-light-status-on { color: #D97706; }
 
 /* Food supply tracker */
 .aq-food-section {
@@ -1030,9 +1046,9 @@
 .primary-button {
   background: #111827;
   color: #fff;
-  border: none;
-  padding: 11px 22px;
-  font-size: 14px;
+  border: 1.5px solid transparent;
+  padding: 9px 18px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 999px;
   cursor: pointer;
@@ -1149,33 +1165,34 @@
 
 /* ── Small buttons ── */
 .small-button {
-  padding: 7px 13px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1.5px solid #e5e7eb;
   background: #f9fafb;
   color: #374151;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   transition: background 0.15s, border-color 0.15s;
+  line-height: 1;
 }
 
 .small-button:hover { background: #f3f4f6; border-color: #d1d5db; }
 
 .small-button.ghost {
   background: #fff;
-  color: #6b7280;
+  color: #374151;
 }
 
 .small-button.danger {
   border-color: #fecdd3;
   color: #be123c;
-  background: #fff1f2;
+  background: #fff;
 }
 
 .small-button.danger:hover {
-  background: #ffe4e6;
+  background: #fff1f2;
   border-color: #fda4af;
 }
 
@@ -1816,4 +1833,63 @@
   display: flex;
   justify-content: center;
   padding: 16px 0 4px;
+}
+
+/* ── Device feed journal ── */
+.aq-journal-table-wrap { overflow-x: auto; margin-top: 8px; }
+.aq-journal-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.aq-journal-table th {
+  text-align: left;
+  padding: 6px 10px;
+  color: #6b7280;
+  font-weight: 600;
+  border-bottom: 1px solid #f1f3f5;
+  white-space: nowrap;
+}
+.aq-journal-table td { padding: 8px 10px; border-bottom: 1px solid #f9fafb; color: #374151; }
+.aq-journal-table tr:last-child td { border-bottom: none; }
+.aq-journal-center { text-align: center; }
+.aq-journal-loading,
+.aq-journal-empty { padding: 12px 0; color: #9ca3af; font-size: 13px; text-align: center; }
+
+/* ── Statistics tab ── */
+.aq-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.aq-stats-card {
+  background: #fff;
+  border: 1px solid #f1f3f5;
+  border-radius: 12px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+}
+.aq-stats-value { font-size: 22px; font-weight: 700; color: #1f2937; line-height: 1.1; }
+.aq-stats-label { font-size: 11px; color: #6b7280; font-weight: 500; }
+.aq-stats-section-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 4px; }
+.aq-stats-days-row { display: flex; justify-content: space-between; margin-top: 4px; }
+.aq-stats-days-row span { font-size: 10px; color: #9ca3af; text-align: center; flex: 1; overflow: hidden; white-space: nowrap; }
+.aq-stats-period-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+.aq-period-pill {
+  font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+  border: 1px solid #d1d5db; background: #f9fafb; color: #6b7280; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.aq-period-pill.active { background: #D97706; color: #fff; border-color: #D97706; }
+
+.aq-recs-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.aq-rec-item {
+  font-size: 13px;
+  color: #374151;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-left: 3px solid #1976D2;
+  border-radius: 0 8px 8px 0;
+}
+
+@media (max-width: 400px) {
+  .aq-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .aq-stats-value { font-size: 18px; }
 }

@@ -3,11 +3,11 @@ import { useParams } from 'react-router-dom'
 import { api, getApiErrorMessage } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { TRANSLATIONS, type Lang } from '../translations'
-import type { FeedTime, StatusResponse, Device } from '../types'
+import type { FeedTime, StatusResponse, Device, DeviceFeedEvent, DeviceStats, LightStats } from '../types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'home' | 'info' | 'settings'
+type Tab = 'home' | 'info' | 'settings' | 'stats'
 
 interface LocalFeedTime extends FeedTime {
   day: string
@@ -117,6 +117,46 @@ function NextFeedGauge({ nextFeedMinutes, T }: NextFeedGaugeProps) {
   )
 }
 
+interface LightGaugeProps {
+  durationSeconds: number
+  isOn: boolean
+  T: ReturnType<typeof useTranslations>
+}
+
+function LightGauge({ durationSeconds, isOn, T }: LightGaugeProps) {
+  const MAX_SECONDS = 60 * 60
+  const fraction = isOn ? Math.min(1, durationSeconds / MAX_SECONDS) : 0
+  const trackLen = (GAUGE_ARC / 360) * CIRCUMFERENCE
+  const offset = trackLen * (1 - fraction)
+  const color = isOn ? '#D97706' : '#9CA3AF'
+  const minutes = Math.floor(durationSeconds / 60)
+  const label = isOn ? `${minutes}` : '--'
+
+  return (
+    <div className="aq-gauge-wrap">
+      <svg className="aq-gauge-svg" viewBox="0 0 260 160">
+        <path d={TRACK_PATH} fill="none" stroke="#E6E9EF" strokeWidth="14" strokeLinecap="round" />
+        <path
+          d={TRACK_PATH}
+          fill="none"
+          stroke={color}
+          strokeWidth="14"
+          strokeLinecap="round"
+          strokeDasharray={`${trackLen}`}
+          strokeDashoffset={offset}
+          className="aq-gauge-fill-arc"
+        />
+        <text x="130" y="118" textAnchor="middle" fontSize="32" fontWeight="700" fill={color}>{label}</text>
+        {isOn && <text x="130" y="148" textAnchor="middle" fontSize="13" fill={color} opacity="0.8">хв</text>}
+      </svg>
+      <div className="aq-gauge-title">{T.lightSensor}</div>
+      <div className={`aq-gauge-sub aq-light-status${isOn ? ' aq-light-status-on' : ''}`}>
+        {isOn ? T.lightOn : T.lightOff}
+      </div>
+    </div>
+  )
+}
+
 // ─── Food helpers ─────────────────────────────────────────────────────────────
 
 function calcFoodRemaining(totalG: number, loadedTs: number, gpf: number, feedTimesPerDay: number): number {
@@ -158,6 +198,46 @@ const SettingsIcon = () => (
   </svg>
 )
 
+const StatsIcon = () => (
+  <svg className="aq-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+)
+
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+
+function Sparkline({ data, id, color = '#667eea' }: { data: number[]; id: string; color?: string }) {
+  if (data.length < 2) return null
+  const W = 100
+  const H = 36
+  const max = Math.max(...data, 1)
+  const pts: [number, number][] = data.map((v, i) => [
+    (i / (data.length - 1)) * W,
+    H - (v / max) * (H - 6) - 3,
+  ])
+  let linePath = `M ${pts[0][0]},${pts[0][1]}`
+  for (let i = 1; i < pts.length; i++) {
+    const dx = (pts[i][0] - pts[i - 1][0]) / 2.5
+    linePath += ` C ${pts[i - 1][0] + dx},${pts[i - 1][1]} ${pts[i][0] - dx},${pts[i][1]} ${pts[i][0]},${pts[i][1]}`
+  }
+  const fillPath = `${linePath} L ${W},${H} L 0,${H} Z`
+  const gradId = `sg-${id}`
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: 40, display: 'block', marginTop: 8 }} aria-hidden="true">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={fillPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DeviceDashboardPage() {
@@ -194,9 +274,51 @@ export function DeviceDashboardPage() {
     localStorage.setItem(`aq_feed_repeats_${deviceId}`, String(n))
   }, [deviceId])
 
+  // ── Food supply display toggle (localStorage) ─────────────────────────────
+  const [sFoodEnabled, setSFoodEnabled] = useState(
+    () => localStorage.getItem(`aq_food_enabled_${deviceId}`) !== 'false'
+  )
+  const handleFoodEnabled = (v: boolean) => {
+    setSFoodEnabled(v)
+    localStorage.setItem(`aq_food_enabled_${deviceId}`, String(v))
+  }
+
+  // ── Light sensor settings (localStorage) ─────────────────────────────────
+  const [sLightEnabled, setSLightEnabled] = useState(
+    () => localStorage.getItem(`aq_light_enabled_${deviceId}`) !== 'false'
+  )
+  const [sLightThreshold, setSLightThreshold] = useState(
+    () => Number(localStorage.getItem(`aq_light_threshold_${deviceId}`) || 10)
+  )
+  const handleLightEnabled = (v: boolean) => {
+    setSLightEnabled(v)
+    localStorage.setItem(`aq_light_enabled_${deviceId}`, String(v))
+  }
+  const handleLightThreshold = (v: number) => {
+    setSLightThreshold(v)
+    localStorage.setItem(`aq_light_threshold_${deviceId}`, String(v))
+  }
+
+  // ── Light sensor duration tracking ────────────────────────────────────────
+  const [lightOnSeconds, setLightOnSeconds] = useState(0)
+  const lightSessionStartRef = useRef<number | null>(null)
+  const lightSessionStartIsoRef = useRef<string | null>(null)
+
   // ── Schedule ──────────────────────────────────────────────────────────────
   const [localSchedule, setLocalSchedule] = useState<LocalFeedTime[]>([])
   const scheduleEdited = useRef(false)
+
+  // ── Feed journal ──────────────────────────────────────────────────────────
+  const [feedEvents, setFeedEvents] = useState<DeviceFeedEvent[]>([])
+  const [feedEventsLoading, setFeedEventsLoading] = useState(false)
+  const [feedEventsError, setFeedEventsError] = useState<string | null>(null)
+
+  // ── Statistics ────────────────────────────────────────────────────────────
+  const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsError, setStatsError] = useState<string | null>(null)
+  const [lightStats, setLightStats] = useState<LightStats | null>(null)
+  const [statsDays, setStatsDays] = useState(7)
 
   // ── Toast ─────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg] = useState('')
@@ -248,6 +370,30 @@ export function DeviceDashboardPage() {
       const data = await api.getStatus(deviceId)
       setStatus(data)
 
+      const isLightOn = (data.lightLux ?? 0) > sLightThreshold
+      if (isLightOn) {
+        if (lightSessionStartRef.current === null) {
+          lightSessionStartRef.current = Date.now()
+          lightSessionStartIsoRef.current = new Date().toISOString()
+        }
+        setLightOnSeconds(Math.floor((Date.now() - lightSessionStartRef.current) / 1000))
+      } else {
+        if (lightSessionStartRef.current !== null) {
+          const sessionSec = Math.floor((Date.now() - lightSessionStartRef.current) / 1000)
+          if (sessionSec >= 30 && deviceId && lightSessionStartIsoRef.current) {
+            const endedAt = new Date().toISOString()
+            void api.createLightEvent(deviceId, {
+              started_at: lightSessionStartIsoRef.current,
+              ended_at: endedAt,
+              duration_sec: sessionSec,
+            }).catch(() => {})
+          }
+        }
+        lightSessionStartRef.current = null
+        lightSessionStartIsoRef.current = null
+        setLightOnSeconds(0)
+      }
+
       if (!scheduleEdited.current) {
         setLocalSchedule(
           data.feedTimes.map((ft) => ({ ...ft, day: '0' }))
@@ -297,6 +443,34 @@ export function DeviceDashboardPage() {
     }, 1000)
     return () => clearInterval(t)
   }, [cooldown])
+
+  // ─── Feed events journal ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (tab !== 'info' || !deviceId) return
+    setFeedEventsLoading(true)
+    setFeedEventsError(null)
+    api.getDeviceFeedEvents(deviceId, 20)
+      .then(setFeedEvents)
+      .catch((err) => setFeedEventsError(getApiErrorMessage(err, 'Помилка завантаження')))
+      .finally(() => setFeedEventsLoading(false))
+  }, [tab, deviceId])
+
+  // ─── Statistics ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (tab !== 'stats' || !deviceId) return
+    setStatsLoading(true)
+    setStatsError(null)
+    Promise.all([
+      api.getDeviceStats(deviceId, statsDays),
+      api.getLightStats(deviceId, statsDays),
+    ])
+      .then(([stats, light]) => {
+        setDeviceStats(stats)
+        setLightStats(light)
+      })
+      .catch((err) => setStatsError(getApiErrorMessage(err, 'Помилка завантаження')))
+      .finally(() => setStatsLoading(false))
+  }, [tab, deviceId, statsDays])
 
   // ─── Feed now ─────────────────────────────────────────────────────────────
   const handleFeed = async () => {
@@ -470,9 +644,48 @@ export function DeviceDashboardPage() {
 
   if (loading && !status) {
     return (
-      <div className="aq-loading">
-        <div className="aq-spinner" />
-        <div className="aq-loading-text">{T.connecting}</div>
+      <div className="aq-shell">
+        <div style={{ padding: '10px 12px 0', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+          <span className="sk" style={{ width: 130, height: 18, display: 'block' }} />
+        </div>
+        <div className="aq-content">
+          {/* Gauges skeleton */}
+          <div className="aq-card aq-battery-card">
+            <div className="aq-gauges-row">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="aq-gauge-wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <span className="sk" style={{ width: '100%', aspectRatio: '260/160', borderRadius: 12 }} />
+                  <span className="sk" style={{ width: '65%', height: 12 }} />
+                  <span className="sk" style={{ width: '45%', height: 10 }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <span className="sk" style={{ width: '100%', height: 8, borderRadius: 4 }} />
+            </div>
+          </div>
+          {/* Feed button skeleton */}
+          <div className="aq-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <span className="sk" style={{ width: '45%', height: 16 }} />
+            <span className="sk" style={{ width: '30%', height: 13 }} />
+            <span className="sk" style={{ width: '100%', height: 52, borderRadius: 999 }} />
+          </div>
+          {/* Schedule skeleton */}
+          <div className="aq-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <span className="sk" style={{ width: '40%', height: 16 }} />
+            <span className="sk" style={{ width: '100%', height: 56, borderRadius: 8 }} />
+            <span className="sk" style={{ width: '100%', height: 56, borderRadius: 8 }} />
+          </div>
+        </div>
+        {/* Bottom tabs skeleton */}
+        <nav className="aq-bottom-tabs">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 0' }}>
+              <span className="sk" style={{ width: 22, height: 22, borderRadius: 5 }} />
+              <span className="sk" style={{ width: 36, height: 9 }} />
+            </div>
+          ))}
+        </nav>
       </div>
     )
   }
@@ -496,10 +709,17 @@ export function DeviceDashboardPage() {
             nextFeedMinutes={status?.nextFeedMinutes}
             T={T}
           />
+          {status?.lightLux != null && sLightEnabled && (
+            <LightGauge
+              durationSeconds={lightOnSeconds}
+              isOn={(status.lightLux ?? 0) > sLightThreshold}
+              T={T}
+            />
+          )}
         </div>
 
         {/* Food supply */}
-        <div className="aq-food-section">
+        {sFoodEnabled && <div className="aq-food-section">
           <div className="aq-food-header">
             <span className="aq-food-title">{T.foodTitle}</span>
             <button
@@ -568,7 +788,7 @@ export function DeviceDashboardPage() {
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {status?.isCharging && (
           <div className="aq-alert aq-alert-charging">
@@ -582,6 +802,7 @@ export function DeviceDashboardPage() {
             {T.lowBattery}
           </div>
         )}
+
       </div>
 
       {/* Manual feed card */}
@@ -980,6 +1201,60 @@ export function DeviceDashboardPage() {
           )}
         </div>
       )}
+
+      {/* Feed journal card */}
+      <div className="aq-card">
+        <div className="aq-section-header">
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+          </div>
+          <div>
+            <div className="aq-section-title">{T.feedJournal}</div>
+            <div className="aq-section-sub">{T.feedJournalSub}</div>
+          </div>
+        </div>
+        {feedEventsError && <div className="aq-info-banner">{feedEventsError}</div>}
+        {feedEventsLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <span className="sk" style={{ width: '38%', height: 13 }} />
+                <span className="sk" style={{ width: '12%', height: 13 }} />
+                <span className="sk" style={{ width: '22%', height: 13 }} />
+              </div>
+            ))}
+          </div>
+        ) : feedEvents.length === 0 ? (
+          <div className="aq-journal-empty">{T.feedJournalEmpty}</div>
+        ) : (
+          <div className="aq-journal-table-wrap">
+            <table className="aq-journal-table">
+              <thead>
+                <tr>
+                  <th>Час</th>
+                  <th>Повторів</th>
+                  <th>Джерело</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feedEvents.map((ev) => (
+                  <tr key={ev.id}>
+                    <td>{new Date(ev.created_at).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td className="aq-journal-center">{ev.repeats}</td>
+                    <td>{T.feedJournalSource(ev.source)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </>
   )
 
@@ -1215,7 +1490,99 @@ export function DeviceDashboardPage() {
         <button className="aq-save-btn" onClick={() => void saveTimezone()}>{T.saveTimezone}</button>
       </div>
 
-      {/* 7. Account */}
+      {/* 7. Food supply toggle */}
+      <div className="aq-card">
+        <div className="aq-section-header">
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </div>
+          <div>
+            <div className="aq-section-title">{T.foodTitle}</div>
+            <div className="aq-section-sub">{T.foodSettingsSub}</div>
+          </div>
+        </div>
+        <label className="aq-toggle">
+          <input
+            type="checkbox"
+            checked={sFoodEnabled}
+            onChange={(e) => handleFoodEnabled(e.target.checked)}
+          />
+          <span className="aq-toggle-box" />
+          <span className="aq-toggle-label">
+            <svg className="aq-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+            {T.foodShowSection}
+          </span>
+        </label>
+      </div>
+
+      {/* 8. Light sensor */}
+      {status?.lightLux != null && (
+        <div className="aq-card">
+          <div className="aq-section-header">
+            <div className="aq-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            </div>
+            <div>
+              <div className="aq-section-title">{T.lightSensor}</div>
+              <div className="aq-section-sub">{T.lightSettingsSub}</div>
+            </div>
+          </div>
+
+          <label className="aq-toggle">
+            <input
+              type="checkbox"
+              checked={sLightEnabled}
+              onChange={(e) => handleLightEnabled(e.target.checked)}
+            />
+            <span className="aq-toggle-box" />
+            <span className="aq-toggle-label">
+              <svg className="aq-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+              {T.lightShowGauge}
+            </span>
+          </label>
+
+          {sLightEnabled && (
+            <div className="aq-settings-field" style={{ marginTop: 14 }}>
+              <label className="aq-settings-label">{T.lightThresholdLabel}</label>
+              <input
+                className="aq-settings-input"
+                type="number"
+                min="1"
+                max="1000"
+                value={sLightThreshold}
+                onChange={(e) => handleLightThreshold(Math.max(1, Math.min(1000, Number(e.target.value))))}
+              />
+              <p className="aq-settings-hint">{T.lightThresholdHint}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 9. Account */}
       <div className="aq-card">
         <div className="aq-section-header">
           <div className="aq-section-icon">
@@ -1238,6 +1605,137 @@ export function DeviceDashboardPage() {
       </div>
     </>
   )
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  STATS TAB
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const renderStats = () => {
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Today's live light: backend total + current in-progress session
+    const backendTodaySec = lightStats?.days.find((d) => d.date === today)?.duration_sec ?? 0
+    const todayLightSec = backendTodaySec + lightOnSeconds
+    const todayLightH = Math.floor(todayLightSec / 3600)
+    const todayLightM = Math.floor((todayLightSec % 3600) / 60)
+
+    // Light sparkline — add live session to today's bar
+    const lightSparkline = (lightStats?.days ?? []).map((d) => {
+      const sec = d.date === today ? d.duration_sec + lightOnSeconds : d.duration_sec
+      return Math.round(sec / 60)
+    })
+
+    // Shared day label helper
+    const labelStep = statsDays <= 7 ? 1 : statsDays <= 14 ? 2 : 5
+    const makeDayLabels = (dates: string[]) =>
+      dates.map((dateStr, i, arr) => {
+        const isLast = i === arr.length - 1
+        if (i % labelStep !== 0 && !isLast) return ''
+        const dt = new Date(dateStr + 'T12:00:00')
+        return statsDays <= 7
+          ? dt.toLocaleDateString('uk-UA', { weekday: 'short' })
+          : dt.toLocaleDateString('uk-UA', { day: 'numeric', month: 'numeric' })
+      })
+
+    const feedingDayLabels = makeDayLabels((deviceStats?.days ?? []).map((d) => d.date))
+    const lightDayLabels = makeDayLabels((lightStats?.days ?? []).map((d) => d.date))
+
+    const recs: string[] = []
+    const todayCount = deviceStats?.feedings_today ?? 0
+    const avg = deviceStats?.avg_feedings_per_day ?? 0
+    if (todayCount === 0) recs.push(T.recNoFeedingsToday)
+    else if (avg < 2) recs.push(T.recFeedMore)
+    if (todayCount > 5) recs.push(T.recFeedTooMuch)
+    if (todayLightSec === 0) recs.push(T.recNoLight)
+    else if (todayLightH < 8) recs.push(T.recLightTooShort)
+    else recs.push(T.recLightGood)
+    if (recs.length === 0 || (todayCount >= 2 && todayCount <= 4 && todayLightH >= 8)) recs.push(T.recAllGood)
+
+    return (
+      <>
+        {statsError && <div className="aq-info-banner">{statsError}</div>}
+        {statsLoading && (
+          <>
+            <div className="aq-stats-grid">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="aq-stats-card" style={{ gap: 8 }}>
+                  <span className="sk" style={{ width: '60%', height: 26 }} />
+                  <span className="sk" style={{ width: '80%', height: 11 }} />
+                </div>
+              ))}
+            </div>
+            <div className="aq-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span className="sk" style={{ width: '50%', height: 14 }} />
+              <span className="sk" style={{ width: '100%', height: 40, borderRadius: 4 }} />
+              <span className="sk" style={{ width: '100%', height: 12 }} />
+            </div>
+            <div className="aq-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span className="sk" style={{ width: '50%', height: 14 }} />
+              <span className="sk" style={{ width: '100%', height: 40, borderRadius: 4 }} />
+              <span className="sk" style={{ width: '100%', height: 12 }} />
+            </div>
+          </>
+        )}
+
+        {/* Summary cards */}
+        <div className="aq-stats-grid">
+          <div className="aq-stats-card">
+            <span className="aq-stats-value">{deviceStats?.feedings_today ?? '--'}</span>
+            <span className="aq-stats-label">{T.statsFeedingsToday}</span>
+          </div>
+          <div className="aq-stats-card">
+            <span className="aq-stats-value">{deviceStats?.avg_feedings_per_day ?? '--'}</span>
+            <span className="aq-stats-label">{T.statsAvgPerDay}</span>
+          </div>
+          <div className="aq-stats-card">
+            <span className="aq-stats-value">{todayLightH > 0 || todayLightM > 0 ? T.statsLightHours(todayLightH, todayLightM) : '--'}</span>
+            <span className="aq-stats-label">{T.statsLightToday}</span>
+          </div>
+        </div>
+
+        {/* Shared period selector */}
+        <div className="aq-stats-period-bar">
+          {([7, 14, 30] as const).map((d) => (
+            <button
+              key={d}
+              className={`aq-period-pill${statsDays === d ? ' active' : ''}`}
+              onClick={() => setStatsDays(d)}
+            >
+              {d}д
+            </button>
+          ))}
+        </div>
+
+        {/* Feedings chart */}
+        <div className="aq-card">
+          <div className="aq-stats-section-title">{T.statsFeedings}</div>
+          <Sparkline data={deviceStats?.feedings_sparkline ?? []} id="dev-feedings" color="#1976D2" />
+          <div className="aq-stats-days-row">
+            {feedingDayLabels.map((label, i) => <span key={i}>{label}</span>)}
+          </div>
+        </div>
+
+        {/* Light chart */}
+        {status?.lightLux != null && (
+          <div className="aq-card">
+            <div className="aq-stats-section-title">{T.statsLight}</div>
+            <Sparkline data={lightSparkline} id="dev-light" color="#D97706" />
+            <div className="aq-stats-days-row">
+              {lightDayLabels.map((label, i) => <span key={i}>{label}</span>)}
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations */}
+        <div className="aq-card">
+          <div className="aq-stats-section-title">{T.statsRecommendations}</div>
+          <ul className="aq-recs-list">
+            {recs.map((r, i) => <li key={i} className="aq-rec-item">{r}</li>)}
+          </ul>
+        </div>
+      </>
+    )
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  RENDER
@@ -1266,6 +1764,7 @@ export function DeviceDashboardPage() {
         {tab === 'home' && renderHome()}
         {tab === 'info' && renderInfo()}
         {tab === 'settings' && renderSettings()}
+        {tab === 'stats' && renderStats()}
       </div>
 
       {/* Bottom tabs */}
@@ -1283,6 +1782,13 @@ export function DeviceDashboardPage() {
         >
           <InfoIcon />
           {T.tabInfo}
+        </button>
+        <button
+          className={`aq-tab${tab === 'stats' ? ' active' : ''}`}
+          onClick={() => setTab('stats')}
+        >
+          <StatsIcon />
+          {T.tabStats}
         </button>
         <button
           className={`aq-tab${tab === 'settings' ? ' active' : ''}`}

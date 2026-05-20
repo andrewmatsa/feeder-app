@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, getApiErrorMessage } from '../services/api'
 import type { AdminDevice, AdminFeedEvent, AdminStats, AdminUser, CreateUserRequest } from '../types'
 
@@ -319,6 +319,16 @@ export function AdminPage() {
     ? users.filter((u) => u.email.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : users
 
+  const [feedSearch, setFeedSearch] = useState('')
+
+  const filteredFeedEvents = useMemo(() => {
+    const q = feedSearch.trim().toLowerCase()
+    if (!q) return feedEvents
+    return feedEvents.filter(
+      (ev) => ev.user_email.toLowerCase().includes(q) || ev.device_name.toLowerCase().includes(q),
+    )
+  }, [feedEvents, feedSearch])
+
   if (loading) {
     return (
       <section className="admin-section">
@@ -499,6 +509,16 @@ export function AdminPage() {
       {activeTab === 'feedings' && (
         <>
           {feedEventsError && <div className="admin-error-banner">{feedEventsError}</div>}
+          <div className="admin-search-row">
+            <input
+              type="search"
+              className="admin-input admin-search-input"
+              placeholder="Фільтр за email або пристроєм…"
+              value={feedSearch}
+              onChange={(e) => setFeedSearch(e.target.value)}
+            />
+          </div>
+
           <div className="admin-table-wrapper">
             <table className="admin-table">
               <thead>
@@ -511,7 +531,7 @@ export function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {feedEvents.map((ev) => (
+                {filteredFeedEvents.map((ev) => (
                   <tr key={ev.id}>
                     <td data-label="Час">{fmtActivity(ev.created_at)}</td>
                     <td data-label="Користувач" className="admin-cell-email">{ev.user_email}</td>
@@ -520,9 +540,11 @@ export function AdminPage() {
                     <td data-label="Джерело">{fmtSource(ev.source)}</td>
                   </tr>
                 ))}
-                {feedEvents.length === 0 && !feedEventsLoading && (
+                {filteredFeedEvents.length === 0 && !feedEventsLoading && (
                   <tr>
-                    <td colSpan={5} className="admin-cell-empty">Немає записів</td>
+                    <td colSpan={5} className="admin-cell-empty">
+                      {feedSearch ? 'Нічого не знайдено' : 'Немає записів'}
+                    </td>
                   </tr>
                 )}
                 {feedEventsLoading && (
