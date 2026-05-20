@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
 try:
-    from .dependencies import UserClaims, get_current_user
+    from .dependencies import UserClaims, _fetch_role, get_current_user
     from .supabase_client import get_supabase
 except ImportError:
-    from dependencies import UserClaims, get_current_user
+    from dependencies import UserClaims, _fetch_role, get_current_user
     from supabase_client import get_supabase
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -28,6 +28,7 @@ class AuthResponse(BaseModel):
     refresh_token: str
     user_id: str
     email: str
+    role: str
 
 
 class RefreshRequest(BaseModel):
@@ -37,6 +38,7 @@ class RefreshRequest(BaseModel):
 class UserResponse(BaseModel):
     user_id: str
     email: str
+    role: str
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
@@ -56,11 +58,13 @@ async def register(request: RegisterRequest):
             detail="Registration failed. Check if email confirmation is required in Supabase settings.",
         )
 
+    user_id = str(response.user.id)
     return AuthResponse(
         access_token=response.session.access_token,
         refresh_token=response.session.refresh_token,
-        user_id=str(response.user.id),
+        user_id=user_id,
         email=response.user.email,
+        role=_fetch_role(user_id),
     )
 
 
@@ -78,11 +82,13 @@ async def login(request: LoginRequest):
     if response.user is None or response.session is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
+    user_id = str(response.user.id)
     return AuthResponse(
         access_token=response.session.access_token,
         refresh_token=response.session.refresh_token,
-        user_id=str(response.user.id),
+        user_id=user_id,
         email=response.user.email,
+        role=_fetch_role(user_id),
     )
 
 
@@ -97,11 +103,13 @@ async def refresh_token(request: RefreshRequest):
     if response.user is None or response.session is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
+    user_id = str(response.user.id)
     return AuthResponse(
         access_token=response.session.access_token,
         refresh_token=response.session.refresh_token,
-        user_id=str(response.user.id),
+        user_id=user_id,
         email=response.user.email,
+        role=_fetch_role(user_id),
     )
 
 
@@ -119,4 +127,5 @@ async def me(current_user: UserClaims = Depends(get_current_user)):
     return UserResponse(
         user_id=current_user.id,
         email=current_user.email,
+        role=current_user.role,
     )

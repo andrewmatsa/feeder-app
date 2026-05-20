@@ -20,6 +20,7 @@ export interface Translations {
   repeatCount: string
   feedNow: string
   feedNowCooldown: (s: number) => string
+  feedCooldownLabel: string
   feeding: string
 
   schedule: string
@@ -185,6 +186,7 @@ const uk: Translations = {
   repeatCount: 'Кількість повторів',
   feedNow: 'Годувати зараз',
   feedNowCooldown: s => `Годувати зараз (${s} с)`,
+  feedCooldownLabel: 'Наступне годування',
   feeding: 'Годую...',
 
   schedule: 'Автоматичне годування',
@@ -350,6 +352,7 @@ const en: Translations = {
   repeatCount: 'Number of repeats',
   feedNow: 'Feed Now',
   feedNowCooldown: s => `Feed Now (${s} s)`,
+  feedCooldownLabel: 'Next feeding',
   feeding: 'Feeding...',
 
   schedule: 'Automatic Feeding',

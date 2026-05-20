@@ -8,7 +8,7 @@ class FeedRequest(BaseModel):
 
 
 class SpeedRequest(BaseModel):
-    speed: int = Field(ge=1, le=100, description="Servo speed")
+    speed: float = Field(ge=1.0, le=20.0, description="Servo speed")
 
 
 class FeedTime(BaseModel):
@@ -50,7 +50,7 @@ class TimezoneRequest(BaseModel):
 
 class StatusResponse(BaseModel):
     angle: int
-    speed: int
+    speed: float
     feedRepeats: int
     minFeedIntervalMin: int = 5
     powerSaveMode: bool

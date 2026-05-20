@@ -8,12 +8,33 @@ import httpx
 from fastapi import HTTPException
 
 try:
-    from .config import ESP32_BASE_URL
+    from .config import ESP32_BASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_URL
 except ImportError:
-    from config import ESP32_BASE_URL
+    from config import ESP32_BASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_URL
 
 http_client = httpx.AsyncClient(timeout=5.0, follow_redirects=False)
 MUTATION_HEADERS = {"X-AquaFeed-Client": "backend"}
+
+
+def get_device_base_url(device_id: str | None) -> str | None:
+    """Return the ESP32 endpoint URL stored for this device, or None to use the default."""
+    if not device_id or not SUPABASE_SERVICE_KEY or not SUPABASE_URL:
+        return None
+    try:
+        from supabase import create_client
+        client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        result = (
+            client.table("devices")
+            .select("endpoint_url")
+            .eq("id", device_id)
+            .maybe_single()
+            .execute()
+        )
+        if result.data:
+            return result.data.get("endpoint_url") or None
+    except Exception:
+        pass
+    return None
 
 
 async def request_firmware(
@@ -22,11 +43,12 @@ async def request_firmware(
     method: str = "GET",
     params: dict[str, Any] | None = None,
     data: dict[str, Any] | None = None,
+    base_url: str | None = None,
 ) -> httpx.Response:
     try:
         response = await http_client.request(
             method,
-            f"{ESP32_BASE_URL}{path}",
+            f"{base_url or ESP32_BASE_URL}{path}",
             params=params,
             data=data,
             headers=MUTATION_HEADERS if method.upper() != "GET" else None,

@@ -92,6 +92,51 @@ export interface AuthResponse {
   refresh_token: string
   user_id: string
   email: string
+  role: string
+}
+
+export interface AdminUser {
+  user_id: string
+  email: string
+  role: 'admin' | 'user'
+  created_at: string
+  device_count: number
+  last_activity: string | null
+  is_active: boolean
+}
+
+export interface AdminDevice {
+  id: string
+  name: string
+  mac_address: string | null
+  created_at: string
+  last_seen: string | null
+}
+
+export interface CreateUserRequest {
+  email: string
+  password: string
+  role: 'admin' | 'user'
+}
+
+export interface AdminStats {
+  total_users: number
+  total_devices: number
+  feedings_today: number
+  active_users_week: number
+  users_sparkline: number[]
+  devices_sparkline: number[]
+  feedings_sparkline: number[]
+  active_sparkline: number[]
+}
+
+export interface AdminFeedEvent {
+  id: string
+  created_at: string
+  source: string
+  repeats: number
+  user_email: string
+  device_name: string
 }
 
 export interface LoginRequest {

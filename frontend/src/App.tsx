@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AddDevicePage } from './pages/AddDevicePage'
+import { AdminPage } from './pages/AdminPage'
 import { DeviceDashboardPage } from './pages/DeviceDashboardPage'
 import { DevicesPage } from './pages/DevicesPage'
 import { LoginPage } from './pages/LoginPage'
@@ -21,8 +22,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/devices" replace />} />
-          <Route path="login" element={<LoginPage />} />
-          <Route path="register" element={<RegisterPage />} />
+          <Route path="login" element={<ProtectedRoute guestOnly><LoginPage /></ProtectedRoute>} />
+          <Route path="register" element={<ProtectedRoute guestOnly><RegisterPage /></ProtectedRoute>} />
           <Route
             path="devices"
             element={
@@ -44,6 +45,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DeviceDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminPage />
               </ProtectedRoute>
             }
           />

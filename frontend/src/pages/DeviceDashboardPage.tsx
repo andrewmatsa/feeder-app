@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { api, getApiErrorMessage } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { TRANSLATIONS, type Lang } from '../translations'
@@ -15,11 +15,11 @@ interface LocalFeedTime extends FeedTime {
 
 // ─── Battery gauge SVG ────────────────────────────────────────────────────────
 
-const GAUGE_R = 55
-const GAUGE_CX = 60
-const GAUGE_CY = 60
-const GAUGE_START = 210  // degrees
-const GAUGE_ARC = 300    // total sweep degrees
+const GAUGE_R = 110
+const GAUGE_CX = 130
+const GAUGE_CY = 140
+const GAUGE_START = 180
+const GAUGE_ARC = 180
 const CIRCUMFERENCE = 2 * Math.PI * GAUGE_R
 
 function describeArc(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
@@ -56,13 +56,13 @@ function BatteryGauge({ percent, isCharging, voltage, T }: BatteryGaugeProps) {
 
   return (
     <div className="aq-gauge-wrap">
-      <svg className="aq-gauge-svg" viewBox="0 0 120 100">
-        <path d={TRACK_PATH} fill="none" stroke="#e8eaed" strokeWidth="9" strokeLinecap="round" />
+      <svg className="aq-gauge-svg" viewBox="0 0 260 160">
+        <path d={TRACK_PATH} fill="none" stroke="#E6E9EF" strokeWidth="14" strokeLinecap="round" />
         <path
           d={TRACK_PATH}
           fill="none"
           stroke={color}
-          strokeWidth="9"
+          strokeWidth="14"
           strokeLinecap="round"
           strokeDasharray={`${trackLen}`}
           strokeDashoffset={offset}
@@ -72,10 +72,10 @@ function BatteryGauge({ percent, isCharging, voltage, T }: BatteryGaugeProps) {
             '--charge-target': `${offset}`,
           } as React.CSSProperties : undefined}
         />
-        <text x="60" y="58" textAnchor="middle" fontSize="18" fontWeight="700" fill="#111">{clamp}%</text>
-        <text x="60" y="73" textAnchor="middle" fontSize="10" fill="#888">{voltage.toFixed(2)}V</text>
+        <text x="130" y="130" textAnchor="middle" dominantBaseline="middle" fontSize="28" fontWeight="700" fill={color}>{clamp}%</text>
       </svg>
       <div className="aq-gauge-title">{T.batteryStatus}</div>
+      <div className="aq-gauge-sub">{T.voltageValue} {voltage.toFixed(2)} V</div>
     </div>
   )
 }
@@ -98,22 +98,21 @@ function NextFeedGauge({ nextFeedMinutes, T }: NextFeedGaugeProps) {
 
   return (
     <div className="aq-gauge-wrap">
-      <svg className="aq-gauge-svg" viewBox="0 0 120 100">
-        <path d={TRACK_PATH} fill="none" stroke="#e8eaed" strokeWidth="9" strokeLinecap="round" />
+      <svg className="aq-gauge-svg" viewBox="0 0 260 160">
+        <path d={TRACK_PATH} fill="none" stroke="#E6E9EF" strokeWidth="14" strokeLinecap="round" />
         <path
           d={TRACK_PATH}
           fill="none"
           stroke="#1976D2"
-          strokeWidth="9"
+          strokeWidth="14"
           strokeLinecap="round"
           strokeDasharray={`${trackLen}`}
           strokeDashoffset={offset}
           className="aq-gauge-fill-arc"
         />
-        <text x="60" y="55" textAnchor="middle" fontSize="11" fontWeight="700" fill="#111">{label}</text>
-        <text x="60" y="70" textAnchor="middle" fontSize="9" fill="#888">{T.untilNextFeed}</text>
+        <text x="130" y="130" textAnchor="middle" dominantBaseline="middle" fontSize="28" fontWeight="600" fill="#1976D2">{label}</text>
       </svg>
-      <div className="aq-gauge-title">{T.schedule}</div>
+      <div className="aq-gauge-title">{T.untilNextFeed}</div>
     </div>
   )
 }
@@ -185,8 +184,15 @@ export function DeviceDashboardPage() {
 
   // ── Feed ──────────────────────────────────────────────────────────────────
   const [feeding, setFeeding] = useState(false)
-  const [feedRepeats, setFeedRepeats] = useState(1)
+  const [feedRepeats, setFeedRepeats] = useState<number>(() =>
+    Number(localStorage.getItem(`aq_feed_repeats_${deviceId}`) || 1)
+  )
   const [cooldown, setCooldown] = useState(0)
+
+  const updateFeedRepeats = useCallback((n: number) => {
+    setFeedRepeats(n)
+    localStorage.setItem(`aq_feed_repeats_${deviceId}`, String(n))
+  }, [deviceId])
 
   // ── Schedule ──────────────────────────────────────────────────────────────
   const [localSchedule, setLocalSchedule] = useState<LocalFeedTime[]>([])
@@ -207,9 +213,10 @@ export function DeviceDashboardPage() {
   const [sTimezone, setSTimezone] = useState(2)
   const settingsInited = useRef(false)
 
-  // ── Servo (tracked from status but not surfaced in UI on this page) ────────
-  const [_angle, setAngle] = useState(90)
-  const [_speed, setSpeed] = useState(50)
+  // ── Servo ─────────────────────────────────────────────────────────────────
+  const [sAngle, setSAngle] = useState(90)
+  const [sSpeed, setSSpeed] = useState(20)
+  const angleDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Food ──────────────────────────────────────────────────────────────────
   const [foodTotalG, setFoodTotalG] = useState<number>(() => Number(localStorage.getItem('aq_food_total') || 0))
@@ -238,7 +245,7 @@ export function DeviceDashboardPage() {
   // ─── Fetch status ──────────────────────────────────────────────────────────
   const fetchStatus = useCallback(async () => {
     try {
-      const data = await api.getStatus()
+      const data = await api.getStatus(deviceId)
       setStatus(data)
 
       if (!scheduleEdited.current) {
@@ -247,8 +254,8 @@ export function DeviceDashboardPage() {
         )
       }
 
-      setAngle(data.angle)
-      setSpeed(data.speed)
+      setSAngle(data.angle)
+      setSSpeed(Number(data.speed))
 
       if (!settingsInited.current) {
         setSDeepSleep(data.deepSleepIdleSec)
@@ -256,10 +263,16 @@ export function DeviceDashboardPage() {
         setSDisplayOff(data.displayOffAfterSec)
         setSPowerSave(data.powerSaveMode)
         setSMinInterval(data.minFeedIntervalMin)
+        if (!localStorage.getItem(`aq_feed_repeats_${deviceId}`)) {
+          setFeedRepeats(data.feedRepeats)
+        }
         settingsInited.current = true
       }
 
-      setCooldown(data.manualFeedCooldownSeconds > 0 ? data.manualFeedCooldownSeconds : 0)
+      setCooldown((prev) => {
+        const backend = data.manualFeedCooldownSeconds > 0 ? data.manualFeedCooldownSeconds : 0
+        return backend > prev ? backend : prev
+      })
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load status'))
     } finally {
@@ -291,8 +304,9 @@ export function DeviceDashboardPage() {
     try {
       setFeeding(true)
       showToast(T.toastFeeding)
-      await api.feedNow({ repeats: feedRepeats })
+      await api.feedNow({ repeats: feedRepeats }, deviceId)
       showToast(T.toastFed)
+      setCooldown(sMinInterval * 60)
       setTimeout(() => {
         setFeeding(false)
         void fetchStatus()
@@ -327,7 +341,7 @@ export function DeviceDashboardPage() {
     try {
       await api.setSchedule({
         times: localSchedule.map((ft) => ({ hour: ft.hour, minute: ft.minute, repeats: ft.repeats })),
-      })
+      }, deviceId)
       showToast(T.toastScheduleSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -342,7 +356,7 @@ export function DeviceDashboardPage() {
         deepSleepIdleSec: sDeepSleep,
         displayEnabled: sDisplayEnabled,
         displayOffAfterSec: sDisplayOff,
-      })
+      }, deviceId)
       showToast(T.toastSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -351,7 +365,7 @@ export function DeviceDashboardPage() {
 
   const saveMinInterval = async () => {
     try {
-      await api.setMinInterval({ minFeedIntervalMin: sMinInterval })
+      await api.setMinInterval({ minFeedIntervalMin: sMinInterval }, deviceId)
       showToast(T.toastIntervalSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -365,7 +379,7 @@ export function DeviceDashboardPage() {
       return
     }
     try {
-      await api.calibrateBattery({ actualVoltage: v })
+      await api.calibrateBattery({ actualVoltage: v }, deviceId)
       showToast(T.toastCalibDone)
     } catch {
       showToast(T.toastCalibError)
@@ -374,8 +388,40 @@ export function DeviceDashboardPage() {
 
   const saveTimezone = async () => {
     try {
-      await api.setTimezone({ offsetHours: sTimezone })
+      await api.setTimezone({ offsetHours: sTimezone }, deviceId)
       showToast(T.toastTimezoneSaved)
+    } catch {
+      showToast(T.toastSaveError)
+    }
+  }
+
+  const sendAngle = useCallback((angle: number, notify: boolean) => {
+    api.setAngle({ angle }, deviceId)
+      .then(() => { if (notify) showToast(T.toastSaved) })
+      .catch(() => { if (notify) showToast(T.toastSaveError) })
+  }, [deviceId, T])
+
+  const handleAngleChange = (value: number) => {
+    setSAngle(value)
+    if (angleDebounce.current) clearTimeout(angleDebounce.current)
+    angleDebounce.current = setTimeout(() => {
+      angleDebounce.current = null
+      sendAngle(value, false)
+    }, 150)
+  }
+
+  const handleAngleCommit = (value: number) => {
+    if (angleDebounce.current) {
+      clearTimeout(angleDebounce.current)
+      angleDebounce.current = null
+    }
+    sendAngle(value, true)
+  }
+
+  const saveSpeed = async () => {
+    try {
+      await api.setSpeed({ speed: sSpeed }, deviceId)
+      showToast(T.toastSaved)
     } catch {
       showToast(T.toastSaveError)
     }
@@ -413,8 +459,9 @@ export function DeviceDashboardPage() {
     : { months: 0, days: 0 }
 
   // ─── Uptime ────────────────────────────────────────────────────────────────
-  const uptimeH = status ? Math.floor(status.deepSleepIdleSec / 3600) : 0
-  const uptimeM = status ? Math.floor((status.deepSleepIdleSec % 3600) / 60) : 0
+  const uptimeSec = status?.uptimeSeconds ?? 0
+  const uptimeH = Math.floor(uptimeSec / 3600)
+  const uptimeM = Math.floor((uptimeSec % 3600) / 60)
 
   // ─── Guard ────────────────────────────────────────────────────────────────
   if (!deviceId) {
@@ -483,13 +530,8 @@ export function DeviceDashboardPage() {
                     : T.foodNoSchedule}
                 </span>
               </div>
-              {feedTimesPerDay > 0 && (
-                <div className="aq-food-hint">{T.foodFeedingsPerDay(feedTimesPerDay)}</div>
-              )}
             </>
-          ) : (
-            <div className="aq-food-hint">{T.foodNotSet}</div>
-          )}
+          ) : null}
 
           {foodFormOpen && (
             <div className="aq-food-form">
@@ -562,28 +604,35 @@ export function DeviceDashboardPage() {
           <div className="aq-stepper">
             <button
               className="aq-stepper-btn"
-              onClick={() => setFeedRepeats((r) => Math.max(1, r - 1))}
+              onClick={() => updateFeedRepeats(Math.max(1, feedRepeats - 1))}
               disabled={feedRepeats <= 1}
             >−</button>
             <span className="aq-stepper-val">{feedRepeats}</span>
             <button
               className="aq-stepper-btn"
-              onClick={() => setFeedRepeats((r) => Math.min(10, r + 1))}
+              onClick={() => updateFeedRepeats(Math.min(10, feedRepeats + 1))}
               disabled={feedRepeats >= 10}
             >+</button>
           </div>
         </div>
 
         <button
-          className={`aq-feed-btn${feeding ? ' is-feeding' : ''}`}
+          className={`aq-feed-btn${feeding ? ' is-feeding' : ''}${cooldown > 0 ? ' is-cooldown' : ''}`}
           onClick={() => void handleFeed()}
           disabled={feeding || cooldown > 0}
         >
-          {feeding
-            ? T.feeding
-            : cooldown > 0
-              ? T.feedNowCooldown(cooldown)
-              : T.feedNow}
+          {feeding ? (
+            T.feeding
+          ) : cooldown > 0 ? (
+            <>
+              <span className="aq-feed-btn-cooldown-time">
+                {String(Math.floor(cooldown / 60)).padStart(2, '0')}:{String(cooldown % 60).padStart(2, '0')}
+              </span>
+              <span className="aq-feed-btn-cooldown-label">{T.feedCooldownLabel}</span>
+            </>
+          ) : (
+            T.feedNow
+          )}
         </button>
       </div>
 
@@ -617,16 +666,27 @@ export function DeviceDashboardPage() {
           {localSchedule.map((ft, idx) => (
             <div className="aq-feed-block" key={idx}>
               <div className="aq-feed-time-col">
-                <input
-                  className="aq-time-input"
-                  type="time"
-                  value={`${String(ft.hour).padStart(2, '0')}:${String(ft.minute).padStart(2, '0')}`}
-                  onChange={(e) => {
-                    const [h, m] = e.target.value.split(':').map(Number)
-                    updateFeedTime(idx, 'hour', h)
-                    updateFeedTime(idx, 'minute', m)
-                  }}
-                />
+                <div className="aq-time-custom">
+                  <select
+                    className="aq-time-part"
+                    value={ft.hour}
+                    onChange={(e) => updateFeedTime(idx, 'hour', Number(e.target.value))}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                  <span className="aq-time-sep">:</span>
+                  <select
+                    className="aq-time-part"
+                    value={ft.minute}
+                    onChange={(e) => updateFeedTime(idx, 'minute', Number(e.target.value))}
+                  >
+                    {Array.from({ length: 60 }, (_, i) => (
+                      <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="aq-feed-center">
                 <div className="aq-feed-field">
@@ -666,12 +726,63 @@ export function DeviceDashboardPage() {
         <button className="aq-add-btn" onClick={addFeedTime}>{T.addFeeding}</button>
         <button className="aq-save-btn" onClick={() => void saveSchedule()}>{T.saveAllTimes}</button>
       </div>
+
+      {/* Servo card */}
+      <div className="aq-card">
+        <div className="aq-section-header">
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24">
+              <line x1="8" y1="5" x2="8" y2="19" />
+              <line x1="16" y1="5" x2="16" y2="19" />
+              <circle cx="8" cy="10" r="2.5" />
+              <circle cx="16" cy="14" r="2.5" />
+            </svg>
+          </div>
+          <div>
+            <div className="aq-section-title">{T.manualControl}</div>
+            <div className="aq-section-sub">{T.manualControlSub}</div>
+          </div>
+        </div>
+
+        <div className="aq-settings-field">
+          <label className="aq-settings-label">{T.servoAngle(sAngle)}</label>
+          <input
+            className="aq-servo-slider"
+            type="range"
+            min="0"
+            max="180"
+            value={sAngle}
+            onChange={(e) => handleAngleChange(Number(e.target.value))}
+            onMouseUp={(e) => handleAngleCommit(Number((e.target as HTMLInputElement).value))}
+            onTouchEnd={(e) => handleAngleCommit(Number((e.target as HTMLInputElement).value))}
+          />
+        </div>
+
+        <div className="aq-settings-field" style={{ marginTop: 16 }}>
+          <label className="aq-settings-label">{T.servoSpeed(sSpeed)}</label>
+          <input
+            className="aq-servo-slider"
+            type="range"
+            min="1"
+            max="20"
+            step="0.1"
+            value={sSpeed}
+            onChange={(e) => setSSpeed(Number(e.target.value))}
+          />
+        </div>
+
+        <button className="aq-save-btn" style={{ marginTop: 14 }} onClick={() => void saveSpeed()}>
+          {T.saveSpeed}
+        </button>
+      </div>
     </>
   )
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  INFO TAB
   // ═══════════════════════════════════════════════════════════════════════════
+
+  const toKB = (bytes: number) => `${(bytes / 1024).toFixed(2)} KB`
 
   const renderInfo = () => (
     <>
@@ -705,7 +816,7 @@ export function DeviceDashboardPage() {
         </div>
       </div>
 
-      {/* Battery/device info card */}
+      {/* Battery card */}
       <div className="aq-card">
         <div className="aq-section-header">
           <div className="aq-section-icon">
@@ -727,9 +838,49 @@ export function DeviceDashboardPage() {
           <span>{T.percentValue}</span>
           <span>{status?.batteryPercent}%</span>
         </div>
+        <div className="aq-info-row">
+          <span>{T.isCharging}</span>
+          <span>{status?.isCharging ? T.on : T.off}</span>
+        </div>
       </div>
 
-      {/* System info card */}
+      {/* Settings summary card */}
+      <div className="aq-card">
+        <div className="aq-section-header">
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </div>
+          <div>
+            <div className="aq-section-title">{T.manualControl}</div>
+            <div className="aq-section-sub">{T.manualControlSub}</div>
+          </div>
+        </div>
+        <div className="aq-info-row">
+          <span>{T.servoSpeedLabel}</span>
+          <span>{status?.speed}</span>
+        </div>
+        <div className="aq-info-row">
+          <span>{T.feedRepeatsLabel}</span>
+          <span>{feedRepeats}</span>
+        </div>
+        <div className="aq-info-row">
+          <span>{T.scheduleCountLabel}</span>
+          <span>{localSchedule.length}</span>
+        </div>
+        <div className="aq-info-row">
+          <span>{T.powerSaveLabel}</span>
+          <span>{status?.powerSaveMode ? T.on : T.off}</span>
+        </div>
+        <div className="aq-info-row">
+          <span>{T.oledLabel}</span>
+          <span>{status?.displayEnabled ? T.on : T.off}</span>
+        </div>
+      </div>
+
+      {/* System card */}
       <div className="aq-card">
         <div className="aq-section-header">
           <div className="aq-section-icon">
@@ -754,15 +905,81 @@ export function DeviceDashboardPage() {
             <span className="aq-mono">{status.currentTime}</span>
           </div>
         )}
-        <div className="aq-info-row">
-          <span>{T.powerSaveLabel}</span>
-          <span>{status?.powerSaveMode ? T.on : T.off}</span>
-        </div>
-        <div className="aq-info-row">
-          <span>{T.oledLabel}</span>
-          <span>{status?.displayEnabled ? T.on : T.off}</span>
-        </div>
+        {status?.cpuFrequency != null && (
+          <div className="aq-info-row">
+            <span>{T.cpuFreq}</span>
+            <span>{status.cpuFrequency} MHz</span>
+          </div>
+        )}
       </div>
+
+      {/* Memory & Cache card */}
+      {status?.memoryTotalHeap != null && (
+        <div className="aq-card">
+          <div className="aq-section-header">
+            <div className="aq-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9" y1="9" x2="15" y2="9" />
+                <line x1="9" y1="12" x2="15" y2="12" />
+                <line x1="9" y1="15" x2="13" y2="15" />
+              </svg>
+            </div>
+            <div>
+              <div className="aq-section-title">{T.memoryInfo}</div>
+              <div className="aq-section-sub">{T.memoryInfoSub}</div>
+            </div>
+          </div>
+          {status.memoryFreeHeap != null && (
+            <div className="aq-info-row">
+              <span>{T.freeMemory}</span>
+              <span>{toKB(status.memoryFreeHeap)}</span>
+            </div>
+          )}
+          {status.memoryUsedHeap != null && (
+            <div className="aq-info-row">
+              <span>{T.usedMemory}</span>
+              <span>{toKB(status.memoryUsedHeap)}</span>
+            </div>
+          )}
+          {status.memoryTotalHeap != null && (
+            <div className="aq-info-row">
+              <span>{T.totalMemory}</span>
+              <span>{toKB(status.memoryTotalHeap)}</span>
+            </div>
+          )}
+          {status.memoryMaxAllocHeap != null && (
+            <div className="aq-info-row">
+              <span>{T.maxBlock}</span>
+              <span>{toKB(status.memoryMaxAllocHeap)}</span>
+            </div>
+          )}
+          {status.memoryMinFreeHeap != null && (
+            <div className="aq-info-row">
+              <span>{T.minFree}</span>
+              <span>{toKB(status.memoryMinFreeHeap)}</span>
+            </div>
+          )}
+          {status.cacheSize != null && (
+            <div className="aq-info-row">
+              <span>{T.cacheSizeLabel}</span>
+              <span>{toKB(status.cacheSize)}</span>
+            </div>
+          )}
+          {status.cacheAge != null && (
+            <div className="aq-info-row">
+              <span>{T.cacheAgeLabel}</span>
+              <span>{status.cacheAge} ms</span>
+            </div>
+          )}
+          {status.cacheValid != null && (
+            <div className="aq-info-row">
+              <span>{T.cacheStatusLabel}</span>
+              <span>{status.cacheValid ? T.cacheActive : T.cacheInactive}</span>
+            </div>
+          )}
+        </div>
+      )}
     </>
   )
 
@@ -837,37 +1054,43 @@ export function DeviceDashboardPage() {
           </div>
         </div>
 
-        <label className="aq-checkbox-row">
-          <span>{T.powerSaveToggle}</span>
-          <input
-            type="checkbox"
-            className="aq-checkbox"
-            checked={sPowerSave}
-            onChange={(e) => setSPowerSave(e.target.checked)}
-          />
+        <label className="aq-toggle">
+          <input type="checkbox" checked={sPowerSave} onChange={(e) => setSPowerSave(e.target.checked)} />
+          <span className="aq-toggle-box" />
+          <span className="aq-toggle-label">
+            <svg className="aq-toggle-icon" viewBox="0 0 24 24">
+              <path d="M13 2L6 13h5l-1 9 8-12h-5l0-8z" />
+            </svg>
+            {T.powerSaveToggle}
+          </span>
         </label>
         <p className="aq-settings-hint">{T.powerSaveHint}</p>
 
-        <div className="aq-settings-field">
-          <label className="aq-settings-label">{T.deepSleepLabel}</label>
-          <input
-            className="aq-settings-input"
-            type="number"
-            min="10"
-            max="3600"
-            value={sDeepSleep}
-            onChange={(e) => setSDeepSleep(Number(e.target.value))}
-          />
-        </div>
+        {sPowerSave && (
+          <div className="aq-settings-field">
+            <label className="aq-settings-label">{T.deepSleepLabel}</label>
+            <input
+              className="aq-settings-input"
+              type="number"
+              min="10"
+              max="3600"
+              value={sDeepSleep}
+              onChange={(e) => setSDeepSleep(Number(e.target.value))}
+            />
+          </div>
+        )}
 
-        <label className="aq-checkbox-row" style={{ marginTop: 12 }}>
-          <span>{T.oledToggle}</span>
-          <input
-            type="checkbox"
-            className="aq-checkbox"
-            checked={sDisplayEnabled}
-            onChange={(e) => setSDisplayEnabled(e.target.checked)}
-          />
+        <label className="aq-toggle">
+          <input type="checkbox" checked={sDisplayEnabled} onChange={(e) => setSDisplayEnabled(e.target.checked)} />
+          <span className="aq-toggle-box" />
+          <span className="aq-toggle-label">
+            <svg className="aq-toggle-icon" viewBox="0 0 24 24">
+              <rect x="3.5" y="5.5" width="17" height="11" rx="2" />
+              <path d="M9 19h6" />
+              <path d="M12 16.5v2.5" />
+            </svg>
+            {T.oledToggle}
+          </span>
         </label>
         <p className="aq-settings-hint">{T.oledHint}</p>
 
@@ -1030,8 +1253,7 @@ export function DeviceDashboardPage() {
 
       {/* Device mini-header */}
       <div style={{ padding: '10px 12px 0', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-        <Link to="/devices" className="back-link">← Мої акваріуми</Link>
-        {device && (
+{device && (
           <div style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', marginBottom: 4 }}>
             {device.name}
           </div>
