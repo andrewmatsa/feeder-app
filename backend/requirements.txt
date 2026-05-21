@@ -5,3 +5,4 @@ pydantic[email]==2.5.0
 pydantic-settings==2.1.0
 supabase>=2.15.0
 httpx>=0.26.0
+python-multipart>=0.0.9
