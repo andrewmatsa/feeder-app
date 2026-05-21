@@ -60,7 +60,7 @@ private:
   int lastFedHour;
   int lastFedMinute;
   long long lastFedEpochMinute;
-  long long lastScheduledFeedEpochMinute;
+  long long lastSchedEpMinute;
   int minFeedIntervalMinutes;
   Preferences* preferencesRef;
   static int timezoneOffsetMinutes;

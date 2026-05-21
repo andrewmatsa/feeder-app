@@ -2,6 +2,7 @@
 #define SERVO_CONTROLLER_H
 
 #include <ESP32Servo.h>
+#include <functional>
 
 class ServoController {
 public:
@@ -14,9 +15,10 @@ public:
   int getCurrentAngle() const { return currentAngle; }
   bool isMoving() const { return manualMoving; }
   void setMoving(bool moving) { manualMoving = moving; }
-  
+
   void feedSequence(int repeats = 1);
-  
+  void feedSequenceAsync(int repeats, std::function<void()> onDone = nullptr);
+
 private:
   Servo servo;
   int pin;
@@ -31,6 +33,13 @@ private:
   void moveServoSmooth(int target);
   void moveServoFast(int target);
   int speedToStepDelayMs(float sliderSpeed);
+
+  struct FeedTaskParams {
+    ServoController* self;
+    int repeats;
+    std::function<void()> onDone;
+  };
+  static void feedTask(void* params);
 };
 
 #endif

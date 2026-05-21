@@ -16,7 +16,7 @@ DeviceRuntime::DeviceRuntime(ApiHandlers& apiHandlers,
 
 bool DeviceRuntime::tryRunFeedSequence(int repeats, const char* blockedMessage, bool showDisplay) {
   if (!scheduler.canFeedNow()) {
-    Serial.println(blockedMessage);
+    Serial.printf("[FEED] Blocked: %s\n", blockedMessage);
     return false;
   }
 
@@ -27,8 +27,11 @@ bool DeviceRuntime::tryRunFeedSequence(int repeats, const char* blockedMessage, 
     oled.update(feedDisplayData);
   }
 
-  servo.feedSequence(repeats);
-  scheduler.recordManualFeed();
+  Serial.printf("[FEED] Button feed: %d repeat(s)\n", repeats);
+  servo.feedSequenceAsync(repeats, [this]() {
+    Serial.println("[FEED] Button feed complete");
+    scheduler.recordManualFeed();
+  });
   return true;
 }
 

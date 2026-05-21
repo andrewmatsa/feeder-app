@@ -19,6 +19,7 @@
 const int SERVO_PIN = 4;
 const int BUTTON_PIN = 3;
 const int BATTERY_PIN = 2; // ⚡ MH Electronic Voltage Sensor (VOUT)
+const int LIGHT_PIN = 5;   // LDR voltage divider: 3.3V → LDR → GPIO5 → 10kΩ → GND
 const int OLED_SDA_PIN = 6;
 const int OLED_SCL_PIN = 7;
 
@@ -28,7 +29,7 @@ WebServer server(80);
 ServoController servo(SERVO_PIN, 0, 180);
 BatteryMonitor battery(BATTERY_PIN);
 FeedingScheduler scheduler;
-ApiHandlers apiHandlers(server, preferences, servo, battery, scheduler);
+ApiHandlers apiHandlers(server, preferences, servo, battery, scheduler, LIGHT_PIN);
 OledDisplay oled(OLED_SDA_PIN, OLED_SCL_PIN);
 DeviceRuntime deviceRuntime(apiHandlers, scheduler, servo, battery, oled);
 PowerManager powerManager(apiHandlers, scheduler, servo, oled, BUTTON_PIN);
@@ -38,7 +39,9 @@ bool lastButtonState = HIGH;
 uint32_t buttonPressStartMs = 0;
 
 void performAutoFeeding(int repeats) {
-  servo.feedSequence(repeats);
+  servo.feedSequenceAsync(repeats, []() {
+    Serial.println("[SCHED] Auto feed complete");
+  });
   powerManager.markInteraction();
 }
 
@@ -52,6 +55,7 @@ void printStartupBanner() {
 void initializeHardwareModules() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   lastButtonState = digitalRead(BUTTON_PIN);
+  pinMode(LIGHT_PIN, INPUT);
 
   Serial.println("Initializing battery monitor...");
   battery.begin();
@@ -161,18 +165,21 @@ void handleManualButtonPress() {
 
   if (lastButtonState == LOW && buttonState == HIGH) {
     uint32_t pressDuration = millis() - buttonPressStartMs;
-    if (pressDuration >= 3000) {
-      // Long press (≥3s) — enter AP mode to allow WiFi reconfiguration
+    Serial.printf("[BTN] Released after %ums\n", pressDuration);
+    if (pressDuration >= 5000) {
+      Serial.println("[BTN] Long press → entering AP mode");
       powerManager.markInteraction();
       startAPMode();
     } else if (!servo.isMoving()) {
-      // Short press — manual feed
+      Serial.println("[BTN] Short press → manual feed");
       powerManager.markInteraction();
       deviceRuntime.tryRunFeedSequence(
         apiHandlers.getFeedRepeats(),
         "Manual button feed blocked: recently fed",
         true
       );
+    } else {
+      Serial.println("[BTN] Short press ignored — servo already moving");
     }
     buttonPressStartMs = 0;
   }
@@ -217,6 +224,16 @@ void loop(){
   static uint32_t lastLoopMs = 0;
   if (millis() - lastLoopMs < 20) return;
   lastLoopMs = millis();
+
+  static uint32_t lastStatusLogMs = 0;
+  if (millis() - lastStatusLogMs > 30000) {
+    lastStatusLogMs = millis();
+    Serial.printf("[STATUS] Battery: %.2fV (%d%%) | WiFi: %s | IP: %s\n",
+      battery.getVoltage(), battery.getPercent(),
+      WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "disconnected",
+      isAPMode ? WiFi.softAPIP().toString().c_str() : WiFi.localIP().toString().c_str()
+    );
+  }
 
   server.handleClient();
   updateWiFiProvisioning();

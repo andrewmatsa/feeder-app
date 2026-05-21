@@ -430,7 +430,7 @@ export function DeviceDashboardPage() {
       }
 
       setSAngle(data.angle)
-      setSSpeed(Number(data.speed))
+      if (!speedDirty) setSSpeed(Number(data.speed))
 
       if (!settingsInited.current) {
         setSDeepSleep(data.deepSleepIdleSec)
@@ -618,15 +618,7 @@ export function DeviceDashboardPage() {
     angleDebounce.current = setTimeout(() => {
       angleDebounce.current = null
       sendAngle(value, false)
-    }, 150)
-  }
-
-  const handleAngleCommit = (value: number) => {
-    if (angleDebounce.current) {
-      clearTimeout(angleDebounce.current)
-      angleDebounce.current = null
-    }
-    sendAngle(value, true)
+    }, 50)
   }
 
   const saveSpeed = async () => {
@@ -1029,8 +1021,6 @@ export function DeviceDashboardPage() {
             max="180"
             value={sAngle}
             onChange={(e) => handleAngleChange(Number(e.target.value))}
-            onMouseUp={(e) => handleAngleCommit(Number((e.target as HTMLInputElement).value))}
-            onTouchEnd={(e) => handleAngleCommit(Number((e.target as HTMLInputElement).value))}
           />
         </div>
 
@@ -1039,9 +1029,9 @@ export function DeviceDashboardPage() {
           <input
             className="aq-servo-slider"
             type="range"
-            min="1"
+            min="10"
             max="20"
-            step="0.1"
+            step="0.5"
             value={sSpeed}
             onChange={(e) => { setSSpeed(Number(e.target.value)); setSpeedDirty(true) }}
           />
@@ -1875,7 +1865,7 @@ export function DeviceDashboardPage() {
             <div className="aq-offline-steps">
               <div className="aq-offline-step">
                 <span className="aq-offline-step-num">1</span>
-                <span>{lang === 'uk' ? 'Підключіться до WiFi:' : 'Connect to WiFi:'} <strong>FishFeeder-XXXX</strong></span>
+                <span>{lang === 'uk' ? 'Підключіться до WiFi:' : 'Connect to WiFi:'} <strong>FishFeeder-XXXX</strong> {lang === 'uk' ? '(пароль:' : '(password:'} <strong>12345678</strong>)</span>
               </div>
               <div className="aq-offline-step">
                 <span className="aq-offline-step-num">2</span>

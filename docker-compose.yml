@@ -7,8 +7,8 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      MOCK_DEVICE: ${MOCK_DEVICE:-true}
-      ESP32_BASE_URL: ${ESP32_BASE_URL:-http://host.docker.internal}
+      MOCK_DEVICE: ${MOCK_DEVICE:-false}
+      ESP32_BASE_URL: ${ESP32_BASE_URL:-http://192.168.0.205}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     extra_hosts:
       - "host.docker.internal:host-gateway"

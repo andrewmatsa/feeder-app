@@ -8,7 +8,7 @@ class FeedRequest(BaseModel):
 
 
 class SpeedRequest(BaseModel):
-    speed: float = Field(ge=1.0, le=20.0, description="Servo speed")
+    speed: float = Field(ge=10.0, le=20.0, description="Servo speed")
 
 
 class FeedTime(BaseModel):

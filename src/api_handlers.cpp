@@ -7,9 +7,9 @@
 
 ApiHandlers::ApiHandlers(WebServer& server, Preferences& preferences,
                          ServoController& servo, BatteryMonitor& battery,
-                         FeedingScheduler& scheduler)
+                         FeedingScheduler& scheduler, int lightPin)
   : server(server), preferences(preferences),
-    servo(servo), battery(battery), scheduler(scheduler),
+    servo(servo), battery(battery), scheduler(scheduler), lightPin(lightPin),
     powerSaveMode(true), displayEnabled(true),
     displayOffAfterSec(20),
     deepSleepIdleSec(300),
@@ -146,6 +146,12 @@ void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
   doc["batteryCalibration"] = battery.getCalibrationFactor();
   doc["isCharging"] = battery.isCharging();
 
+  if (lightPin >= 0) {
+    // Average 4 readings to reduce noise; map 0-4095 ADC to 0-1000 lux-like scale
+    int raw = (analogRead(lightPin) + analogRead(lightPin) + analogRead(lightPin) + analogRead(lightPin)) / 4;
+    doc["lightLux"] = map(raw, 0, 4095, 0, 1000);
+  }
+
   appendFeedTimes(doc["feedTimes"].to<JsonArray>());
   appendRuntimeStatus(doc, nextFeed);
   appendMemoryStatus(doc);
@@ -182,7 +188,7 @@ void ApiHandlers::handleSetAngle() {
   if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("angle") && !servo.isMoving()) {
-    servo.setAngle(server.arg("angle").toInt(), false);
+    servo.setAngle(server.arg("angle").toInt(), true);
     invalidateCache();
   }
   server.send(200, "text/plain", "ok");
@@ -196,14 +202,18 @@ void ApiHandlers::handleFeedNow() {
     repeatsForFeed = constrain(server.arg("repeats").toInt(), 1, 20);
   }
   if (!scheduler.canFeedNow()) {
+    Serial.println("[FEED] Blocked: recently fed (cooldown active)");
     server.send(429, "text/plain", "feeding blocked: recently fed");
     return;
   }
 
+  Serial.printf("[FEED] Starting feed sequence: %d repeat(s)\n", repeatsForFeed);
   server.send(200, "text/plain", "feeding");
-  servo.feedSequence(repeatsForFeed);
-  scheduler.recordManualFeed();
-  invalidateCache();
+  servo.feedSequenceAsync(repeatsForFeed, [this]() {
+    Serial.println("[FEED] Feed sequence complete");
+    scheduler.recordManualFeed();
+    invalidateCache();
+  });
 }
 
 void ApiHandlers::handleSetSpeed() {
@@ -211,6 +221,7 @@ void ApiHandlers::handleSetSpeed() {
   noteClientActivity();
   if(server.hasArg("speed")) {
     float speed = server.arg("speed").toFloat();
+    Serial.printf("[SPEED] Set to %.1f\n", speed);
     servo.setSpeed(speed);
     preferences.putFloat("speed", speed);
     invalidateCache();
