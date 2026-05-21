@@ -9,7 +9,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    from .admin import router as admin_router
+    from .admin import router as admin_router, simulated_offline_devices
     from .auth import router as auth_router
     from .devices import router as devices_router
     from .mock_realtime import mock_record_feed, mock_touch_last_seen
@@ -36,7 +36,7 @@ try:
         TimezoneRequest,
     )
 except ImportError:
-    from admin import router as admin_router
+    from admin import router as admin_router, simulated_offline_devices
     from auth import router as auth_router
     from devices import router as devices_router
     from mock_realtime import mock_record_feed, mock_touch_last_seen
@@ -109,6 +109,8 @@ async def get_status(
     current_user: UserClaims = Depends(get_current_user),
     device_id: str | None = None,
 ):
+    if device_id and device_id in simulated_offline_devices:
+        raise HTTPException(status_code=503, detail="Device offline (simulated)")
     if MOCK_DEVICE:
         mock_touch_last_seen(current_user.id, device_id)
         return mock_status(device_id)
@@ -259,6 +261,20 @@ async def set_timezone(
         base_url=get_device_base_url(device_id),
     )
     return CommandResponse(success=True, message=f"Timezone set to UTC{request.offsetHours:+d}")
+
+
+@app.post("/api/forget-wifi", response_model=CommandResponse)
+async def forget_wifi(
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
+    if MOCK_DEVICE:
+        return CommandResponse(success=True, message="WiFi credentials cleared (mock)")
+    await request_firmware(
+        "/api/forgetWiFi", method="POST",
+        base_url=get_device_base_url(device_id),
+    )
+    return CommandResponse(success=True, message="WiFi credentials cleared")
 
 
 if __name__ == "__main__":

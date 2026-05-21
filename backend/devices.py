@@ -7,10 +7,12 @@ try:
     from .config import SUPABASE_SERVICE_KEY, SUPABASE_URL
     from .dependencies import UserClaims, get_bearer_token, get_current_user
     from .device_service import DeviceRecord, DeviceService, build_device_service
+    from .admin import simulated_offline_devices
 except ImportError:
     from config import SUPABASE_SERVICE_KEY, SUPABASE_URL
     from dependencies import UserClaims, get_bearer_token, get_current_user
     from device_service import DeviceRecord, DeviceService, build_device_service
+    from admin import simulated_offline_devices
 
 router = APIRouter(prefix="/api/v1/devices", tags=["devices"])
 
@@ -37,12 +39,15 @@ class UpdateDeviceRequest(BaseModel):
 
 
 def _to_response(record: DeviceRecord) -> DeviceResponse:
+    last_seen = None if record.id in simulated_offline_devices else (
+        record.last_seen.isoformat() if record.last_seen else None
+    )
     return DeviceResponse(
         id=record.id,
         name=record.name,
         macAddress=record.mac_address,
         createdAt=record.created_at.isoformat(),
-        lastSeen=record.last_seen.isoformat() if record.last_seen else None,
+        lastSeen=last_seen,
     )
 
 

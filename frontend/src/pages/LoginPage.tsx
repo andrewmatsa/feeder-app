@@ -1,10 +1,19 @@
-﻿import { FormEvent, useState } from 'react'
+import { FormEvent, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { api } from '../services/api'
 import { useAuthStore } from '../store/authStore'
+import { useUiStore } from '../store/uiStore'
+
+const T = {
+  uk: { title: 'Вхід', password: 'Пароль', submit: 'Увійти', submitting: 'Входимо…', error: 'Помилка входу', noAccount: 'Немає акаунта?', register: 'Зареєструватися' },
+  en: { title: 'Sign in', password: 'Password', submit: 'Sign in', submitting: 'Signing in…', error: 'Login error', noAccount: 'No account?', register: 'Register' },
+}
 
 export function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const lang = useUiStore(s => s.lang)
+  const t = T[lang] ?? T.uk
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/devices'
@@ -24,9 +33,14 @@ export function LoginPage() {
     setError(null)
     try {
       await login({ email, password })
-      navigate(from, { replace: true })
+      const devices = await api.listDevices().catch(() => [])
+      if (devices.length > 0) {
+        navigate(`/devices/${devices[0].id}`, { replace: true })
+      } else {
+        navigate(from, { replace: true })
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Помилка входу')
+      setError(err instanceof Error ? err.message : t.error)
     } finally {
       setSubmitting(false)
     }
@@ -34,35 +48,23 @@ export function LoginPage() {
 
   return (
     <div className="auth-panel">
-      <h2>Вхід</h2>
+      <h2>{t.title}</h2>
       <form className="auth-form" onSubmit={(e) => void handleSubmit(e)}>
         <label>
           Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
         </label>
         <label>
-          Пароль
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
+          {t.password}
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
         </label>
         {error && <div className="form-error">{error}</div>}
         <button type="submit" className="primary-button" disabled={submitting}>
-          {submitting ? 'Входимо…' : 'Увійти'}
+          {submitting ? t.submitting : t.submit}
         </button>
       </form>
       <p className="auth-switch">
-        Немає акаунта? <Link to="/register">Зареєструватися</Link>
+        {t.noAccount} <Link to="/register">{t.register}</Link>
       </p>
     </div>
   )

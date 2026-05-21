@@ -104,6 +104,7 @@ export interface AuthResponse {
   user_id: string
   email: string
   role: string
+  created_at?: string | null
 }
 
 export interface AdminUser {

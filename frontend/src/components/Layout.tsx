@@ -1,19 +1,31 @@
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useUiStore } from '../store/uiStore'
 import { authStorage } from '../services/api'
 import { APP_VERSION } from '../version'
 import '../App.css'
 
+const NAV_T = {
+  uk: { devices: 'Мої годівниці', admin: 'Адмін', logout: 'Вийти' },
+  en: { devices: 'My feeders', admin: 'Admin', logout: 'Sign out' },
+}
+
 export function Layout() {
-  const { logout, isAdmin } = useAuthStore()
+  const { isAdmin, logout } = useAuthStore()
+  const pageSubtitle = useUiStore(s => s.pageSubtitle)
   const location = useLocation()
   const isAuthenticated = !!authStorage.getToken()
   const onDeviceList = location.pathname === '/devices' || location.pathname === '/devices/new'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const lang = useUiStore(s => s.lang)
+  const T = NAV_T[lang] ?? NAV_T.uk
 
   const illustrationRef = useRef<HTMLDivElement>(null)
   const tailBurstTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const escapeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { setMenuOpen(false) }, [location.pathname])
 
   const handleFishClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -66,29 +78,60 @@ export function Layout() {
             </div>
             <div className="header-brand-text">
               <span className="header-title">AquaFeed</span>
-              <span className="header-sub">Керування годівницями</span>
+              <span className="header-sub">{pageSubtitle}</span>
             </div>
           </div>
 
           {isAuthenticated && (
-            <nav className="top-nav">
-              <Link to="/devices" className={`nav-link${onDeviceList ? ' active' : ''}`}>
-                Мої акваріуми
-              </Link>
-              {isAdmin && (
-                <>
+            <>
+              <nav className="top-nav">
+                <Link to="/devices" className={`nav-link${onDeviceList ? ' active' : ''}`}>
+                  {T.devices}
+                </Link>
+                {isAdmin && (
                   <Link
                     to="/admin"
                     className={`nav-link${location.pathname.startsWith('/admin') ? ' active' : ''}`}
                   >
-                    Адмін
+                    {T.admin}
                   </Link>
-                  <button type="button" className="nav-button" onClick={() => void logout()}>
-                    Вийти
+                )}
+                <button type="button" className="nav-button" onClick={() => void logout()}>
+                  {T.logout}
+                </button>
+              </nav>
+
+              <button
+                type="button"
+                className={`burger-btn${menuOpen ? ' open' : ''}`}
+                onClick={() => setMenuOpen(v => !v)}
+                aria-label="Меню"
+              >
+                {menuOpen
+                  ? <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><line x1="3" y1="3" x2="17" y2="17" stroke="#374151" strokeWidth="2" strokeLinecap="round"/><line x1="17" y1="3" x2="3" y2="17" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>
+                  : <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><line x1="3" y1="5" x2="17" y2="5" stroke="#374151" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="#374151" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="15" x2="17" y2="15" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>
+                }
+              </button>
+
+              {menuOpen && (
+                <div className="burger-menu" onClick={() => setMenuOpen(false)}>
+                  <Link to="/devices" className={`burger-item${onDeviceList ? ' active' : ''}`}>
+                    {T.devices}
+                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className={`burger-item${location.pathname.startsWith('/admin') ? ' active' : ''}`}
+                    >
+                      {T.admin}
+                    </Link>
+                  )}
+                  <button type="button" className="burger-item burger-logout" onClick={() => void logout()}>
+                    {T.logout}
                   </button>
-                </>
+                </div>
               )}
-            </nav>
+            </>
           )}
         </div>
       </header>

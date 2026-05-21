@@ -236,6 +236,12 @@ export const api = {
     })
   },
 
+  async forgetWifi(deviceId?: string): Promise<void> {
+    await apiClient.post('/api/forget-wifi', null, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+    })
+  },
+
   async listAdminUsers(): Promise<AdminUser[]> {
     const response = await apiClient.get<AdminUser[]>('/api/v1/admin/users')
     return response.data
@@ -262,6 +268,19 @@ export const api = {
 
   async deleteUserDevice(userId: string, deviceId: string): Promise<void> {
     await apiClient.delete(`/api/v1/admin/users/${userId}/devices/${deviceId}`)
+  },
+
+  async getSimulatedOfflineDevices(): Promise<string[]> {
+    const response = await apiClient.get<string[]>('/api/v1/admin/devices/sim-offline')
+    return response.data
+  },
+
+  async setSimulatedOffline(deviceId: string): Promise<void> {
+    await apiClient.post(`/api/v1/admin/devices/${deviceId}/sim-offline`)
+  },
+
+  async clearSimulatedOffline(deviceId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/admin/devices/${deviceId}/sim-offline`)
   },
 
   async getAdminStats(): Promise<AdminStats> {

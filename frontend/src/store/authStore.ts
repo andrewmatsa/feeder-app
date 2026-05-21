@@ -3,6 +3,8 @@ import { api, authStorage, getApiErrorMessage, setAccessToken } from '../service
 import type { LoginRequest, RegisterRequest } from '../types'
 
 const ROLE_KEY = 'aquafeed_role'
+const EMAIL_KEY = 'aquafeed_email'
+const CREATED_AT_KEY = 'aquafeed_created_at'
 
 const roleStorage = {
   get: () => localStorage.getItem(ROLE_KEY) as 'admin' | 'user' | null,
@@ -13,6 +15,7 @@ const roleStorage = {
 interface AuthState {
   email: string | null
   role: 'admin' | 'user' | null
+  createdAt: string | null
   isAuthenticated: boolean
   isAdmin: boolean
   login: (request: LoginRequest) => Promise<void>
@@ -22,8 +25,9 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  email: null,
+  email: localStorage.getItem(EMAIL_KEY),
   role: roleStorage.get(),
+  createdAt: localStorage.getItem(CREATED_AT_KEY),
   isAuthenticated: !!authStorage.getToken(),
   isAdmin: roleStorage.get() === 'admin',
 
@@ -34,6 +38,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: !!authStorage.getToken(),
       role,
       isAdmin: role === 'admin',
+      email: localStorage.getItem(EMAIL_KEY),
+      createdAt: localStorage.getItem(CREATED_AT_KEY),
     })
   },
 
@@ -41,9 +47,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const data = await api.login(request)
       roleStorage.save(data.role)
+      if (data.email) localStorage.setItem(EMAIL_KEY, data.email)
+      if (data.created_at) localStorage.setItem(CREATED_AT_KEY, data.created_at)
       set({
         email: data.email,
         role: data.role as 'admin' | 'user',
+        createdAt: data.created_at ?? null,
         isAuthenticated: true,
         isAdmin: data.role === 'admin',
       })
@@ -56,9 +65,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const data = await api.register(request)
       roleStorage.save(data.role)
+      if (data.email) localStorage.setItem(EMAIL_KEY, data.email)
+      if (data.created_at) localStorage.setItem(CREATED_AT_KEY, data.created_at)
       set({
         email: data.email,
         role: data.role as 'admin' | 'user',
+        createdAt: data.created_at ?? null,
         isAuthenticated: true,
         isAdmin: data.role === 'admin',
       })
@@ -70,6 +82,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     await api.logout()
     roleStorage.clear()
-    set({ email: null, role: null, isAuthenticated: false, isAdmin: false })
+    localStorage.removeItem(EMAIL_KEY)
+    localStorage.removeItem(CREATED_AT_KEY)
+    set({ email: null, role: null, createdAt: null, isAuthenticated: false, isAdmin: false })
   },
 }))
