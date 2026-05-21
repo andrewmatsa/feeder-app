@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, getApiErrorMessage } from '../services/api'
 import { useAuthStore } from '../store/authStore'
+import { useUiStore } from '../store/uiStore'
 import { TRANSLATIONS, type Lang } from '../translations'
 import type { FeedTime, StatusResponse, Device, DeviceFeedEvent, DeviceStats, LightStats } from '../types'
 
@@ -146,8 +147,9 @@ function LightGauge({ durationSeconds, isOn, T }: LightGaugeProps) {
           strokeDashoffset={offset}
           className="aq-gauge-fill-arc"
         />
-        <text x="130" y="118" textAnchor="middle" fontSize="32" fontWeight="700" fill={color}>{label}</text>
-        {isOn && <text x="130" y="148" textAnchor="middle" fontSize="13" fill={color} opacity="0.8">хв</text>}
+        <text x="130" y="130" textAnchor="middle" dominantBaseline="middle" fontSize="28" fontWeight="700" fill={color}>
+          {isOn ? `${minutes} хв` : '--'}
+        </text>
       </svg>
       <div className="aq-gauge-title">{T.lightSensor}</div>
       <div className={`aq-gauge-sub aq-light-status${isOn ? ' aq-light-status-on' : ''}`}>
@@ -242,7 +244,9 @@ function Sparkline({ data, id, color = '#667eea' }: { data: number[]; id: string
 
 export function DeviceDashboardPage() {
   const { deviceId } = useParams<{ deviceId: string }>()
+  const navigate = useNavigate()
   const logout = useAuthStore((s) => s.logout)
+  const accountEmail = useAuthStore((s) => s.email)
 
   // ── Language ──────────────────────────────────────────────────────────────
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('aq_lang') as Lang) || 'uk')
@@ -251,6 +255,7 @@ export function DeviceDashboardPage() {
   const switchLang = (l: Lang) => {
     setLang(l)
     localStorage.setItem('aq_lang', l)
+    setUiLang(l)
   }
 
   // ── Core state ────────────────────────────────────────────────────────────
@@ -258,9 +263,25 @@ export function DeviceDashboardPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isOnline, setIsOnline] = useState<boolean | null>(null)
 
   // ── Tab ───────────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<Tab>('home')
+  const setPageSubtitle = useUiStore(s => s.setPageSubtitle)
+  const setUiLang = useUiStore(s => s.setLang)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = (searchParams.get('tab') as Tab | null) ?? 'home'
+  const setTab = (t: Tab) => setSearchParams({ tab: t }, { replace: true })
+
+  useEffect(() => {
+    const labels: Record<Tab, string> = {
+      home: T.tabHomeSubtitle,
+      info: T.tabInfo,
+      stats: T.tabStats,
+      settings: T.tabSettings,
+    }
+    setPageSubtitle(labels[tab])
+    return () => setPageSubtitle(T.tabHomeSubtitle)
+  }, [tab, T, setPageSubtitle])
 
   // ── Feed ──────────────────────────────────────────────────────────────────
   const [feeding, setFeeding] = useState(false)
@@ -307,6 +328,7 @@ export function DeviceDashboardPage() {
   // ── Schedule ──────────────────────────────────────────────────────────────
   const [localSchedule, setLocalSchedule] = useState<LocalFeedTime[]>([])
   const scheduleEdited = useRef(false)
+  const [scheduleDirty, setScheduleDirty] = useState(false)
 
   // ── Feed journal ──────────────────────────────────────────────────────────
   const [feedEvents, setFeedEvents] = useState<DeviceFeedEvent[]>([])
@@ -334,6 +356,10 @@ export function DeviceDashboardPage() {
   const [sCalibVoltage, setSCalibVoltage] = useState('')
   const [sTimezone, setSTimezone] = useState(2)
   const settingsInited = useRef(false)
+  const [powerDirty, setPowerDirty] = useState(false)
+  const [intervalDirty, setIntervalDirty] = useState(false)
+  const [timezoneDirty, setTimezoneDirty] = useState(false)
+  const [speedDirty, setSpeedDirty] = useState(false)
 
   // ── Servo ─────────────────────────────────────────────────────────────────
   const [sAngle, setSAngle] = useState(90)
@@ -347,6 +373,8 @@ export function DeviceDashboardPage() {
   const [foodFormOpen, setFoodFormOpen] = useState(false)
   const [foodInputG, setFoodInputG] = useState('')
   const [foodInputGpf, setFoodInputGpf] = useState('')
+  const [forgetting, setForgetting] = useState(false)
+  const [wifiForgetDone, setWifiForgetDone] = useState(false)
 
   // ─── Toast helper ──────────────────────────────────────────────────────────
   const showToast = useCallback((msg: string) => {
@@ -368,6 +396,7 @@ export function DeviceDashboardPage() {
   const fetchStatus = useCallback(async () => {
     try {
       const data = await api.getStatus(deviceId)
+      setIsOnline(true)
       setStatus(data)
 
       const isLightOn = (data.lightLux ?? 0) > sLightThreshold
@@ -420,6 +449,7 @@ export function DeviceDashboardPage() {
         return backend > prev ? backend : prev
       })
     } catch (err) {
+      setIsOnline(false)
       setError(getApiErrorMessage(err, 'Failed to load status'))
     } finally {
       setLoading(false)
@@ -494,18 +524,21 @@ export function DeviceDashboardPage() {
   // ─── Schedule helpers ──────────────────────────────────────────────────────
   const addFeedTime = () => {
     scheduleEdited.current = true
+    setScheduleDirty(true)
     setLocalSchedule((prev) => [...prev, { hour: 8, minute: 0, repeats: 1, day: '0' }])
     showToast(T.toastFeedAdded)
   }
 
   const removeFeedTime = (idx: number) => {
     scheduleEdited.current = true
+    setScheduleDirty(true)
     setLocalSchedule((prev) => prev.filter((_, i) => i !== idx))
     showToast(T.toastFeedRemoved)
   }
 
   const updateFeedTime = (idx: number, field: keyof LocalFeedTime, value: string | number) => {
     scheduleEdited.current = true
+    setScheduleDirty(true)
     setLocalSchedule((prev) =>
       prev.map((ft, i) => i === idx ? { ...ft, [field]: value } : ft)
     )
@@ -516,6 +549,7 @@ export function DeviceDashboardPage() {
       await api.setSchedule({
         times: localSchedule.map((ft) => ({ hour: ft.hour, minute: ft.minute, repeats: ft.repeats })),
       }, deviceId)
+      setScheduleDirty(false)
       showToast(T.toastScheduleSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -531,6 +565,7 @@ export function DeviceDashboardPage() {
         displayEnabled: sDisplayEnabled,
         displayOffAfterSec: sDisplayOff,
       }, deviceId)
+      setPowerDirty(false)
       showToast(T.toastSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -540,6 +575,7 @@ export function DeviceDashboardPage() {
   const saveMinInterval = async () => {
     try {
       await api.setMinInterval({ minFeedIntervalMin: sMinInterval }, deviceId)
+      setIntervalDirty(false)
       showToast(T.toastIntervalSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -563,6 +599,7 @@ export function DeviceDashboardPage() {
   const saveTimezone = async () => {
     try {
       await api.setTimezone({ offsetHours: sTimezone }, deviceId)
+      setTimezoneDirty(false)
       showToast(T.toastTimezoneSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -595,6 +632,7 @@ export function DeviceDashboardPage() {
   const saveSpeed = async () => {
     try {
       await api.setSpeed({ speed: sSpeed }, deviceId)
+      setSpeedDirty(false)
       showToast(T.toastSaved)
     } catch {
       showToast(T.toastSaveError)
@@ -619,6 +657,21 @@ export function DeviceDashboardPage() {
     setFoodFormOpen(false)
     setFoodInputG('')
     setFoodInputGpf('')
+  }
+
+  const handleForgetWifi = async () => {
+    if (!window.confirm(lang === 'uk'
+      ? 'Забути мережу?\n\nПристрій повернеться в режим точки доступу. Для підключення відкрийте мережу FishFeeder-XXXX.'
+      : 'Forget network?\n\nThe device will return to access point mode. Connect to FishFeeder-XXXX to reconfigure.')) return
+    setForgetting(true)
+    try {
+      await api.forgetWifi(deviceId)
+      setWifiForgetDone(true)
+    } catch {
+      showToast(lang === 'uk' ? 'Помилка' : 'Error')
+    } finally {
+      setForgetting(false)
+    }
   }
 
   // ─── Food calculations ─────────────────────────────────────────────────────
@@ -751,7 +804,9 @@ export function DeviceDashboardPage() {
                 </span>
               </div>
             </>
-          ) : null}
+          ) : (
+            <p className="aq-food-not-set">{T.foodNotSet}</p>
+          )}
 
           {foodFormOpen && (
             <div className="aq-food-form">
@@ -945,7 +1000,7 @@ export function DeviceDashboardPage() {
         </div>
 
         <button className="aq-add-btn" onClick={addFeedTime}>{T.addFeeding}</button>
-        <button className="aq-save-btn" onClick={() => void saveSchedule()}>{T.saveAllTimes}</button>
+        {scheduleDirty && <button className="aq-save-btn" onClick={() => void saveSchedule()}>{T.saveAllTimes}</button>}
       </div>
 
       {/* Servo card */}
@@ -988,13 +1043,13 @@ export function DeviceDashboardPage() {
             max="20"
             step="0.1"
             value={sSpeed}
-            onChange={(e) => setSSpeed(Number(e.target.value))}
+            onChange={(e) => { setSSpeed(Number(e.target.value)); setSpeedDirty(true) }}
           />
         </div>
 
-        <button className="aq-save-btn" style={{ marginTop: 14 }} onClick={() => void saveSpeed()}>
+        {speedDirty && <button className="aq-save-btn" style={{ marginTop: 14 }} onClick={() => void saveSpeed()}>
           {T.saveSpeed}
-        </button>
+        </button>}
       </div>
     </>
   )
@@ -1312,6 +1367,14 @@ export function DeviceDashboardPage() {
           </div>
         </div>
         <p className="aq-settings-hint">{T.forgetHint}</p>
+        <button
+          type="button"
+          className="aq-danger-btn"
+          onClick={() => void handleForgetWifi()}
+          disabled={forgetting}
+        >
+          {forgetting ? '…' : T.forgetNetwork}
+        </button>
       </div>
 
       {/* 3. Power settings */}
@@ -1330,7 +1393,7 @@ export function DeviceDashboardPage() {
         </div>
 
         <label className="aq-toggle">
-          <input type="checkbox" checked={sPowerSave} onChange={(e) => setSPowerSave(e.target.checked)} />
+          <input type="checkbox" checked={sPowerSave} onChange={(e) => { setSPowerSave(e.target.checked); setPowerDirty(true) }} />
           <span className="aq-toggle-box" />
           <span className="aq-toggle-label">
             <svg className="aq-toggle-icon" viewBox="0 0 24 24">
@@ -1350,13 +1413,13 @@ export function DeviceDashboardPage() {
               min="10"
               max="3600"
               value={sDeepSleep}
-              onChange={(e) => setSDeepSleep(Number(e.target.value))}
+              onChange={(e) => { setSDeepSleep(Number(e.target.value)); setPowerDirty(true) }}
             />
           </div>
         )}
 
         <label className="aq-toggle">
-          <input type="checkbox" checked={sDisplayEnabled} onChange={(e) => setSDisplayEnabled(e.target.checked)} />
+          <input type="checkbox" checked={sDisplayEnabled} onChange={(e) => { setSDisplayEnabled(e.target.checked); setPowerDirty(true) }} />
           <span className="aq-toggle-box" />
           <span className="aq-toggle-label">
             <svg className="aq-toggle-icon" viewBox="0 0 24 24">
@@ -1377,13 +1440,13 @@ export function DeviceDashboardPage() {
             min="5"
             max="600"
             value={sDisplayOff}
-            onChange={(e) => setSDisplayOff(Number(e.target.value))}
+            onChange={(e) => { setSDisplayOff(Number(e.target.value)); setPowerDirty(true) }}
           />
         </div>
 
-        <button className="aq-save-btn" style={{ marginTop: 14 }} onClick={() => void savePowerSettings()}>
+        {powerDirty && <button className="aq-save-btn" style={{ marginTop: 14 }} onClick={() => void savePowerSettings()}>
           {T.savePowerSettings}
-        </button>
+        </button>}
       </div>
 
       {/* 4. Feed interval */}
@@ -1409,11 +1472,11 @@ export function DeviceDashboardPage() {
             min="1"
             max="1440"
             value={sMinInterval}
-            onChange={(e) => setSMinInterval(Number(e.target.value))}
+            onChange={(e) => { setSMinInterval(Number(e.target.value)); setIntervalDirty(true) }}
           />
         </div>
         <p className="aq-settings-hint">{T.minIntervalHint(sMinInterval)}</p>
-        <button className="aq-save-btn" onClick={() => void saveMinInterval()}>{T.saveInterval}</button>
+        {intervalDirty && <button className="aq-save-btn" onClick={() => void saveMinInterval()}>{T.saveInterval}</button>}
       </div>
 
       {/* 5. Battery calibration */}
@@ -1477,7 +1540,7 @@ export function DeviceDashboardPage() {
           <select
             className="aq-settings-input"
             value={sTimezone}
-            onChange={(e) => setSTimezone(Number(e.target.value))}
+            onChange={(e) => { setSTimezone(Number(e.target.value)); setTimezoneDirty(true) }}
           >
             {Array.from({ length: 27 }, (_, i) => i - 12).map((offset) => (
               <option key={offset} value={offset}>
@@ -1487,7 +1550,7 @@ export function DeviceDashboardPage() {
           </select>
         </div>
         <p className="aq-settings-hint">{T.timezoneHint}</p>
-        <button className="aq-save-btn" onClick={() => void saveTimezone()}>{T.saveTimezone}</button>
+        {timezoneDirty && <button className="aq-save-btn" onClick={() => void saveTimezone()}>{T.saveTimezone}</button>}
       </div>
 
       {/* 7. Food supply toggle */}
@@ -1592,7 +1655,7 @@ export function DeviceDashboardPage() {
             </svg>
           </div>
           <div>
-            <div className="aq-section-title">{T.account}</div>
+            <div className="aq-section-title">{accountEmail ?? T.account}</div>
             <div className="aq-section-sub">{T.accountSub}</div>
           </div>
         </div>
@@ -1640,16 +1703,22 @@ export function DeviceDashboardPage() {
     const feedingDayLabels = makeDayLabels((deviceStats?.days ?? []).map((d) => d.date))
     const lightDayLabels = makeDayLabels((lightStats?.days ?? []).map((d) => d.date))
 
-    const recs: string[] = []
+    const condRecs: string[] = []
     const todayCount = deviceStats?.feedings_today ?? 0
     const avg = deviceStats?.avg_feedings_per_day ?? 0
-    if (todayCount === 0) recs.push(T.recNoFeedingsToday)
-    else if (avg < 2) recs.push(T.recFeedMore)
-    if (todayCount > 5) recs.push(T.recFeedTooMuch)
-    if (todayLightSec === 0) recs.push(T.recNoLight)
-    else if (todayLightH < 8) recs.push(T.recLightTooShort)
-    else recs.push(T.recLightGood)
-    if (recs.length === 0 || (todayCount >= 2 && todayCount <= 4 && todayLightH >= 8)) recs.push(T.recAllGood)
+    if (todayCount === 0) condRecs.push(T.recNoFeedingsToday)
+    else if (avg < 2) condRecs.push(T.recFeedMore)
+    if (todayCount > 5) condRecs.push(T.recFeedTooMuch)
+    if (todayLightSec === 0) condRecs.push(T.recNoLight)
+    else if (todayLightH < 8) condRecs.push(T.recLightTooShort)
+    else condRecs.push(T.recLightGood)
+    if (condRecs.length === 0 || (todayCount >= 2 && todayCount <= 4 && todayLightH >= 8)) condRecs.push(T.recAllGood)
+
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
+    const tips = T.dailyTips
+    const tip1 = tips[dayOfYear % tips.length]
+    const tip2 = tips[(dayOfYear + 7) % tips.length]
+    const recs = [...new Set([...condRecs, tip1, tip2])].slice(0, 5)
 
     return (
       <>
@@ -1743,6 +1812,92 @@ export function DeviceDashboardPage() {
 
   return (
     <div className="aq-shell">
+      {/* WiFi forget modal */}
+      {wifiForgetDone && (
+        <div className="aq-wifi-modal-overlay">
+          <div className="aq-wifi-modal">
+            <div className="aq-wifi-modal-title">
+              {lang === 'uk' ? 'Мережу забуто' : 'Network forgotten'}
+            </div>
+            <p className="aq-wifi-modal-note">
+              {lang === 'uk'
+                ? 'Всі налаштування збережено. Щоб підключитись до нової мережі:'
+                : 'All settings are preserved. To connect to a new network:'}
+            </p>
+            <div className="aq-wifi-modal-step">
+              {lang === 'uk' ? '1. Підключіться до WiFi:' : '1. Connect to WiFi:'}
+            </div>
+            <div className="aq-wifi-modal-code">FishFeeder-XXXX</div>
+            <div className="aq-wifi-modal-step" style={{ marginTop: -4 }}>
+              {lang === 'uk' ? 'Пароль:' : 'Password:'} <strong>12345678</strong>
+            </div>
+            <div className="aq-wifi-modal-step" style={{ marginTop: 10 }}>
+              {lang === 'uk' ? '2. Відкрийте в браузері:' : '2. Open in browser:'}
+            </div>
+            <div className="aq-wifi-modal-code">192.168.4.1</div>
+            <div className="aq-wifi-modal-step">
+              {lang === 'uk' ? '3. Введіть нові дані WiFi' : '3. Enter new WiFi credentials'}
+            </div>
+            <button
+              type="button"
+              className="aq-wifi-modal-btn"
+              onClick={() => { setWifiForgetDone(false); navigate('/devices') }}
+            >
+              {lang === 'uk' ? 'Зрозуміло' : 'Got it'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Offline overlay */}
+      {isOnline === false && !loading && (
+        <div className="aq-offline-overlay">
+          <div className="aq-offline-card">
+            <div className="aq-offline-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+                <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+                <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+                <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <line x1="12" y1="20" x2="12.01" y2="20"/>
+              </svg>
+            </div>
+            <div className="aq-offline-title">
+              {lang === 'uk' ? 'Пристрій офлайн' : 'Device offline'}
+            </div>
+            <p className="aq-offline-desc">
+              {lang === 'uk'
+                ? 'Годівниця недоступна. Якщо ви щойно забули мережу — пристрій очікує підключення до нового WiFi.'
+                : 'Feeder is unreachable. If you just forgot the network — the device is waiting for new WiFi credentials.'}
+            </p>
+            <div className="aq-offline-steps">
+              <div className="aq-offline-step">
+                <span className="aq-offline-step-num">1</span>
+                <span>{lang === 'uk' ? 'Підключіться до WiFi:' : 'Connect to WiFi:'} <strong>FishFeeder-XXXX</strong></span>
+              </div>
+              <div className="aq-offline-step">
+                <span className="aq-offline-step-num">2</span>
+                <span>{lang === 'uk' ? 'Відкрийте в браузері:' : 'Open in browser:'} <strong>192.168.4.1</strong></span>
+              </div>
+              <div className="aq-offline-step">
+                <span className="aq-offline-step-num">3</span>
+                <span>{lang === 'uk' ? 'Введіть нові дані WiFi' : 'Enter new WiFi credentials'}</span>
+              </div>
+            </div>
+            <div className="aq-offline-actions">
+              <button type="button" className="aq-offline-retry" onClick={() => void fetchStatus()}>
+                {lang === 'uk' ? 'Перевірити підключення' : 'Check connection'}
+              </button>
+              <button type="button" className="aq-offline-back" onClick={() => navigate('/devices')}>
+                {lang === 'uk' ? 'До списку' : 'Back to list'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       <div className={`aq-toast${toastVisible ? ' show' : ''}`}>
         <span className="aq-toast-icon">i</span>
@@ -1751,9 +1906,9 @@ export function DeviceDashboardPage() {
 
       {/* Device mini-header */}
       <div style={{ padding: '10px 12px 0', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-{device && (
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', marginBottom: 4 }}>
-            {device.name}
+        {device && (
+          <div style={{ marginBottom: 4 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: '#1f2937' }}>{device.name}</div>
           </div>
         )}
         {error && <div className="error-banner">{error}</div>}

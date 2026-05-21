@@ -8,6 +8,7 @@ import { DeviceDashboardPage } from './pages/DeviceDashboardPage'
 import { DevicesPage } from './pages/DevicesPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { useAuthStore } from './store/authStore'
 
 function App() {
@@ -45,6 +46,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DeviceDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
               </ProtectedRoute>
             }
           />

@@ -16,6 +16,9 @@ except ImportError:
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
+# In-memory set of device IDs with simulated offline (resets on server restart)
+simulated_offline_devices: set[str] = set()
+
 
 def _service_client():
     if not SUPABASE_SERVICE_KEY:
@@ -362,3 +365,18 @@ async def delete_user_device(
     )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пристрій не знайдено")
+
+
+@router.get("/devices/sim-offline", response_model=list[str])
+async def get_simulated_offline(_: UserClaims = Depends(require_admin)):
+    return list(simulated_offline_devices)
+
+
+@router.post("/devices/{device_id}/sim-offline", status_code=status.HTTP_204_NO_CONTENT)
+async def set_simulated_offline(device_id: str, _: UserClaims = Depends(require_admin)):
+    simulated_offline_devices.add(device_id)
+
+
+@router.delete("/devices/{device_id}/sim-offline", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_simulated_offline(device_id: str, _: UserClaims = Depends(require_admin)):
+    simulated_offline_devices.discard(device_id)

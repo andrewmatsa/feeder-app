@@ -85,7 +85,7 @@
 }
 
 .app-illustration svg {
-  width: 65px;
+  width: 78px;
   height: auto;
   display: block;
   transform: translateY(-6px);
@@ -110,6 +110,8 @@
 .hero-svg-fish {
   animation: hero-fish-swim 4.2s ease-in-out infinite;
   transform-origin: 32px 42px;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   transform-box: fill-box;
   cursor: pointer;
 }

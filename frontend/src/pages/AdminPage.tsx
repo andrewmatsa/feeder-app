@@ -69,6 +69,7 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
   const [devices, setDevices] = useState<AdminDevice[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [simOfflineIds, setSimOfflineIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     api.listUserDevices(userId)
@@ -76,6 +77,12 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
       .catch((err) => setError(getApiErrorMessage(err, 'Помилка завантаження')))
       .finally(() => setLoading(false))
   }, [userId])
+
+  useEffect(() => {
+    api.getSimulatedOfflineDevices()
+      .then((ids) => setSimOfflineIds(new Set(ids)))
+      .catch(() => {})
+  }, [])
 
   const handleDelete = async (deviceId: string, name: string) => {
     if (!window.confirm(`Видалити пристрій "${name}"?`)) return
@@ -85,6 +92,21 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
       onDeviceDeleted(userId)
     } catch (err) {
       setError(getApiErrorMessage(err, 'Помилка видалення пристрою'))
+    }
+  }
+
+  const toggleSimOffline = async (deviceId: string) => {
+    const isActive = simOfflineIds.has(deviceId)
+    try {
+      if (isActive) {
+        await api.clearSimulatedOffline(deviceId)
+        setSimOfflineIds((prev) => { const s = new Set(prev); s.delete(deviceId); return s })
+      } else {
+        await api.setSimulatedOffline(deviceId)
+        setSimOfflineIds((prev) => new Set(prev).add(deviceId))
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Помилка'))
     }
   }
 
@@ -109,7 +131,24 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
               <td>{d.name}</td>
               <td>{fmtDate(d.created_at)}</td>
               <td>{fmtActivity(d.last_seen)}</td>
-              <td>
+              <td style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className={`admin-btn-block${simOfflineIds.has(d.id) ? ' blocked' : ''}`}
+                  onClick={() => void toggleSimOffline(d.id)}
+                >
+                  {simOfflineIds.has(d.id) ? (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                      Відключено
+                    </>
+                  ) : (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                      Відключити
+                    </>
+                  )}
+                </button>
                 <button
                   type="button"
                   className="admin-btn-danger-sm"

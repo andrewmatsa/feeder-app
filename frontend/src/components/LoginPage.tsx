@@ -83,6 +83,10 @@ export function LoginPage({ onSuccess }: Props) {
 
       <div className="lp-shell">
         <div className="lp-hero-header">
+          <div className="lp-app-heading">
+            <div className="lp-app-title">AquaFeed</div>
+            <div className="lp-app-subtitle">{T.loginSubtitle}</div>
+          </div>
           <div className="app-illustration" ref={illustrationRef}>
             <svg
               className="hero-svg-fish"
@@ -115,10 +119,6 @@ export function LoginPage({ onSuccess }: Props) {
               <ellipse cx="18.7" cy="38.5" rx="7.1" ry="7.4" fill="#fcfcfa" />
               <ellipse className="hero-fish-eye" cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c" />
             </svg>
-          </div>
-          <div className="lp-app-heading">
-            <div className="lp-app-title">AquaFeed</div>
-            <div className="lp-app-subtitle">{T.loginSubtitle}</div>
           </div>
         </div>
 

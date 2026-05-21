@@ -30,7 +30,7 @@ body {
   padding-top: 10px;
 }
 .app-illustration svg {
-  width: 65px;
+  width: 78px;
   height: auto;
   display: block;
   transform: translateY(-6px);
@@ -57,6 +57,8 @@ body {
   animation: hero-fish-swim 4.2s ease-in-out infinite;
   transform-origin: 32px 42px;
   transform-box: fill-box;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
 .hero-fish-body {
@@ -137,37 +139,46 @@ body {
 }
 .lang-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  align-self: flex-end;
+  margin-bottom: 16px;
 }
 .lang-btn {
   width: auto;
   flex: 0 0 auto;
-  border: 1px solid rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.18);
   border-radius: 999px;
   background: #fff;
-  color: #111;
-  padding: 6px 12px;
+  color: #555;
+  padding: 4px 12px;
   font-size: 12px;
   font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
 }
 .lang-btn.active {
   background: #111;
   color: #fff;
+  border-color: #111;
 }
 h1 {
   margin: 0 0 6px;
-  font-size: 24px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
 }
 p {
   margin: 0 0 16px;
   color: #666;
   line-height: 1.45;
+  font-size: 13px;
 }
 label {
   display: block;
   font-weight: 600;
+  font-size: 13px;
   margin-bottom: 6px;
+  color: #222;
 }
 input {
   width: 100%;
@@ -177,7 +188,15 @@ input {
   border: 1px solid #d5d9e0;
   background: #f9fafc;
   font-size: 14px;
+  font-family: inherit;
+  color: #222;
   margin-bottom: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus {
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
 }
 button {
   width: 100%;
@@ -188,8 +207,11 @@ button {
   padding: 14px;
   font-size: 15px;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
+  transition: opacity 0.15s;
 }
+button:hover { opacity: 0.85; }
 .note {
   margin-top: 14px;
   font-size: 13px;
@@ -206,7 +228,15 @@ button {
 </head>
 <body>
   <div class="shell">
+    <div class="lang-row">
+      <button type="button" id="langUkBtn" class="lang-btn" onclick="setLang('uk')">UK</button>
+      <button type="button" id="langEnBtn" class="lang-btn" onclick="setLang('en')">EN</button>
+    </div>
     <div class="hero-header">
+      <div class="app-heading">
+        <div class="app-title">AquaFeed Control</div>
+        <div class="app-subtitle">WiFi access login</div>
+      </div>
       <div class="app-illustration">
         <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
           <path class="hero-fish-body" d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
@@ -225,16 +255,8 @@ button {
           <ellipse class="hero-fish-eye" cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
         </svg>
       </div>
-      <div class="app-heading">
-        <div class="app-title">AquaFeed Control</div>
-        <div class="app-subtitle">WiFi access login</div>
-      </div>
     </div>
     <div class="card">
-      <div class="lang-row">
-        <button type="button" id="langUkBtn" class="lang-btn" onclick="setLang('uk')">UK</button>
-        <button type="button" id="langEnBtn" class="lang-btn" onclick="setLang('en')">EN</button>
-      </div>
       <h1 id="title">Unlock settings</h1>
       <p id="desc">Enter the access point password to continue to WiFi connection setup.</p>
       <label id="passwordLabel" for="password">Access point password</label>
@@ -359,7 +381,7 @@ body {
   padding-top: 10px;
 }
 .app-illustration svg {
-  width: 65px;
+  width: 78px;
   height: auto;
   display: block;
   transform: translateY(-6px);
@@ -386,6 +408,8 @@ body {
   animation: hero-fish-swim 4.2s ease-in-out infinite;
   transform-origin: 32px 42px;
   transform-box: fill-box;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
 .hero-fish-body {
@@ -466,38 +490,46 @@ body {
 }
 .lang-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  align-self: flex-end;
+  margin-bottom: 16px;
 }
 .lang-btn {
   width: auto;
   flex: 0 0 auto;
-  min-width: 58px;
-  border: 1px solid rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.18);
   border-radius: 999px;
   background: #fff;
-  color: #111;
-  padding: 6px 12px;
+  color: #555;
+  padding: 4px 12px;
   font-size: 12px;
   font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
 }
 .lang-btn.active {
   background: #111;
   color: #fff;
+  border-color: #111;
 }
 h1 {
   margin: 0 0 6px;
-  font-size: 24px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
 }
 p {
   margin: 0 0 16px;
   color: #666;
   line-height: 1.45;
+  font-size: 13px;
 }
 label {
   display: block;
   font-weight: 600;
+  font-size: 13px;
   margin-bottom: 6px;
+  color: #222;
 }
 input {
   width: 100%;
@@ -507,7 +539,15 @@ input {
   border: 1px solid #d5d9e0;
   background: #f9fafc;
   font-size: 14px;
+  font-family: inherit;
+  color: #222;
   margin-bottom: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus {
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
 }
 button {
   width: 100%;
@@ -518,12 +558,16 @@ button {
   padding: 14px;
   font-size: 15px;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
+  transition: opacity 0.15s;
 }
+button:hover { opacity: 0.85; }
 .hint {
   margin-top: 12px;
   font-size: 13px;
-  color: #666;
+  color: #6b7280;
+  line-height: 1.45;
 }
 #msg {
   min-height: 20px;
@@ -544,7 +588,15 @@ button {
 </head>
 <body>
   <div class="shell">
+    <div class="lang-row">
+      <button type="button" id="langUkBtn" class="lang-btn" onclick="setConnectLang('uk')">UK</button>
+      <button type="button" id="langEnBtn" class="lang-btn" onclick="setConnectLang('en')">EN</button>
+    </div>
     <div class="hero-header">
+      <div class="app-heading">
+        <div class="app-title">AquaFeed Control</div>
+        <div class="app-subtitle">WiFi connection</div>
+      </div>
       <div class="app-illustration">
         <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
           <path class="hero-fish-body" d="M58.7 41.5c0-3.5 4.9-11.4 2.6-13.8c-2.5-2.6-8.3 8.5-11.2 8.5c-3.5 0-5.6-4.3-7.3-6.1c-1.4-1.4 2.6-7 .8-7.4c-7.5-1.8-8.5 2.6-12.6 1.5c-3.2-.8-6.5-1.3-9.7-1.3c-12 0-14.3 8.6-16.4 16.6C4.5 40.7 16.6 51 16.6 51s-9.2-5.2-9-4c1.5 6.6 7.7 10.8 14.7 12.4c2 .5 4.1.7 6.1.7c12.8 0 14.8-9.9 21.7-11.1c4.2-.7 8.7 7.4 11.1 4.9c2.6-2.6-2.5-8.3-2.5-12.4" fill="#728389"/>
@@ -563,16 +615,8 @@ button {
           <ellipse class="hero-fish-eye" cx="18.7" cy="38.5" rx="4.9" ry="5.1" fill="#29251c"/>
         </svg>
       </div>
-      <div class="app-heading">
-        <div class="app-title">AquaFeed Control</div>
-        <div class="app-subtitle">WiFi connection</div>
-      </div>
     </div>
     <div class="card">
-      <div class="lang-row">
-        <button type="button" id="langUkBtn" class="lang-btn" onclick="setConnectLang('uk')">UK</button>
-        <button type="button" id="langEnBtn" class="lang-btn" onclick="setConnectLang('en')">EN</button>
-      </div>
       <h1 id="title">Connect home WiFi</h1>
       <p id="desc">Enter your home WiFi credentials. After a successful connection you will get access to the full WiFi settings page.</p>
       <label id="ssidLabel" for="ssid">WiFi network name</label>

@@ -29,6 +29,7 @@ class AuthResponse(BaseModel):
     user_id: str
     email: str
     role: str
+    created_at: str | None = None
 
 
 class RefreshRequest(BaseModel):
@@ -65,6 +66,7 @@ async def register(request: RegisterRequest):
         user_id=user_id,
         email=response.user.email,
         role=_fetch_role(user_id),
+        created_at=str(response.user.created_at) if response.user.created_at else None,
     )
 
 
@@ -89,6 +91,7 @@ async def login(request: LoginRequest):
         user_id=user_id,
         email=response.user.email,
         role=_fetch_role(user_id),
+        created_at=str(response.user.created_at) if response.user.created_at else None,
     )
 
 

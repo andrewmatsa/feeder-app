@@ -35,6 +35,7 @@ PowerManager powerManager(apiHandlers, scheduler, servo, oled, BUTTON_PIN);
 
 // === State variables ===
 bool lastButtonState = HIGH;
+uint32_t buttonPressStartMs = 0;
 
 void performAutoFeeding(int repeats) {
   servo.feedSequence(repeats);
@@ -153,14 +154,29 @@ void handleWakeCause(esp_sleep_wakeup_cause_t wakeCause) {
 
 void handleManualButtonPress() {
   bool buttonState = digitalRead(BUTTON_PIN);
-  if (lastButtonState == HIGH && buttonState == LOW && !servo.isMoving()) {
-    powerManager.markInteraction();
-    deviceRuntime.tryRunFeedSequence(
-      apiHandlers.getFeedRepeats(),
-      "Manual button feed blocked: recently fed",
-      true
-    );
+
+  if (lastButtonState == HIGH && buttonState == LOW) {
+    buttonPressStartMs = millis();
   }
+
+  if (lastButtonState == LOW && buttonState == HIGH) {
+    uint32_t pressDuration = millis() - buttonPressStartMs;
+    if (pressDuration >= 3000) {
+      // Long press (≥3s) — enter AP mode to allow WiFi reconfiguration
+      powerManager.markInteraction();
+      startAPMode();
+    } else if (!servo.isMoving()) {
+      // Short press — manual feed
+      powerManager.markInteraction();
+      deviceRuntime.tryRunFeedSequence(
+        apiHandlers.getFeedRepeats(),
+        "Manual button feed blocked: recently fed",
+        true
+      );
+    }
+    buttonPressStartMs = 0;
+  }
+
   lastButtonState = buttonState;
 }
 

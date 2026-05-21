@@ -4,6 +4,7 @@ export interface Translations {
   appTitle: string
   appSubtitle: string
   tabHome: string
+  tabHomeSubtitle: string
   tabInfo: string
   tabSettings: string
   connecting: string
@@ -173,6 +174,7 @@ export interface Translations {
   recLightTooShort: string
   recLightGood: string
   recAllGood: string
+  dailyTips: string[]
 
   loginSignIn: string
   loginRegister: string
@@ -203,6 +205,7 @@ const uk: Translations = {
   appTitle: 'AquaFeed Control',
   appSubtitle: 'Розумна годівниця',
   tabHome: 'Головна',
+  tabHomeSubtitle: 'Керування годівницею',
   tabInfo: 'Інформація',
   tabSettings: 'Налаштування',
   connecting: 'Підключення...',
@@ -309,7 +312,7 @@ const uk: Translations = {
   wifiSettings: 'Підключення до WiFi',
   wifiSettingsSub: 'Управління збереженою мережею',
   forgetNetwork: 'Забути мережу',
-  forgetHint: 'Кнопка «Забути» видаляє збережені дані мережі та повертає пристрій у режим точки доступу за адресою http://fish.local.',
+  forgetHint: 'Кнопка «Забути» видаляє збережені дані мережі та повертає пристрій у режим точки доступу. Підключіться до мережі FishFeeder-XXXX і відкрийте 192.168.4.1 для налаштування.',
 
   powerSettings: 'Налаштування енергії',
   powerSettingsSub: 'Оптимізуйте споживання живлення',
@@ -372,6 +375,23 @@ const uk: Translations = {
   recLightTooShort: 'Світло горить менше 8 годин. Рекомендується 8–12 годин на день.',
   recLightGood: 'Тривалість світла оптимальна. Так тримати!',
   recAllGood: 'Все в нормі! Рибки щасливі.',
+  dailyTips: [
+    'Замінюйте 20–30% води щотижня — це підтримує баланс і чистоту акваріума.',
+    'Перевіряйте фільтр раз на місяць: забитий фільтр погіршує якість води.',
+    'Не перегодовуйте — залишки корму розкладаються і підвищують рівень аміаку.',
+    'Температура води повинна бути стабільною: різкі перепади стресують рибок.',
+    'Рослини в акваріумі поглинають нітрати і насичують воду киснем.',
+    'Чистіть стінки акваріума від водоростей раз на тиждень.',
+    'Після тривалого відключення світла перевірте поведінку рибок — вони мають бути активними.',
+    'Нові рибки потребують 2 тижні карантину перед переміщенням в основний акваріум.',
+    'Використовуйте кондиціонер для нейтралізації хлору при кожній заміні води.',
+    'Регулярно перевіряйте рівень pH — для більшості риб оптимальний діапазон 6.5–7.5.',
+    'Правильне освітлення 8–12 годин на день підтримує природний цикл для риб і рослин.',
+    'Уникайте розміщення акваріума під прямим сонячним світлом — це спричиняє цвітіння водоростей.',
+    'Годуйте рибок дрібними порціями 2–3 рази на день замість однієї великої.',
+    'Рівень нітратів понад 40 мг/л шкідливий — частіша заміна води вирішує проблему.',
+    'Перевіряйте аератор щомісяця: хороша аерація критична для здоров\'я риб.',
+  ],
 
   loginSignIn: 'Увійти',
   loginRegister: 'Реєстрація',
@@ -402,6 +422,7 @@ const en: Translations = {
   appTitle: 'AquaFeed Control',
   appSubtitle: 'Smart Feeder',
   tabHome: 'Home',
+  tabHomeSubtitle: 'Feeder control',
   tabInfo: 'Info',
   tabSettings: 'Settings',
   connecting: 'Connecting...',
@@ -508,7 +529,7 @@ const en: Translations = {
   wifiSettings: 'WiFi Connection',
   wifiSettingsSub: 'Manage saved network',
   forgetNetwork: 'Forget Network',
-  forgetHint: "The 'Forget' button removes saved network data and returns the device to access point mode at http://fish.local.",
+  forgetHint: "The 'Forget' button removes saved network data and returns the device to access point mode. Connect to FishFeeder-XXXX and open 192.168.4.1 to reconfigure.",
 
   powerSettings: 'Power Settings',
   powerSettingsSub: 'Optimize power consumption',
@@ -571,6 +592,23 @@ const en: Translations = {
   recLightTooShort: 'Light has been on for less than 8 hours. 8–12 hours per day is recommended.',
   recLightGood: 'Light duration is optimal. Keep it up!',
   recAllGood: 'All looks good! Happy fish.',
+  dailyTips: [
+    'Replace 20–30% of the water weekly to maintain balance and cleanliness.',
+    'Check the filter once a month — a clogged filter degrades water quality.',
+    'Don\'t overfeed — leftover food decomposes and raises ammonia levels.',
+    'Keep water temperature stable: sudden changes stress your fish.',
+    'Live plants absorb nitrates and oxygenate the water naturally.',
+    'Clean the aquarium walls of algae once a week.',
+    'After a long period without light, check your fish — they should be active.',
+    'New fish need 2 weeks of quarantine before joining the main tank.',
+    'Use a water conditioner to neutralize chlorine with every water change.',
+    'Check pH regularly — most fish thrive in a 6.5–7.5 range.',
+    'Proper lighting of 8–12 hours a day supports a natural cycle for fish and plants.',
+    'Avoid placing the tank in direct sunlight — it causes algae blooms.',
+    'Feed small portions 2–3 times a day rather than one large feeding.',
+    'Nitrate levels above 40 mg/L are harmful — more frequent water changes help.',
+    'Check the aerator monthly: good oxygenation is critical for fish health.',
+  ],
 
   loginSignIn: 'Sign in',
   loginRegister: 'Register',
