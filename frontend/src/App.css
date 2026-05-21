@@ -979,6 +979,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .nav-link {
@@ -992,6 +993,7 @@
   border: 1px solid transparent;
   transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
   letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
