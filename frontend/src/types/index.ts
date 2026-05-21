@@ -5,6 +5,7 @@ export interface FeedTime {
 }
 
 export interface StatusResponse {
+  firmwareVersion?: string
   angle: number
   speed: number
   feedRepeats: number

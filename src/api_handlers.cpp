@@ -133,6 +133,7 @@ void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
 
   NextFeedInfo nextFeed = scheduler.computeNextFeed();
   doc["status"] = "ok";
+  doc["firmwareVersion"] = AQUAFEED_FIRMWARE_VERSION;
   doc["currentAngle"] = servo.getCurrentAngle();
   doc["speed"] = servo.getSpeed();
   doc["feedRepeats"] = feedRepeats;

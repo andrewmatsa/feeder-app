@@ -49,6 +49,7 @@ class TimezoneRequest(BaseModel):
 
 
 class StatusResponse(BaseModel):
+    firmwareVersion: str | None = None
     angle: int
     speed: float
     feedRepeats: int

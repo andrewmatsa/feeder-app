@@ -14,6 +14,7 @@
 #include "oled_display.h"
 #include "device_runtime.h"
 #include "power_manager.h"
+#include "ota_handler.h"
 
 // === Hardware pins ===
 const int SERVO_PIN = 4;
@@ -33,6 +34,7 @@ ApiHandlers apiHandlers(server, preferences, servo, battery, scheduler, LIGHT_PI
 OledDisplay oled(OLED_SDA_PIN, OLED_SCL_PIN);
 DeviceRuntime deviceRuntime(apiHandlers, scheduler, servo, battery, oled);
 PowerManager powerManager(apiHandlers, scheduler, servo, oled, BUTTON_PIN);
+OtaHandler otaHandler(server, battery);
 
 // === State variables ===
 bool lastButtonState = HIGH;
@@ -108,6 +110,7 @@ void initializeNetworkAndServer() {
   initWiFi(preferences);
   WiFi.setSleep(apiHandlers.getPowerSaveMode() && !isAPMode);
   apiHandlers.setupRoutes();
+  otaHandler.registerRoutes();
   setupWiFiHandlers(server, preferences);
   server.begin();
   Serial.println("HTTP server started");

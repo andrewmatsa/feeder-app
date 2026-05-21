@@ -356,6 +356,9 @@ export function DeviceDashboardPage() {
   const [sMinInterval, setSMinInterval] = useState(5)
   const [sCalibVoltage, setSCalibVoltage] = useState('')
   const [calibDirty, setCalibDirty] = useState(false)
+  const [otaFile, setOtaFile] = useState<File | null>(null)
+  const [otaState, setOtaState] = useState<'idle' | 'uploading' | 'rebooting' | 'done' | 'error'>('idle')
+  const [otaError, setOtaError] = useState('')
   const [sTimezone, setSTimezone] = useState(2)
   const settingsInited = useRef(false)
   const [powerDirty, setPowerDirty] = useState(false)
@@ -585,6 +588,38 @@ export function DeviceDashboardPage() {
       showToast(T.toastIntervalSaved)
     } catch {
       showToast(T.toastSaveError)
+    }
+  }
+
+  const handleOtaUpload = async () => {
+    if (!otaFile) return
+    setOtaState('uploading')
+    setOtaError('')
+    try {
+      await api.otaUpdate(otaFile, deviceId)
+      setOtaState('rebooting')
+      let attempts = 0
+      const poll = setInterval(() => {
+        void (async () => {
+          attempts++
+          try {
+            await api.getStatus(deviceId)
+            clearInterval(poll)
+            setOtaState('done')
+            setOtaFile(null)
+            void fetchStatus()
+          } catch {
+            if (attempts > 30) {
+              clearInterval(poll)
+              setOtaState('error')
+              setOtaError(T.otaRebootTimeout)
+            }
+          }
+        })()
+      }, 3000)
+    } catch (err) {
+      setOtaState('error')
+      setOtaError(getApiErrorMessage(err, T.otaFailed))
     }
   }
 
@@ -1626,7 +1661,63 @@ export function DeviceDashboardPage() {
         {timezoneDirty && <button className="aq-save-btn" onClick={() => void saveTimezone()}>{T.saveTimezone}</button>}
       </div>
 
-      {/* 9. Account */}
+      {/* 9. OTA Firmware Update */}
+      <div className="aq-card">
+        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: 14 }}>
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+            </svg>
+          </div>
+          <div>
+            <div className="aq-section-title">{T.otaTitle}</div>
+            <div className="aq-section-sub">{T.otaCurrentVersion} {status?.firmwareVersion ?? '—'}</div>
+          </div>
+        </div>
+
+        {status && status.batteryPercent < 20 && (
+          <p className="aq-settings-hint" style={{ color: '#ef4444', marginBottom: 10 }}>
+            {T.otaBatteryWarning}
+          </p>
+        )}
+
+        <input
+          type="file"
+          accept=".bin"
+          disabled={otaState !== 'idle'}
+          onChange={(e) => { setOtaFile(e.target.files?.[0] ?? null); setOtaState('idle'); setOtaError('') }}
+          style={{ fontSize: 13, color: '#555' }}
+        />
+
+        {otaFile && otaState === 'idle' && (
+          <button className="aq-save-btn" style={{ marginTop: 12 }} onClick={() => void handleOtaUpload()}>
+            {T.otaFlash}
+          </button>
+        )}
+
+        {(otaState === 'uploading' || otaState === 'rebooting') && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ height: 6, borderRadius: 999, background: '#e5e7eb', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 999, background: '#34c759', width: otaState === 'rebooting' ? '80%' : '40%', transition: 'width 0.5s' }} />
+            </div>
+            <p className="aq-settings-hint" style={{ marginTop: 6 }}>
+              {otaState === 'rebooting' ? T.otaRebooting : T.otaUploading}
+            </p>
+          </div>
+        )}
+
+        {otaState === 'done' && (
+          <p className="aq-settings-hint" style={{ color: '#16a34a', marginTop: 10 }}>{T.otaDone}</p>
+        )}
+
+        {otaState === 'error' && (
+          <p className="aq-settings-hint" style={{ color: '#ef4444', marginTop: 10 }}>{otaError}</p>
+        )}
+      </div>
+
+      {/* 10. Account */}
       <div className="aq-card">
         <div className="aq-section-header">
           <div className="aq-section-icon">

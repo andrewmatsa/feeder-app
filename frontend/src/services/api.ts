@@ -236,6 +236,15 @@ export const api = {
     })
   },
 
+  async otaUpdate(file: File, deviceId?: string): Promise<void> {
+    const formData = new FormData()
+    formData.append('file', file)
+    await apiClient.post('/api/ota-update', formData, {
+      params: deviceId ? { device_id: deviceId } : undefined,
+      timeout: 120_000,
+    })
+  },
+
   async forgetWifi(deviceId?: string): Promise<void> {
     await apiClient.post('/api/forget-wifi', null, {
       params: deviceId ? { device_id: deviceId } : undefined,

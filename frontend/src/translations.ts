@@ -179,6 +179,16 @@ export interface Translations {
   recAllGood: string
   dailyTips: string[]
 
+  otaTitle: string
+  otaCurrentVersion: string
+  otaBatteryWarning: string
+  otaFlash: string
+  otaUploading: string
+  otaRebooting: string
+  otaDone: string
+  otaFailed: string
+  otaRebootTimeout: string
+
   loginSignIn: string
   loginRegister: string
   loginEmail: string
@@ -399,6 +409,16 @@ const uk: Translations = {
     'Перевіряйте аератор щомісяця: хороша аерація критична для здоров\'я риб.',
   ],
 
+  otaTitle: 'Оновлення прошивки',
+  otaCurrentVersion: 'Поточна версія:',
+  otaBatteryWarning: 'Батарея розряджена (<20%). Зарядіть пристрій перед оновленням.',
+  otaFlash: 'Завантажити прошивку',
+  otaUploading: 'Завантаження...',
+  otaRebooting: 'Перезавантаження пристрою...',
+  otaDone: 'Прошивку оновлено успішно.',
+  otaFailed: 'Помилка оновлення прошивки.',
+  otaRebootTimeout: 'Пристрій не відповідає після перезавантаження.',
+
   loginSignIn: 'Увійти',
   loginRegister: 'Реєстрація',
   loginEmail: 'Email',
@@ -618,6 +638,16 @@ const en: Translations = {
     'Nitrate levels above 40 mg/L are harmful — more frequent water changes help.',
     'Check the aerator monthly: good oxygenation is critical for fish health.',
   ],
+
+  otaTitle: 'Firmware Update',
+  otaCurrentVersion: 'Current version:',
+  otaBatteryWarning: 'Battery too low (<20%). Please charge the device before updating.',
+  otaFlash: 'Flash firmware',
+  otaUploading: 'Uploading...',
+  otaRebooting: 'Rebooting device...',
+  otaDone: 'Firmware updated successfully.',
+  otaFailed: 'Firmware update failed.',
+  otaRebootTimeout: 'Device did not respond after reboot.',
 
   loginSignIn: 'Sign in',
   loginRegister: 'Register',
