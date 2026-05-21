@@ -132,7 +132,7 @@ export function DevicesPage() {
     <section className="devices-section">
       <div className="devices-toolbar">
         <h2>{t.title}</h2>
-        <Link to="/devices/new" className="primary-button link-button">
+        <Link to="/devices/new" className="primary-button link-button" style={{ padding: '6px 14px', fontSize: 12, boxShadow: 'none' }}>
           {t.add}
         </Link>
       </div>
@@ -167,7 +167,7 @@ export function DevicesPage() {
               )}
 
               <div className="device-card-actions">
-                <Link to={`/devices/${device.id}`} className="primary-button link-button" style={{ flex: 1 }}>
+                <Link to={`/devices/${device.id}`} className="primary-button link-button" style={{ padding: '7px 20px', fontSize: 13 }}>
                   {t.open}
                 </Link>
                 <button type="button" className="icon-btn" title={t.rename} onClick={() => startRename(device)}>
