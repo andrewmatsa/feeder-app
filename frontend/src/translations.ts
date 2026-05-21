@@ -46,6 +46,7 @@ export interface Translations {
   nextFeedIn: (h: number, m: number) => string
   nextFeedLabel: (h: number, m: number) => string
   repeats: string
+  save: string
   day: string
   addFeeding: string
   saveAllTimes: string
@@ -118,6 +119,8 @@ export interface Translations {
   powerSaveToggle: string
   powerSaveHint: string
   deepSleepLabel: string
+  oledTitle: string
+  oledSub: string
   oledToggle: string
   oledHint: string
   displayOffLabel: (n: number) => string
@@ -246,6 +249,7 @@ const uk: Translations = {
   scheduleSub: 'Налаштуйте розклад годувань',
   nextFeedIn: (h, m) => `${h} год ${m} хв`,
   nextFeedLabel: (h, m) => `До наступного годування: ${h} год ${m} хв`,
+  save: 'Зберегти',
   repeats: 'Повторів:',
   day: 'День:',
   addFeeding: '+ Додати годування',
@@ -314,11 +318,13 @@ const uk: Translations = {
   forgetNetwork: 'Забути мережу',
   forgetHint: 'Кнопка «Забути» видаляє збережені дані мережі та повертає пристрій у режим точки доступу. Підключіться до мережі FishFeeder-XXXX і відкрийте 192.168.4.1 для налаштування.',
 
-  powerSettings: 'Налаштування енергії',
-  powerSettingsSub: 'Оптимізуйте споживання живлення',
-  powerSaveToggle: 'Режим збереження енергії',
-  powerSaveHint: 'Режим економії увімкнено: після бездіяльності — глибокий сон. Пробудження перед розкладом (таймер) або кнопкою. Веб не дає заснути.',
-  deepSleepLabel: 'Секунд бездіяльності до глибокого сну (10–3600):',
+  powerSettings: 'Режим збереження енергії',
+  powerSettingsSub: 'Після бездіяльності — глибокий сон. Пробудження за розкладом або кнопкою.',
+  powerSaveToggle: 'Увімкнути',
+  powerSaveHint: '',
+  deepSleepLabel: 'Секунд бездіяльності до сну (10–3600):',
+  oledTitle: 'OLED дисплей',
+  oledSub: 'Керування екраном пристрою',
   oledToggle: 'Увімкнути OLED дисплей',
   oledHint: 'Вимкніть дисплей для економії енергії. Всі функції працюють через веб-інтерфейс.',
   displayOffLabel: n => `Секунд до вимкнення OLED (режим економії, 5–600): За замовчуванням ${n} с.`,
@@ -463,6 +469,7 @@ const en: Translations = {
   scheduleSub: 'Configure feeding schedule',
   nextFeedIn: (h, m) => `${h}h ${m}m`,
   nextFeedLabel: (h, m) => `Until next feed: ${h}h ${m}m`,
+  save: 'Save',
   repeats: 'Repeats:',
   day: 'Day:',
   addFeeding: '+ Add feeding',
@@ -531,11 +538,13 @@ const en: Translations = {
   forgetNetwork: 'Forget Network',
   forgetHint: "The 'Forget' button removes saved network data and returns the device to access point mode. Connect to FishFeeder-XXXX and open 192.168.4.1 to reconfigure.",
 
-  powerSettings: 'Power Settings',
-  powerSettingsSub: 'Optimize power consumption',
-  powerSaveToggle: 'Power saving mode',
-  powerSaveHint: 'Power saving enabled: deep sleep after inactivity. Wake-up before schedule (timer) or by button. Web keeps device awake.',
-  deepSleepLabel: 'Seconds idle before deep sleep (10–3600):',
+  powerSettings: 'Power Saving Mode',
+  powerSettingsSub: 'Deep sleep after inactivity. Wake by schedule or button.',
+  powerSaveToggle: 'Enable',
+  powerSaveHint: '',
+  deepSleepLabel: 'Seconds idle before sleep (10–3600):',
+  oledTitle: 'OLED Display',
+  oledSub: 'Device screen settings',
   oledToggle: 'Enable OLED display',
   oledHint: 'Disable display to save energy. All functions work via web interface.',
   displayOffLabel: n => `Seconds to turn off OLED (power save, 5–600): Default ${n} s.`,

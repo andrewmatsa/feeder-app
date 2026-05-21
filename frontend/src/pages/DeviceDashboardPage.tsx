@@ -264,6 +264,7 @@ export function DeviceDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState<boolean | null>(null)
+  const failCountRef = useRef(0)
 
   // ── Tab ───────────────────────────────────────────────────────────────────
   const setPageSubtitle = useUiStore(s => s.setPageSubtitle)
@@ -354,6 +355,7 @@ export function DeviceDashboardPage() {
   const [sPowerSave, setSPowerSave] = useState(false)
   const [sMinInterval, setSMinInterval] = useState(5)
   const [sCalibVoltage, setSCalibVoltage] = useState('')
+  const [calibDirty, setCalibDirty] = useState(false)
   const [sTimezone, setSTimezone] = useState(2)
   const settingsInited = useRef(false)
   const [powerDirty, setPowerDirty] = useState(false)
@@ -396,6 +398,7 @@ export function DeviceDashboardPage() {
   const fetchStatus = useCallback(async () => {
     try {
       const data = await api.getStatus(deviceId)
+      failCountRef.current = 0
       setIsOnline(true)
       setStatus(data)
 
@@ -430,9 +433,9 @@ export function DeviceDashboardPage() {
       }
 
       setSAngle(data.angle)
-      if (!speedDirty) setSSpeed(Number(data.speed))
 
       if (!settingsInited.current) {
+        setSSpeed(Number(data.speed))
         setSDeepSleep(data.deepSleepIdleSec)
         setSDisplayEnabled(data.displayEnabled)
         setSDisplayOff(data.displayOffAfterSec)
@@ -449,8 +452,11 @@ export function DeviceDashboardPage() {
         return backend > prev ? backend : prev
       })
     } catch (err) {
-      setIsOnline(false)
-      setError(getApiErrorMessage(err, 'Failed to load status'))
+      failCountRef.current += 1
+      if (failCountRef.current >= 3) {
+        setIsOnline(false)
+        setError(getApiErrorMessage(err, 'Failed to load status'))
+      }
     } finally {
       setLoading(false)
     }
@@ -591,6 +597,7 @@ export function DeviceDashboardPage() {
     try {
       await api.calibrateBattery({ actualVoltage: v }, deviceId)
       showToast(T.toastCalibDone)
+      setCalibDirty(false)
     } catch {
       showToast(T.toastCalibError)
     }
@@ -1369,30 +1376,27 @@ export function DeviceDashboardPage() {
 
       {/* 3. Power settings */}
       <div className="aq-card">
-        <div className="aq-section-header">
+        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: sPowerSave ? 14 : 0 }}>
           <div className="aq-section-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
               <line x1="12" y1="2" x2="12" y2="12" />
             </svg>
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="aq-section-title">{T.powerSettings}</div>
             <div className="aq-section-sub">{T.powerSettingsSub}</div>
           </div>
+          <label className="aq-toggle" style={{ margin: 0, width: 'auto', flexShrink: 0 }}>
+            <input type="checkbox" checked={sPowerSave} onChange={(e) => { setSPowerSave(e.target.checked); setPowerDirty(true) }} />
+            <span className="aq-toggle-box" />
+          </label>
+          {powerDirty && (
+            <button className="aq-save-btn" style={{ width: 'auto', margin: 0, padding: '8px 18px', fontSize: 13, flexShrink: 0 }} onClick={() => void savePowerSettings()}>
+              {T.save}
+            </button>
+          )}
         </div>
-
-        <label className="aq-toggle">
-          <input type="checkbox" checked={sPowerSave} onChange={(e) => { setSPowerSave(e.target.checked); setPowerDirty(true) }} />
-          <span className="aq-toggle-box" />
-          <span className="aq-toggle-label">
-            <svg className="aq-toggle-icon" viewBox="0 0 24 24">
-              <path d="M13 2L6 13h5l-1 9 8-12h-5l0-8z" />
-            </svg>
-            {T.powerSaveToggle}
-          </span>
-        </label>
-        <p className="aq-settings-hint">{T.powerSaveHint}</p>
 
         {sPowerSave && (
           <div className="aq-settings-field">
@@ -1407,20 +1411,32 @@ export function DeviceDashboardPage() {
             />
           </div>
         )}
+      </div>
 
-        <label className="aq-toggle">
-          <input type="checkbox" checked={sDisplayEnabled} onChange={(e) => { setSDisplayEnabled(e.target.checked); setPowerDirty(true) }} />
-          <span className="aq-toggle-box" />
-          <span className="aq-toggle-label">
-            <svg className="aq-toggle-icon" viewBox="0 0 24 24">
+      {/* 3b. OLED display */}
+      <div className="aq-card">
+        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: 14 }}>
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3.5" y="5.5" width="17" height="11" rx="2" />
               <path d="M9 19h6" />
               <path d="M12 16.5v2.5" />
             </svg>
-            {T.oledToggle}
-          </span>
-        </label>
-        <p className="aq-settings-hint">{T.oledHint}</p>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="aq-section-title">{T.oledTitle}</div>
+            <div className="aq-section-sub">{T.oledSub}</div>
+          </div>
+          <label className="aq-toggle" style={{ margin: 0, width: 'auto', flexShrink: 0 }}>
+            <input type="checkbox" checked={sDisplayEnabled} onChange={(e) => { setSDisplayEnabled(e.target.checked); setPowerDirty(true) }} />
+            <span className="aq-toggle-box" />
+          </label>
+          {powerDirty && (
+            <button className="aq-save-btn" style={{ width: 'auto', margin: 0, padding: '8px 18px', fontSize: 13, flexShrink: 0 }} onClick={() => void savePowerSettings()}>
+              {T.save}
+            </button>
+          )}
+        </div>
 
         <div className="aq-settings-field">
           <label className="aq-settings-label">{T.displayOffLabel(sDisplayOff)}</label>
@@ -1433,10 +1449,6 @@ export function DeviceDashboardPage() {
             onChange={(e) => { setSDisplayOff(Number(e.target.value)); setPowerDirty(true) }}
           />
         </div>
-
-        {powerDirty && <button className="aq-save-btn" style={{ marginTop: 14 }} onClick={() => void savePowerSettings()}>
-          {T.savePowerSettings}
-        </button>}
       </div>
 
       {/* 4. Feed interval */}
@@ -1469,7 +1481,78 @@ export function DeviceDashboardPage() {
         {intervalDirty && <button className="aq-save-btn" onClick={() => void saveMinInterval()}>{T.saveInterval}</button>}
       </div>
 
-      {/* 5. Battery calibration */}
+      {/* 5. Food supply toggle */}
+      <div className="aq-card">
+        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: 0 }}>
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="aq-section-title">{T.foodTitle}</div>
+            <div className="aq-section-sub">{T.foodSettingsSub}</div>
+          </div>
+          <label className="aq-toggle" style={{ margin: 0, width: 'auto', flexShrink: 0 }}>
+            <input
+              type="checkbox"
+              checked={sFoodEnabled}
+              onChange={(e) => handleFoodEnabled(e.target.checked)}
+            />
+            <span className="aq-toggle-box" />
+          </label>
+        </div>
+      </div>
+
+      {/* 7. Light sensor */}
+      {status?.lightLux != null && (
+        <div className="aq-card">
+          <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: sLightEnabled ? 14 : 0 }}>
+            <div className="aq-section-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div className="aq-section-title">{T.lightSensor}</div>
+              <div className="aq-section-sub">{T.lightSettingsSub}</div>
+            </div>
+            <label className="aq-toggle" style={{ margin: 0, width: 'auto', flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={sLightEnabled}
+                onChange={(e) => handleLightEnabled(e.target.checked)}
+              />
+              <span className="aq-toggle-box" />
+            </label>
+          </div>
+
+          {sLightEnabled && (
+            <div className="aq-settings-field">
+              <label className="aq-settings-label">{T.lightThresholdLabel}</label>
+              <input
+                className="aq-settings-input"
+                type="number"
+                min="1"
+                max="1000"
+                value={sLightThreshold}
+                onChange={(e) => handleLightThreshold(Math.max(1, Math.min(1000, Number(e.target.value))))}
+              />
+              <p className="aq-settings-hint">{T.lightThresholdHint}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 7. Battery calibration */}
       <div className="aq-card">
         <div className="aq-section-header">
           <div className="aq-section-icon">
@@ -1501,15 +1584,15 @@ export function DeviceDashboardPage() {
             max="4.5"
             step="0.001"
             value={sCalibVoltage}
-            onChange={(e) => setSCalibVoltage(e.target.value)}
+            onChange={(e) => { setSCalibVoltage(e.target.value); setCalibDirty(true) }}
             placeholder="e.g. 3.742"
           />
         </div>
         <p className="aq-settings-hint">{T.calibrationHint}</p>
-        <button className="aq-save-btn" onClick={() => void applyCalibration()}>{T.applyCalibration}</button>
+        {calibDirty && <button className="aq-save-btn" onClick={() => void applyCalibration()}>{T.applyCalibration}</button>}
       </div>
 
-      {/* 6. Timezone */}
+      {/* 8. Timezone */}
       <div className="aq-card">
         <div className="aq-section-header">
           <div className="aq-section-icon">
@@ -1542,98 +1625,6 @@ export function DeviceDashboardPage() {
         <p className="aq-settings-hint">{T.timezoneHint}</p>
         {timezoneDirty && <button className="aq-save-btn" onClick={() => void saveTimezone()}>{T.saveTimezone}</button>}
       </div>
-
-      {/* 7. Food supply toggle */}
-      <div className="aq-card">
-        <div className="aq-section-header">
-          <div className="aq-section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18M3 12h18M3 18h18" />
-            </svg>
-          </div>
-          <div>
-            <div className="aq-section-title">{T.foodTitle}</div>
-            <div className="aq-section-sub">{T.foodSettingsSub}</div>
-          </div>
-        </div>
-        <label className="aq-toggle">
-          <input
-            type="checkbox"
-            checked={sFoodEnabled}
-            onChange={(e) => handleFoodEnabled(e.target.checked)}
-          />
-          <span className="aq-toggle-box" />
-          <span className="aq-toggle-label">
-            <svg className="aq-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18M3 12h18M3 18h18" />
-            </svg>
-            {T.foodShowSection}
-          </span>
-        </label>
-      </div>
-
-      {/* 8. Light sensor */}
-      {status?.lightLux != null && (
-        <div className="aq-card">
-          <div className="aq-section-header">
-            <div className="aq-section-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            </div>
-            <div>
-              <div className="aq-section-title">{T.lightSensor}</div>
-              <div className="aq-section-sub">{T.lightSettingsSub}</div>
-            </div>
-          </div>
-
-          <label className="aq-toggle">
-            <input
-              type="checkbox"
-              checked={sLightEnabled}
-              onChange={(e) => handleLightEnabled(e.target.checked)}
-            />
-            <span className="aq-toggle-box" />
-            <span className="aq-toggle-label">
-              <svg className="aq-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-              {T.lightShowGauge}
-            </span>
-          </label>
-
-          {sLightEnabled && (
-            <div className="aq-settings-field" style={{ marginTop: 14 }}>
-              <label className="aq-settings-label">{T.lightThresholdLabel}</label>
-              <input
-                className="aq-settings-input"
-                type="number"
-                min="1"
-                max="1000"
-                value={sLightThreshold}
-                onChange={(e) => handleLightThreshold(Math.max(1, Math.min(1000, Number(e.target.value))))}
-              />
-              <p className="aq-settings-hint">{T.lightThresholdHint}</p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* 9. Account */}
       <div className="aq-card">
