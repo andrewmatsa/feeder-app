@@ -9,7 +9,7 @@ FeedingScheduler::FeedingScheduler()
     lastCheckedHour(-1), lastCheckedMinute(-1),
     lastFedHour(-1), lastFedMinute(-1),
     lastFedEpochMinute(-1),
-    lastScheduledFeedEpochMinute(-1),
+    lastSchedEpMinute(-1),
     minFeedIntervalMinutes(DEFAULT_MIN_FEED_INTERVAL_MINUTES),
     preferencesRef(nullptr) {
   for(int i = 0; i < MAX_FEED_TIMES; i++) {
@@ -21,8 +21,8 @@ void FeedingScheduler::begin(Preferences& preferences) {
   preferencesRef = &preferences;
   setTimezoneOffsetMinutes(preferences.getInt("tzOffsetMin", DEFAULT_TIMEZONE_OFFSET_MINUTES));
   loadFromPreferences(preferences);
-  lastFedEpochMinute = preferences.getLong64("lastFeedEpochMin", -1);
-  lastScheduledFeedEpochMinute = preferences.getLong64("lastScheduledFeedEpochMin", -1);
+  lastFedEpochMinute = preferences.getLong64("lastFeedEpMin", -1);
+  lastSchedEpMinute = preferences.getLong64("lastSchedEpMin", -1);
 }
 
 void FeedingScheduler::setTimezoneOffsetMinutes(int minutes) {
@@ -232,18 +232,18 @@ void FeedingScheduler::persistLastFeedState() {
   if (!preferencesRef) {
     return;
   }
-  preferencesRef->putLong64("lastFeedEpochMin", lastFedEpochMinute);
+  preferencesRef->putLong64("lastFeedEpMin", lastFedEpochMinute);
 }
 
 bool FeedingScheduler::wasScheduleAlreadyExecuted(long long epochMinute) const {
-  return lastScheduledFeedEpochMinute >= 0 && lastScheduledFeedEpochMinute == epochMinute;
+  return lastSchedEpMinute >= 0 && lastSchedEpMinute == epochMinute;
 }
 
 void FeedingScheduler::persistLastScheduledFeedState() {
   if (!preferencesRef) {
     return;
   }
-  preferencesRef->putLong64("lastScheduledFeedEpochMin", lastScheduledFeedEpochMinute);
+  preferencesRef->putLong64("lastSchedEpMin", lastSchedEpMinute);
 }
 
 bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
@@ -293,16 +293,16 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
     if (dayMatches && curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
       repeatsToRun += max(1, feedTimes[i].repeats);
       feedTimes[i].done = true;
-      Serial.printf("Auto feeding queued (slot %d) day=%d %02d:%02d, repeats: %d\n", i+1, feedTimes[i].day, curHour, curMinute, feedTimes[i].repeats);
+      Serial.printf("[SCHED] Slot %d triggered at %02d:%02d, repeats: %d\n", i+1, curHour, curMinute, feedTimes[i].repeats);
     }
   }
 
   if (repeatsToRun > 0) {
-    Serial.printf("Auto feeding total %02d:%02d, combined repeats: %d\n", curHour, curMinute, repeatsToRun);
+    Serial.printf("[SCHED] Running auto feed at %02d:%02d, total repeats: %d\n", curHour, curMinute, repeatsToRun);
     if (feedCallback) {
       feedCallback(repeatsToRun);
     }
-    lastScheduledFeedEpochMinute = currentEpochMinute;
+    lastSchedEpMinute = currentEpochMinute;
     persistLastScheduledFeedState();
     updateLastFeedState(localTime, currentEpochMinute);
     fed = true;

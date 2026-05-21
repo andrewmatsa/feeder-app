@@ -15,7 +15,7 @@ class ApiHandlers {
 public:
   ApiHandlers(WebServer& server, Preferences& preferences,
               ServoController& servo, BatteryMonitor& battery,
-              FeedingScheduler& scheduler);
+              FeedingScheduler& scheduler, int lightPin = -1);
   
   void setupRoutes();
 
@@ -56,7 +56,8 @@ private:
   ServoController& servo;
   BatteryMonitor& battery;
   FeedingScheduler& scheduler;
-  
+  int lightPin;
+
   bool powerSaveMode;
   bool displayEnabled;
   uint16_t displayOffAfterSec;
