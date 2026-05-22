@@ -5,7 +5,7 @@ import os
 
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
@@ -211,9 +211,16 @@ async def set_display_settings(
             request.displayEnabled, request.displayOffAfterSec,
             device_id,
         )
+    base = get_device_base_url(device_id)
     await request_firmware(
-        "/api/setDisplaySettings", method="POST", data=request.model_dump(),
-        base_url=get_device_base_url(device_id),
+        "/api/setPowerMode", method="POST",
+        data={"enabled": str(request.powerSaveMode).lower(), "idleSec": request.deepSleepIdleSec},
+        base_url=base,
+    )
+    await request_firmware(
+        "/api/setDisplayMode", method="POST",
+        data={"enabled": str(request.displayEnabled).lower(), "sec": request.displayOffAfterSec},
+        base_url=base,
     )
     return CommandResponse(success=True, message="Display settings updated")
 
@@ -275,6 +282,43 @@ async def forget_wifi(
         base_url=get_device_base_url(device_id),
     )
     return CommandResponse(success=True, message="WiFi credentials cleared")
+
+
+@app.post("/api/ota-update", response_model=CommandResponse)
+async def ota_update(
+    file: UploadFile = File(...),
+    current_user: UserClaims = Depends(get_current_user),
+    device_id: str | None = None,
+):
+    if MOCK_DEVICE:
+        return CommandResponse(success=True, message="OTA skipped (mock device)")
+
+    if not file.filename or not file.filename.endswith(".bin"):
+        raise HTTPException(status_code=400, detail="File must be a .bin firmware image")
+
+    import httpx
+    base_url = get_device_base_url(device_id)
+
+    async def _gen():
+        while chunk := await file.read(8192):
+            yield chunk
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as ota_client:
+            response = await ota_client.post(
+                f"{base_url}/api/otaUpdate",
+                headers={"X-AquaFeed-Client": "backend"},
+                content=_gen(),
+            )
+            response.raise_for_status()
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="OTA timed out") from exc
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"OTA failed: {exc.response.text}") from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail=f"OTA connection error: {exc}") from exc
+
+    return CommandResponse(success=True, message="Firmware update complete, device rebooting")
 
 
 if __name__ == "__main__":

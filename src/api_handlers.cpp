@@ -133,6 +133,7 @@ void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
 
   NextFeedInfo nextFeed = scheduler.computeNextFeed();
   doc["status"] = "ok";
+  doc["firmwareVersion"] = AQUAFEED_FIRMWARE_VERSION;
   doc["currentAngle"] = servo.getCurrentAngle();
   doc["speed"] = servo.getSpeed();
   doc["feedRepeats"] = feedRepeats;
@@ -188,7 +189,9 @@ void ApiHandlers::handleSetAngle() {
   if (!isTrustedMutationRequest(server)) return;
   noteClientActivity();
   if(server.hasArg("angle") && !servo.isMoving()) {
-    servo.setAngle(server.arg("angle").toInt(), true);
+    int angle = server.arg("angle").toInt();
+    servo.setAngle(angle, true);
+    Serial.printf("[SERVO] Angle set to %d\n", angle);
     invalidateCache();
   }
   server.send(200, "text/plain", "ok");
@@ -235,6 +238,7 @@ void ApiHandlers::handleSetRepeats() {
   if(server.hasArg("repeats")) {
     feedRepeats = server.arg("repeats").toInt();
     preferences.putInt("feedRepeats", feedRepeats);
+    Serial.printf("[FEED] Default repeats set to %d\n", feedRepeats);
     invalidateCache();
   }
   server.send(200, "text/plain", "ok");
@@ -329,6 +333,8 @@ void ApiHandlers::handleSetPowerMode() {
     updated = true;
   }
   if (updated) {
+    Serial.printf("[POWER] Power save: %s, deep sleep idle: %u s\n",
+      powerSaveMode ? "ON" : "OFF", deepSleepIdleSec);
     invalidateCache();
   }
   server.send(200, "text/plain", "ok");
@@ -436,6 +442,8 @@ void ApiHandlers::handleSetBatteryCalibration() {
   preferences.putFloat("battCal", battery.getCalibrationFactor());
   battery.update();
 
+  Serial.printf("[BATT] Calibration: %.4f -> %.4f (measured=%.3fV, raw=%.3fV)\n",
+    oldCalibration, newCalibration, measuredVoltage, currentVoltage);
   invalidateCache();
   server.send(200, "text/plain", "ok");
 }

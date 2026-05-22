@@ -48,7 +48,7 @@ Hardcoded pins in `src/main.cpp`:
 | GPIO 4 | Servo (PWM) |
 | GPIO 3 | Feed button (wakeup source) |
 | GPIO 2 | Battery ADC |
-| GPIO 5 | LDR light sensor (voltage divider: 3.3V → LDR → GPIO5 → 10kΩ → GND) |
+| GPIO 5 | LDR light sensor (hardware present, **disabled in firmware** — GPIO5 is ADC2 which is unsupported on ESP32-C3) |
 | GPIO 6 | OLED SDA |
 | GPIO 7 | OLED SCL |
 
@@ -120,6 +120,14 @@ pio run --target upload
 pio run --target monitor
 pio run --target upload --target monitor
 ```
+
+To build a firmware binary for OTA upload (output: `.pio/build/esp32-c3-devkitc-02/firmware.bin`):
+
+```bash
+pio run
+```
+
+**OTA note:** The firmware uses `min_spiffs.csv` partition table (two OTA app partitions). The first flash after adding this partition scheme must be done over USB to write the new partition layout. After that, firmware can be updated wirelessly via Settings → Firmware Update in the web app.
 
 ### Backend (Python/FastAPI)
 
