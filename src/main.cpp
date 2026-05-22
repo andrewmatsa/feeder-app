@@ -20,7 +20,7 @@
 const int SERVO_PIN = 4;
 const int BUTTON_PIN = 3;
 const int BATTERY_PIN = 2; // ⚡ MH Electronic Voltage Sensor (VOUT)
-const int LIGHT_PIN = 5;   // LDR voltage divider: 3.3V → LDR → GPIO5 → 10kΩ → GND
+const int LIGHT_PIN = -1;  // GPIO5 is ADC2 — not supported on ESP32-C3; disabled
 const int OLED_SDA_PIN = 6;
 const int OLED_SCL_PIN = 7;
 
@@ -52,12 +52,21 @@ void printStartupBanner() {
   Serial.println("\n========================================");
   Serial.println("=== AquaFeed System Starting ===");
   Serial.println("========================================\n");
+  esp_reset_reason_t reason = esp_reset_reason();
+  Serial.printf("Reset reason: %d ", reason);
+  switch (reason) {
+    case ESP_RST_BROWNOUT: Serial.println("(BROWNOUT - low voltage!)"); break;
+    case ESP_RST_PANIC:    Serial.println("(PANIC/CRASH)"); break;
+    case ESP_RST_WDT:      Serial.println("(WATCHDOG)"); break;
+    case ESP_RST_SW:       Serial.println("(Software restart)"); break;
+    case ESP_RST_POWERON:  Serial.println("(Power on)"); break;
+    default:               Serial.println("(other)"); break;
+  }
 }
 
 void initializeHardwareModules() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   lastButtonState = digitalRead(BUTTON_PIN);
-  pinMode(LIGHT_PIN, INPUT);
 
   Serial.println("Initializing battery monitor...");
   battery.begin();
@@ -140,6 +149,7 @@ void printMemoryStatus() {
   Serial.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
   Serial.printf("Largest free block: %d bytes\n", ESP.getMaxAllocHeap());
   Serial.printf("Min free heap (ever): %d bytes\n", ESP.getMinFreeHeap());
+  Serial.printf("Loop stack HWM: %d bytes free\n", uxTaskGetStackHighWaterMark(NULL) * 4);
   Serial.printf("====================\n");
 }
 
@@ -228,15 +238,6 @@ void loop(){
   if (millis() - lastLoopMs < 20) return;
   lastLoopMs = millis();
 
-  static uint32_t lastStatusLogMs = 0;
-  if (millis() - lastStatusLogMs > 30000) {
-    lastStatusLogMs = millis();
-    Serial.printf("[STATUS] Battery: %.2fV (%d%%) | WiFi: %s | IP: %s\n",
-      battery.getVoltage(), battery.getPercent(),
-      WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "disconnected",
-      isAPMode ? WiFi.softAPIP().toString().c_str() : WiFi.localIP().toString().c_str()
-    );
-  }
 
   server.handleClient();
   updateWiFiProvisioning();
@@ -248,7 +249,7 @@ void loop(){
   battery.update();
   NextFeedInfo nextFeed = scheduler.computeNextFeed();
   bool currentPowerSaveMode = apiHandlers.getPowerSaveMode();
-  DisplayData displayData = deviceRuntime.buildDisplayData(nextFeed, isAPMode, savedSSID);
+  DisplayData displayData = deviceRuntime.buildDisplayData(nextFeed, isAPMode);
   bool displayShouldBeAwake = powerManager.shouldDisplayStayAwake(currentPowerSaveMode);
   deviceRuntime.updateDisplay(displayData, displayShouldBeAwake);
   powerManager.updateSleepState(isAPMode, displayShouldBeAwake);

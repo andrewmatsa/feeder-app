@@ -211,9 +211,16 @@ async def set_display_settings(
             request.displayEnabled, request.displayOffAfterSec,
             device_id,
         )
+    base = get_device_base_url(device_id)
     await request_firmware(
-        "/api/setDisplaySettings", method="POST", data=request.model_dump(),
-        base_url=get_device_base_url(device_id),
+        "/api/setPowerMode", method="POST",
+        data={"enabled": str(request.powerSaveMode).lower(), "idleSec": request.deepSleepIdleSec},
+        base_url=base,
+    )
+    await request_firmware(
+        "/api/setDisplayMode", method="POST",
+        data={"enabled": str(request.displayEnabled).lower(), "sec": request.displayOffAfterSec},
+        base_url=base,
     )
     return CommandResponse(success=True, message="Display settings updated")
 

@@ -375,9 +375,9 @@ export function DeviceDashboardPage() {
   const [foodTotalG, setFoodTotalG] = useState<number>(() => Number(localStorage.getItem('aq_food_total') || 0))
   const [foodLoadedTs, setFoodLoadedTs] = useState<number>(() => Number(localStorage.getItem('aq_food_ts') || 0))
   const [gramsPerFeed, setGramsPerFeed] = useState<number>(() => Number(localStorage.getItem('aq_food_gpf') || 0))
-  const [foodFormOpen, setFoodFormOpen] = useState(false)
-  const [foodInputG, setFoodInputG] = useState('')
-  const [foodInputGpf, setFoodInputGpf] = useState('')
+
+  const [foodInputG, setFoodInputG] = useState(() => localStorage.getItem('aq_food_total') || '')
+  const [foodInputGpf, setFoodInputGpf] = useState(() => localStorage.getItem('aq_food_gpf') || '')
   const [forgetting, setForgetting] = useState(false)
   const [wifiForgetDone, setWifiForgetDone] = useState(false)
 
@@ -581,6 +581,36 @@ export function DeviceDashboardPage() {
     }
   }
 
+  const handlePowerSaveToggle = async (checked: boolean) => {
+    setSPowerSave(checked)
+    try {
+      await api.setDisplaySettings({
+        powerSaveMode: checked,
+        deepSleepIdleSec: sDeepSleep,
+        displayEnabled: sDisplayEnabled,
+        displayOffAfterSec: sDisplayOff,
+      }, deviceId)
+      showToast(T.toastSaved)
+    } catch {
+      showToast(T.toastSaveError)
+    }
+  }
+
+  const handleDisplayEnabledToggle = async (checked: boolean) => {
+    setSDisplayEnabled(checked)
+    try {
+      await api.setDisplaySettings({
+        powerSaveMode: sPowerSave,
+        deepSleepIdleSec: sDeepSleep,
+        displayEnabled: checked,
+        displayOffAfterSec: sDisplayOff,
+      }, deviceId)
+      showToast(T.toastSaved)
+    } catch {
+      showToast(T.toastSaveError)
+    }
+  }
+
   const saveMinInterval = async () => {
     try {
       await api.setMinInterval({ minFeedIntervalMin: sMinInterval }, deviceId)
@@ -688,9 +718,6 @@ export function DeviceDashboardPage() {
       setGramsPerFeed(gpf)
       localStorage.setItem('aq_food_gpf', String(gpf))
     }
-    setFoodFormOpen(false)
-    setFoodInputG('')
-    setFoodInputGpf('')
   }
 
   const handleForgetWifi = async () => {
@@ -796,88 +823,37 @@ export function DeviceDashboardPage() {
             nextFeedMinutes={status?.nextFeedMinutes}
             T={T}
           />
-          {status?.lightLux != null && sLightEnabled && (
+          {sLightEnabled && (
             <LightGauge
               durationSeconds={lightOnSeconds}
-              isOn={(status.lightLux ?? 0) > sLightThreshold}
+              isOn={(status?.lightLux ?? 0) > sLightThreshold}
               T={T}
             />
           )}
         </div>
 
-        {/* Food supply */}
-        {sFoodEnabled && <div className="aq-food-section">
-          <div className="aq-food-header">
-            <span className="aq-food-title">{T.foodTitle}</span>
-            <button
-              className="aq-food-refill-btn"
-              onClick={() => {
-                setFoodFormOpen((o) => !o)
-                setFoodInputG(foodTotalG > 0 ? String(foodTotalG) : '')
-                setFoodInputGpf(gramsPerFeed > 0 ? String(gramsPerFeed) : '')
-              }}
-            >
-              {T.foodRefill}
-            </button>
-          </div>
-
-          {foodTotalG > 0 ? (
-            <>
-              <div className="aq-food-bar-track">
-                <div
-                  className="aq-food-bar-fill"
-                  style={{ width: `${foodPercent}%`, background: foodBarColor }}
-                />
-              </div>
-              <div className="aq-food-meta">
-                <span>{T.foodRemaining(Math.round(foodRemaining))}</span>
-                <span className="aq-food-meta-right">
-                  {gramsPerFeed > 0 && feedTimesPerDay > 0
-                    ? T.foodDuration(foodMonths, foodDays)
-                    : T.foodNoSchedule}
-                </span>
-              </div>
-            </>
-          ) : (
-            <p className="aq-food-not-set">{T.foodNotSet}</p>
-          )}
-
-          {foodFormOpen && (
-            <div className="aq-food-form">
-              <div className="aq-food-form-row">
-                <label className="aq-food-form-label">{T.foodGramsTotal}</label>
-                <input
-                  className="aq-food-form-input"
-                  type="number"
-                  min="1"
-                  value={foodInputG}
-                  onChange={(e) => setFoodInputG(e.target.value)}
-                  placeholder="г"
-                />
-              </div>
-              <div className="aq-food-form-row">
-                <label className="aq-food-form-label">{T.foodGramsPerFeed}</label>
-                <input
-                  className="aq-food-form-input"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={foodInputGpf}
-                  onChange={(e) => setFoodInputGpf(e.target.value)}
-                  placeholder="г"
-                />
-              </div>
-              <div className="aq-food-form-btns">
-                <button className="aq-food-cancel-btn" onClick={() => setFoodFormOpen(false)}>
-                  {T.foodCancel}
-                </button>
-                <button className="aq-food-save-btn" onClick={saveFoodForm}>
-                  {T.foodSave}
-                </button>
-              </div>
+        {/* Food supply status */}
+        {sFoodEnabled && foodTotalG > 0 && (
+          <div className="aq-food-section">
+            <div className="aq-food-header">
+              <span className="aq-food-title">{T.foodTitle}</span>
             </div>
-          )}
-        </div>}
+            <div className="aq-food-bar-track">
+              <div
+                className="aq-food-bar-fill"
+                style={{ width: `${foodPercent}%`, background: foodBarColor }}
+              />
+            </div>
+            <div className="aq-food-meta">
+              <span>{T.foodRemaining(Math.round(foodRemaining))}</span>
+              <span className="aq-food-meta-right">
+                {gramsPerFeed > 0 && feedTimesPerDay > 0
+                  ? T.foodDuration(foodMonths, foodDays)
+                  : T.foodNoSchedule}
+              </span>
+            </div>
+          </div>
+        )}
 
         {status?.isCharging && (
           <div className="aq-alert aq-alert-charging">
@@ -1382,33 +1358,6 @@ export function DeviceDashboardPage() {
         </div>
       </div>
 
-      {/* 2. WiFi */}
-      <div className="aq-card">
-        <div className="aq-section-header">
-          <div className="aq-section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-              <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-              <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-              <line x1="12" y1="20" x2="12.01" y2="20" />
-            </svg>
-          </div>
-          <div>
-            <div className="aq-section-title">{T.wifiSettings}</div>
-            <div className="aq-section-sub">{T.wifiSettingsSub}</div>
-          </div>
-        </div>
-        <p className="aq-settings-hint">{T.forgetHint}</p>
-        <button
-          type="button"
-          className="aq-danger-btn"
-          onClick={() => void handleForgetWifi()}
-          disabled={forgetting}
-        >
-          {forgetting ? '…' : T.forgetNetwork}
-        </button>
-      </div>
-
       {/* 3. Power settings */}
       <div className="aq-card">
         <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: sPowerSave ? 14 : 0 }}>
@@ -1423,14 +1372,9 @@ export function DeviceDashboardPage() {
             <div className="aq-section-sub">{T.powerSettingsSub}</div>
           </div>
           <label className="aq-toggle" style={{ margin: 0, width: 'auto', flexShrink: 0 }}>
-            <input type="checkbox" checked={sPowerSave} onChange={(e) => { setSPowerSave(e.target.checked); setPowerDirty(true) }} />
+            <input type="checkbox" checked={sPowerSave} onChange={(e) => { void handlePowerSaveToggle(e.target.checked) }} />
             <span className="aq-toggle-box" />
           </label>
-          {powerDirty && (
-            <button className="aq-save-btn" style={{ width: 'auto', margin: 0, padding: '8px 18px', fontSize: 13, flexShrink: 0 }} onClick={() => void savePowerSettings()}>
-              {T.save}
-            </button>
-          )}
         </div>
 
         {sPowerSave && (
@@ -1445,6 +1389,11 @@ export function DeviceDashboardPage() {
               onChange={(e) => { setSDeepSleep(Number(e.target.value)); setPowerDirty(true) }}
             />
           </div>
+        )}
+        {powerDirty && (
+          <button className="aq-save-btn" onClick={() => void savePowerSettings()}>
+            {T.save}
+          </button>
         )}
       </div>
 
@@ -1463,14 +1412,9 @@ export function DeviceDashboardPage() {
             <div className="aq-section-sub">{T.oledSub}</div>
           </div>
           <label className="aq-toggle" style={{ margin: 0, width: 'auto', flexShrink: 0 }}>
-            <input type="checkbox" checked={sDisplayEnabled} onChange={(e) => { setSDisplayEnabled(e.target.checked); setPowerDirty(true) }} />
+            <input type="checkbox" checked={sDisplayEnabled} onChange={(e) => { void handleDisplayEnabledToggle(e.target.checked) }} />
             <span className="aq-toggle-box" />
           </label>
-          {powerDirty && (
-            <button className="aq-save-btn" style={{ width: 'auto', margin: 0, padding: '8px 18px', fontSize: 13, flexShrink: 0 }} onClick={() => void savePowerSettings()}>
-              {T.save}
-            </button>
-          )}
         </div>
 
         <div className="aq-settings-field">
@@ -1484,6 +1428,11 @@ export function DeviceDashboardPage() {
             onChange={(e) => { setSDisplayOff(Number(e.target.value)); setPowerDirty(true) }}
           />
         </div>
+        {powerDirty && (
+          <button className="aq-save-btn" onClick={() => void savePowerSettings()}>
+            {T.save}
+          </button>
+        )}
       </div>
 
       {/* 4. Feed interval */}
@@ -1518,7 +1467,7 @@ export function DeviceDashboardPage() {
 
       {/* 5. Food supply toggle */}
       <div className="aq-card">
-        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: 0 }}>
+        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: sFoodEnabled ? 14 : 0 }}>
           <div className="aq-section-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18M3 12h18M3 18h18" />
@@ -1537,11 +1486,41 @@ export function DeviceDashboardPage() {
             <span className="aq-toggle-box" />
           </label>
         </div>
+
+        {sFoodEnabled && (
+          <div className="aq-food-form" style={{ marginTop: 0 }}>
+            <div className="aq-food-form-row">
+              <label className="aq-food-form-label">{T.foodGramsTotal}</label>
+              <input
+                className="aq-food-form-input"
+                type="number"
+                min="1"
+                value={foodInputG}
+                onChange={(e) => setFoodInputG(e.target.value)}
+                placeholder="г"
+              />
+            </div>
+            <div className="aq-food-form-row">
+              <label className="aq-food-form-label">{T.foodGramsPerFeed}</label>
+              <input
+                className="aq-food-form-input"
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={foodInputGpf}
+                onChange={(e) => setFoodInputGpf(e.target.value)}
+                placeholder="г"
+              />
+            </div>
+            <button className="aq-food-save-btn" style={{ marginTop: 4 }} onClick={saveFoodForm}>
+              {T.foodSave}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 7. Light sensor */}
-      {status?.lightLux != null && (
-        <div className="aq-card">
+      <div className="aq-card">
           <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: sLightEnabled ? 14 : 0 }}>
             <div className="aq-section-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1585,7 +1564,6 @@ export function DeviceDashboardPage() {
             </div>
           )}
         </div>
-      )}
 
       {/* 7. Battery calibration */}
       <div className="aq-card">
@@ -1663,58 +1641,182 @@ export function DeviceDashboardPage() {
 
       {/* 9. OTA Firmware Update */}
       <div className="aq-card">
-        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: 14 }}>
+        {/* Header */}
+        <div className="aq-section-header" style={{ alignItems: 'center', marginBottom: 16 }}>
           <div className="aq-section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="4" width="16" height="16" rx="2" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-              <line x1="12" y1="8" x2="12" y2="16" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="#4A5568" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
             </svg>
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="aq-section-title">{T.otaTitle}</div>
-            <div className="aq-section-sub">{T.otaCurrentVersion} {status?.firmwareVersion ?? '—'}</div>
+            <div className="aq-section-sub">{T.otaCurrentVersion} <span style={{ fontWeight: 600, color: '#444' }}>{status?.firmwareVersion ?? '—'}</span></div>
           </div>
         </div>
 
-        {status && status.batteryPercent < 20 && (
-          <p className="aq-settings-hint" style={{ color: '#ef4444', marginBottom: 10 }}>
-            {T.otaBatteryWarning}
-          </p>
-        )}
-
-        <input
-          type="file"
-          accept=".bin"
-          disabled={otaState !== 'idle'}
-          onChange={(e) => { setOtaFile(e.target.files?.[0] ?? null); setOtaState('idle'); setOtaError('') }}
-          style={{ fontSize: 13, color: '#555' }}
-        />
-
-        {otaFile && otaState === 'idle' && (
-          <button className="aq-save-btn" style={{ marginTop: 12 }} onClick={() => void handleOtaUpload()}>
-            {T.otaFlash}
-          </button>
-        )}
-
-        {(otaState === 'uploading' || otaState === 'rebooting') && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ height: 6, borderRadius: 999, background: '#e5e7eb', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 999, background: '#34c759', width: otaState === 'rebooting' ? '80%' : '40%', transition: 'width 0.5s' }} />
+        {/* Step indicator */}
+        {(() => {
+          const stepIndex = otaState === 'idle' ? 0 : otaState === 'uploading' ? 1 : otaState === 'rebooting' ? 1 : 2
+          const steps = [
+            lang === 'uk' ? 'Вибір файлу' : 'Select file',
+            lang === 'uk' ? 'Завантаження' : 'Uploading',
+            lang === 'uk' ? 'Готово' : 'Done',
+          ]
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 18, gap: 0 }}>
+              {steps.map((label, i) => {
+                const active = i === stepIndex
+                const completed = i < stepIndex || otaState === 'done'
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : 'none' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: completed ? '#34c759' : active ? '#111' : '#e5e7eb',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        transition: 'background 0.3s',
+                      }}>
+                        {completed ? (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: active ? '#fff' : '#aaa' }}>{i + 1}</span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: 10, color: completed ? '#34c759' : active ? '#111' : '#aaa', fontWeight: active ? 600 : 400, whiteSpace: 'nowrap' }}>{label}</span>
+                    </div>
+                    {i < steps.length - 1 && (
+                      <div style={{ flex: 1, height: 2, background: completed ? '#34c759' : '#e5e7eb', margin: '0 6px', marginBottom: 14, transition: 'background 0.3s' }} />
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            <p className="aq-settings-hint" style={{ marginTop: 6 }}>
+          )
+        })()}
+
+        {/* Battery warning */}
+        {status && status.batteryPercent < 20 && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#fff7ed', border: '1px solid #fed7aa', borderLeft: '3px solid #f97316', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span style={{ fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>{T.otaBatteryWarning}</span>
+          </div>
+        )}
+
+        {/* Drop zone (idle states only) */}
+        {(otaState === 'idle' || otaState === 'error') && (
+          <>
+            <label className={`aq-ota-drop${otaFile ? ' aq-ota-drop--selected' : ''}`}>
+              <input
+                type="file"
+                accept=".bin"
+                style={{ display: 'none' }}
+                onChange={(e) => { setOtaFile(e.target.files?.[0] ?? null); setOtaState('idle'); setOtaError('') }}
+              />
+              {otaFile ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                    <polyline points="13 2 13 9 20 9" />
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{otaFile.name}</span>
+                  <span style={{ fontSize: 11, color: '#6b7280' }}>{(otaFile.size / 1024).toFixed(0)} KB — {lang === 'uk' ? 'натисніть для заміни' : 'click to replace'}</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="16 16 12 12 8 16" />
+                    <line x1="12" y1="12" x2="12" y2="21" />
+                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                  </svg>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>{lang === 'uk' ? 'Виберіть файл прошивки (.bin)' : 'Select firmware file (.bin)'}</span>
+                </div>
+              )}
+            </label>
+
+            {otaFile && otaState === 'idle' && (
+              <button className="aq-save-btn" style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => void handleOtaUpload()}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 16 12 12 8 16" />
+                  <line x1="12" y1="12" x2="12" y2="21" />
+                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                </svg>
+                {T.otaFlash}
+              </button>
+            )}
+
+            {otaState === 'error' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, color: '#ef4444' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+                <span style={{ fontSize: 12 }}>{otaError}</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Progress */}
+        {(otaState === 'uploading' || otaState === 'rebooting') && (
+          <div style={{ marginTop: 4 }}>
+            <div style={{ height: 8, borderRadius: 999, background: '#e5e7eb', overflow: 'hidden' }}>
+              <div
+                className="aq-ota-progress-bar"
+                style={{ width: otaState === 'rebooting' ? '75%' : '35%' }}
+              />
+            </div>
+            <p className="aq-settings-hint" style={{ marginTop: 8, color: '#555' }}>
               {otaState === 'rebooting' ? T.otaRebooting : T.otaUploading}
             </p>
           </div>
         )}
 
+        {/* Done */}
         {otaState === 'done' && (
-          <p className="aq-settings-hint" style={{ color: '#16a34a', marginTop: 10 }}>{T.otaDone}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span style={{ fontSize: 13, color: '#15803d', fontWeight: 500 }}>{T.otaDone}</span>
+          </div>
         )}
+      </div>
 
-        {otaState === 'error' && (
-          <p className="aq-settings-hint" style={{ color: '#ef4444', marginTop: 10 }}>{otaError}</p>
-        )}
+      {/* WiFi */}
+      <div className="aq-card">
+        <div className="aq-section-header">
+          <div className="aq-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+              <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+              <line x1="12" y1="20" x2="12.01" y2="20" />
+            </svg>
+          </div>
+          <div>
+            <div className="aq-section-title">{T.wifiSettings}</div>
+            <div className="aq-section-sub">{T.wifiSettingsSub}</div>
+          </div>
+        </div>
+        <p className="aq-settings-hint">{T.forgetHint}</p>
+        <button
+          type="button"
+          className="aq-danger-btn"
+          onClick={() => void handleForgetWifi()}
+          disabled={forgetting}
+        >
+          {forgetting ? '…' : T.forgetNetwork}
+        </button>
       </div>
 
       {/* 10. Account */}

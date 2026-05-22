@@ -48,8 +48,7 @@ void DeviceRuntime::getCurrentLocalTime(int& currentHour, int& currentMinute) co
 }
 
 DisplayData DeviceRuntime::buildDisplayData(const NextFeedInfo& nextFeed,
-                                            bool isAPMode,
-                                            const String& wifiSSID) const {
+                                            bool isAPMode) const {
   int currentHour;
   int currentMinute;
   getCurrentLocalTime(currentHour, currentMinute);
@@ -66,7 +65,8 @@ DisplayData DeviceRuntime::buildDisplayData(const NextFeedInfo& nextFeed,
   displayData.isAPMode = isAPMode;
   displayData.wifiConnected = (WiFi.status() == WL_CONNECTED);
   displayData.isFeeding = servo.isMoving();
-  displayData.wifiSSID = wifiSSID;
+  displayData.isCharging = battery.isCharging();
+  displayData.cooldownSeconds = scheduler.getSecondsUntilManualFeedAllowed();
   return displayData;
 }
 

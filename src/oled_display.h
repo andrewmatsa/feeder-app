@@ -19,7 +19,8 @@ struct DisplayData {
   bool isAPMode;
   bool wifiConnected;
   bool isFeeding;
-  String wifiSSID;
+  bool isCharging;
+  int cooldownSeconds;
 };
 
 class OledDisplay {

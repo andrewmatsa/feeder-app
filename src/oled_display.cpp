@@ -177,8 +177,12 @@ void OledDisplay::drawSimpleScreen(const DisplayData& data) {
   u8g2.setFont(u8g2_font_helvR10_tr);
   u8g2.drawStr(0, 13, timeStr);
   
-  char batStr[20];
-  snprintf(batStr, sizeof(batStr), "Bat: %.0f%%", data.batteryPercent);
+  char batStr[24];
+  if (data.isCharging) {
+    snprintf(batStr, sizeof(batStr), "Bat: %.0f%% CHG", data.batteryPercent);
+  } else {
+    snprintf(batStr, sizeof(batStr), "Bat: %.0f%%", data.batteryPercent);
+  }
   u8g2.setFont(u8g2_font_helvR10_tr);
   u8g2.drawStr(0, 28, batStr);
   
@@ -216,7 +220,19 @@ void OledDisplay::drawSimpleScreen(const DisplayData& data) {
     snprintf(nextStr, sizeof(nextStr), "Next: --:--");
   }
   u8g2.setFont(u8g2_font_helvR10_tr);
-  u8g2.drawStr(0, 43, nextStr);
+  if (data.cooldownSeconds > 0) {
+    char coolStr[32];
+    int cm = data.cooldownSeconds / 60;
+    int cs = data.cooldownSeconds % 60;
+    if (cm > 0) {
+      snprintf(coolStr, sizeof(coolStr), "Wait: %dm %ds", cm, cs);
+    } else {
+      snprintf(coolStr, sizeof(coolStr), "Wait: %ds", cs);
+    }
+    u8g2.drawStr(0, 43, coolStr);
+  } else {
+    u8g2.drawStr(0, 43, nextStr);
+  }
 }
 
 void OledDisplay::drawFeedingScreen() {
@@ -232,9 +248,9 @@ void OledDisplay::drawFeedingScreen() {
   int radius = 10;
   
   for (int i = 0; i < 8; i++) {
-    float angle = (i * 3.14159 * 2) / 8;
-    int x = centerX + cos(angle) * radius;
-    int y = centerY + sin(angle) * radius;
+    float angle = (i * 3.14159f * 2.0f) / 8.0f;
+    int x = centerX + cosf(angle) * radius;
+    int y = centerY + sinf(angle) * radius;
     
     if (i == spinnerPhase) {
       u8g2.drawDisc(x, y, 3, U8G2_DRAW_ALL);
@@ -249,8 +265,8 @@ void OledDisplay::drawFishAnimation() {
   
   int fishPos = ((currentTime / 200) % 180) + 10;
   
-  float finPhase = (currentTime % 1000) / 1000.0 * 3.14159 * 2;
-  int finOffset = sin(finPhase) * 2;
+  float finPhase = (currentTime % 1000) / 1000.0f * 3.14159f * 2.0f;
+  int finOffset = sinf(finPhase) * 2;
   
   int fishY = 32;
   

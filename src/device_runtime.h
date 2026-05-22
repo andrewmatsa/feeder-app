@@ -17,7 +17,7 @@ public:
                 OledDisplay& oled);
 
   bool tryRunFeedSequence(int repeats, const char* blockedMessage, bool showDisplay);
-  DisplayData buildDisplayData(const NextFeedInfo& nextFeed, bool isAPMode, const String& wifiSSID) const;
+  DisplayData buildDisplayData(const NextFeedInfo& nextFeed, bool isAPMode) const;
   void updateDisplay(const DisplayData& displayData, bool displayShouldBeAwake);
 
 private:

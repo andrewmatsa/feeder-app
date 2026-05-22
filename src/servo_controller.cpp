@@ -107,6 +107,6 @@ void ServoController::feedTask(void* params) {
 void ServoController::feedSequenceAsync(int repeats, std::function<void()> onDone) {
   if (manualMoving) return;
   auto* params = new FeedTaskParams{this, repeats, onDone};
-  xTaskCreatePinnedToCore(feedTask, "feed", 4096, params, 1, NULL, 0);
+  xTaskCreatePinnedToCore(feedTask, "feed", 8192, params, 1, NULL, 0);
 }
 

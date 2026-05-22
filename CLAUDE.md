@@ -48,7 +48,7 @@ Hardcoded pins in `src/main.cpp`:
 | GPIO 4 | Servo (PWM) |
 | GPIO 3 | Feed button (wakeup source) |
 | GPIO 2 | Battery ADC |
-| GPIO 5 | LDR light sensor (voltage divider: 3.3V → LDR → GPIO5 → 10kΩ → GND) |
+| GPIO 5 | LDR light sensor (hardware present, **disabled in firmware** — GPIO5 is ADC2 which is unsupported on ESP32-C3) |
 | GPIO 6 | OLED SDA |
 | GPIO 7 | OLED SCL |
 
