@@ -8,8 +8,9 @@ Run with: pytest -m mock
 """
 from __future__ import annotations
 
+import io
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -252,3 +253,90 @@ def test_set_endpoints_persist_core_fields_and_are_reflected_in_status() -> None
         assert body["feedRepeats"] == 1  # /api/feed is one-shot, doesn't change status
         assert body["powerSaveMode"] is False
         assert body["feedTimes"] == [{"hour": 6, "minute": 45, "repeats": 2}]
+
+
+# ── OTA firmware update ───────────────────────────────────────────────────────
+
+try:
+    OTA_HTTPX_TARGET = "backend.main.httpx"
+except Exception:
+    OTA_HTTPX_TARGET = "main.httpx"
+
+OTA_HTTPX_TARGET = "httpx.AsyncClient"
+
+
+def _make_fake_bin() -> bytes:
+    return b"\xe9" + b"\x00" * 255  # minimal .bin-like content
+
+
+def _mock_ota_client(status_code: int = 200, raise_exc=None):
+    """Build a mock httpx.AsyncClient context manager for OTA tests."""
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+    mock_response.text = "{\"status\":\"rebooting\"}"
+    if raise_exc:
+        mock_response.raise_for_status.side_effect = raise_exc
+    else:
+        mock_response.raise_for_status.return_value = None
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    return mock_client
+
+
+def test_ota_update_returns_success_on_valid_bin() -> None:
+    mock_client = _mock_ota_client()
+    with patch(OTA_HTTPX_TARGET, return_value=mock_client):
+        response = client.post(
+            "/api/ota-update",
+            files={"file": ("firmware.bin", io.BytesIO(_make_fake_bin()), "application/octet-stream")},
+        )
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+
+def test_ota_update_rejects_non_bin_file() -> None:
+    response = client.post(
+        "/api/ota-update",
+        files={"file": ("firmware.txt", io.BytesIO(b"not a binary"), "text/plain")},
+    )
+    assert response.status_code == 400
+    assert "bin" in response.json()["detail"].lower()
+
+
+def test_ota_update_returns_mock_success_when_mock_device() -> None:
+    with patch.object(_main, "MOCK_DEVICE", True):
+        response = client.post(
+            "/api/ota-update",
+            files={"file": ("firmware.bin", io.BytesIO(_make_fake_bin()), "application/octet-stream")},
+        )
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+
+def test_ota_update_returns_504_on_timeout() -> None:
+    import httpx as _httpx
+    mock_client = _mock_ota_client(raise_exc=_httpx.TimeoutException("timed out"))
+    with patch(OTA_HTTPX_TARGET, return_value=mock_client):
+        response = client.post(
+            "/api/ota-update",
+            files={"file": ("firmware.bin", io.BytesIO(_make_fake_bin()), "application/octet-stream")},
+        )
+    assert response.status_code == 504
+
+
+def test_ota_update_returns_502_on_firmware_error() -> None:
+    import httpx as _httpx
+    err_response = MagicMock()
+    err_response.status_code = 500
+    err_response.text = '{"error":"flash_failed"}'
+    exc = _httpx.HTTPStatusError("flash failed", request=MagicMock(), response=err_response)
+    mock_client = _mock_ota_client(raise_exc=exc)
+    with patch(OTA_HTTPX_TARGET, return_value=mock_client):
+        response = client.post(
+            "/api/ota-update",
+            files={"file": ("firmware.bin", io.BytesIO(_make_fake_bin()), "application/octet-stream")},
+        )
+    assert response.status_code == 502

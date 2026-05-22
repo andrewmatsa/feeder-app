@@ -15,6 +15,7 @@ AquaFeed is an ESP32-C3 based automatic fish feeder with firmware control, a Pyt
 - Servo speed and angle control
 - Battery monitoring
 - Power-saving and deep-sleep controls
+- OTA firmware updates via web interface (no USB cable required)
 - Embedded device web UI plus a separate SPA frontend
 
 ## Project Structure
@@ -54,10 +55,26 @@ If you need to bump a release, update `versions.json` first and treat it as the 
 
 1. Install [PlatformIO](https://platformio.org/).
 2. Open the project.
-3. Build and upload the firmware to the ESP32-C3.
+3. Build and upload the firmware to the ESP32-C3:
+
+```bash
+pio run --target upload
+```
+
 4. On first boot the device creates an access point for WiFi provisioning.
 
 After the device joins WiFi, note its hostname or IP from the serial monitor and use that value for the backend `ESP32_BASE_URL`.
+
+### OTA Partition Table
+
+The firmware uses `min_spiffs.csv` to enable OTA updates (two app partitions ~1.9 MB each). **The first flash must be done over USB** to write the new partition table. After that, all firmware updates can be done wirelessly through the Settings → Firmware Update section in the web app.
+
+To build a firmware binary for OTA upload:
+
+```bash
+pio run
+# Binary is at .pio/build/esp32-c3-devkitc-02/firmware.bin
+```
 
 ## Backend Setup
 
@@ -205,6 +222,23 @@ The backend is the public API surface for clients. It normalizes the current fir
   ]
 }
 ```
+
+### `POST /api/ota-update`
+
+Upload a firmware `.bin` file as `multipart/form-data`. The backend streams it directly to the ESP32 without buffering the full binary in RAM.
+
+```
+Content-Type: multipart/form-data
+Body: file=<firmware.bin>
+```
+
+Response on success:
+
+```json
+{ "success": true, "message": "Firmware update complete, device rebooting" }
+```
+
+The device reboots automatically after flashing. The frontend polls `/api/status` until the device responds again (up to 90 seconds). Returns `400` if the file is not a `.bin`, `412` if battery is below 20%, `504` on timeout, `502` if the flash itself failed.
 
 ## Notes
 

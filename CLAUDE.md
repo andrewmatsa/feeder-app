@@ -121,6 +121,14 @@ pio run --target monitor
 pio run --target upload --target monitor
 ```
 
+To build a firmware binary for OTA upload (output: `.pio/build/esp32-c3-devkitc-02/firmware.bin`):
+
+```bash
+pio run
+```
+
+**OTA note:** The firmware uses `min_spiffs.csv` partition table (two OTA app partitions). The first flash after adding this partition scheme must be done over USB to write the new partition layout. After that, firmware can be updated wirelessly via Settings → Firmware Update in the web app.
+
 ### Backend (Python/FastAPI)
 
 ```bash
