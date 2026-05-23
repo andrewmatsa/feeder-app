@@ -235,7 +235,7 @@ button:hover { opacity: 0.85; }
     <div class="hero-header">
       <div class="app-heading">
         <div class="app-title">AquaFeed Control</div>
-        <div class="app-subtitle">WiFi access login</div>
+        <div class="app-subtitle">Вхід у WiFi налаштування</div>
       </div>
       <div class="app-illustration">
         <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
@@ -257,12 +257,12 @@ button:hover { opacity: 0.85; }
       </div>
     </div>
     <div class="card">
-      <h1 id="title">Unlock settings</h1>
-      <p id="desc">Enter the access point password to continue to WiFi connection setup.</p>
-      <label id="passwordLabel" for="password">Access point password</label>
+      <h1 id="title">Розблокувати налаштування</h1>
+      <p id="desc">Введіть пароль точки доступу, щоб перейти до налаштування домашнього WiFi.</p>
+      <label id="passwordLabel" for="password">Пароль точки доступу</label>
       <input id="password" type="password" placeholder="12345678">
-      <button type="button" id="unlockBtn" onclick="login()">Unlock settings</button>
-      <div id="noteText" class="note">After login you will see a separate WiFi connection screen for entering your home network credentials.</div>
+      <button type="button" id="unlockBtn" onclick="login()">Розблокувати</button>
+      <div id="noteText" class="note">Після входу ви побачите окремий екран підключення WiFi для введення даних домашньої мережі.</div>
       <div id="msg"></div>
     </div>
   </div>
@@ -595,7 +595,7 @@ button:hover { opacity: 0.85; }
     <div class="hero-header">
       <div class="app-heading">
         <div class="app-title">AquaFeed Control</div>
-        <div class="app-subtitle">WiFi connection</div>
+        <div class="app-subtitle">Підключення WiFi</div>
       </div>
       <div class="app-illustration">
         <svg class="hero-svg-fish" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Стилізована рибка">
@@ -617,14 +617,14 @@ button:hover { opacity: 0.85; }
       </div>
     </div>
     <div class="card">
-      <h1 id="title">Connect home WiFi</h1>
-      <p id="desc">Enter your home WiFi credentials. After a successful connection you will get access to the full WiFi settings page.</p>
-      <label id="ssidLabel" for="ssid">WiFi network name</label>
-      <input id="ssid" type="text" placeholder="MyHomeWiFi">
-      <label id="passwordLabel" for="password">WiFi password</label>
-      <input id="password" type="password" placeholder="Enter WiFi password">
-      <button type="button" id="connectBtn" onclick="connectWifi()">Connect and unlock</button>
-      <div id="hintText" class="hint">If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open <strong>http://fish.local/</strong>.</div>
+      <h1 id="title">Підключіть домашній WiFi</h1>
+      <p id="desc">Введіть дані домашнього WiFi. Після успішного підключення відкриється повна сторінка налаштувань WiFi.</p>
+      <label id="ssidLabel" for="ssid">Назва WiFi мережі</label>
+      <input id="ssid" type="text" placeholder="МійДомашнійWiFi">
+      <label id="passwordLabel" for="password">Пароль WiFi</label>
+      <input id="password" type="password" placeholder="Введіть пароль WiFi">
+      <button type="button" id="connectBtn" onclick="connectWifi()">Підключити і розблокувати</button>
+      <div id="hintText" class="hint">Після успішного підключення відʼєднайтеся від точки доступу AquaFeed, підʼєднайте телефон до домашнього WiFi і відкрийте <strong>http://fish.local/</strong>.</div>
       <div id="msg"></div>
       <div id="postConnectActions" class="post-connect-actions">
         <button type="button" id="openFishLocalBtn" onclick="openProvisionedWifiPage()">Open fish.local</button>

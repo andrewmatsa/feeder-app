@@ -12,6 +12,7 @@ export function RegisterPage() {
   const register = useAuthStore((s) => s.register)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const lang = useUiStore(s => s.lang)
+  const setLang = useUiStore(s => s.setLang)
   const t = T[lang] ?? T.uk
   const navigate = useNavigate()
 
@@ -40,6 +41,10 @@ export function RegisterPage() {
 
   return (
     <div className="auth-panel">
+      <div className="lang-toggle">
+        <button type="button" className={lang === 'uk' ? 'active' : ''} onClick={() => setLang('uk')}>UK</button>
+        <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
+      </div>
       <h2>{t.title}</h2>
       <form className="auth-form" onSubmit={(e) => void handleSubmit(e)}>
         <label>
