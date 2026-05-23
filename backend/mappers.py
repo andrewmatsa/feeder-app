@@ -39,11 +39,13 @@ def normalize_feed_times(raw_feed_times: Any) -> list[FeedTime]:
     for item in raw_feed_times:
         if not isinstance(item, dict):
             continue
+        raw_day = to_int(item.get("d", item.get("day", -1)), -1)
         normalized.append(
             FeedTime(
                 hour=max(0, min(23, to_int(item.get("h", item.get("hour")), 0))),
                 minute=max(0, min(59, to_int(item.get("m", item.get("minute")), 0))),
                 repeats=max(1, to_int(item.get("r", item.get("repeats")), 1)),
+                day=raw_day if raw_day in range(-1, 7) else -1,
             )
         )
     return normalized
@@ -51,6 +53,7 @@ def normalize_feed_times(raw_feed_times: Any) -> list[FeedTime]:
 
 def map_firmware_status(payload: dict[str, Any]) -> StatusResponse:
     return StatusResponse(
+        firmwareVersion=payload.get("firmwareVersion") or None,
         angle=max(0, min(180, to_int(payload.get("currentAngle", payload.get("angle")), 0))),
         speed=max(1.0, min(20.0, to_float(payload.get("speed"), 20.0))),
         feedRepeats=max(1, to_int(payload.get("feedRepeats"), 1)),
@@ -76,9 +79,11 @@ def map_firmware_status(payload: dict[str, Any]) -> StatusResponse:
         displayAwake=bool(payload.get("displayAwake", True)),
         timestamp=datetime.now().isoformat(),
         lightLux=to_optional_non_negative_int(payload.get("lightLux")),
+        buildDate=payload.get("buildDate") or None,
+        buildTime=payload.get("buildTime") or None,
     )
 
 
 def encode_schedule(times: list[FeedTime]) -> str:
-    firmware_times = [{"h": time.hour, "m": time.minute, "r": time.repeats} for time in times]
+    firmware_times = [{"h": time.hour, "m": time.minute, "r": time.repeats, "d": time.day} for time in times]
     return json.dumps(firmware_times, separators=(",", ":"))

@@ -52,4 +52,4 @@ def test_encode_schedule_uses_firmware_compact_shape() -> None:
 
     encoded = encode_schedule(schedule)
 
-    assert encoded == '[{"h":10,"m":0,"r":2}]'
+    assert encoded == '[{"h":10,"m":0,"r":2,"d":-1}]'

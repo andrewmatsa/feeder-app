@@ -121,11 +121,17 @@ pio run --target monitor
 pio run --target upload --target monitor
 ```
 
-To build a firmware binary for OTA upload (output: `.pio/build/esp32-c3-devkitc-02/firmware.bin`):
+To build a firmware binary for OTA upload:
 
 ```bash
 pio run
 ```
+
+Output files in `.pio/build/esp32-c3-devkitc-02/`:
+- `firmware.bin` — стандартний вихід PlatformIO
+- `aquafeed-v<version>-<date>.bin` — іменований файл для OTA (генерується автоматично скриптом `platformio_extra.py`)
+
+Версія береться з `versions.json` → `firmwareVersion`. Щоб змінити версію перед білдом — оновіть це поле.
 
 **OTA note:** The firmware uses `min_spiffs.csv` partition table (two OTA app partitions). The first flash after adding this partition scheme must be done over USB to write the new partition layout. After that, firmware can be updated wirelessly via Settings → Firmware Update in the web app.
 

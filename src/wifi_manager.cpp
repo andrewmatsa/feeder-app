@@ -93,10 +93,7 @@ void activateApMode(bool clearSession) {
   WiFi.setTxPower(WIFI_POWER_19_5dBm);
   WiFi.softAP(apSSID.c_str(), apPassword.c_str());
   IPAddress IP = WiFi.softAPIP();
-  Serial.println("AP Mode started");
-  Serial.println("SSID: " + apSSID);
-  Serial.println("Password: " + apPassword);
-  Serial.println("AP IP: " + IP.toString());
+  ets_printf("[WIFI] AP mode: SSID=%s IP=%s\n", apSSID.c_str(), IP.toString().c_str());
   isAPMode = true;
 }
 
@@ -134,7 +131,7 @@ bool connectToWiFiInternal(bool keepApAlive) {
   }
 
   if(WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi connected, IP: " + WiFi.localIP().toString());
+    ets_printf("\n[WIFI] Connected, IP: %s\n", WiFi.localIP().toString().c_str());
     if (!keepApAlive) {
       isAPMode = false;
     }

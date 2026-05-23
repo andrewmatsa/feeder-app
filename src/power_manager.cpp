@@ -116,8 +116,7 @@ void PowerManager::enterPowerSaveDeepSleep() {
     wakeMicros = MIN_DEEP_SLEEP_US;
   }
   esp_sleep_enable_timer_wakeup(wakeMicros);
-  Serial.printf("[SLEEP] Entering deep sleep. Wake in %.1f s (next scheduled feed or button)\n", wakeMicros / 1000000.0);
-  Serial.flush();
+  ets_printf("[SLEEP] Entering deep sleep. Wake in %.1f s\n", wakeMicros / 1000000.0);
   delay(50);
   esp_deep_sleep_start();
 }

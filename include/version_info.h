@@ -9,4 +9,12 @@
 #define AQUAFEED_FIRMWARE_VERSION "dev"
 #endif
 
+#ifndef BUILD_DATE
+#define BUILD_DATE __DATE__
+#endif
+
+#ifndef BUILD_TIME
+#define BUILD_TIME __TIME__
+#endif
+
 #endif

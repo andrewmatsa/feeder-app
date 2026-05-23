@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <math.h>
 #include "wifi_manager.h"
+#include "version_info.h"
 
 ApiHandlers::ApiHandlers(WebServer& server, Preferences& preferences,
                          ServoController& servo, BatteryMonitor& battery,
@@ -134,6 +135,8 @@ void ApiHandlers::populateStatusDocument(JsonDocument& doc) {
   NextFeedInfo nextFeed = scheduler.computeNextFeed();
   doc["status"] = "ok";
   doc["firmwareVersion"] = AQUAFEED_FIRMWARE_VERSION;
+  doc["buildDate"] = BUILD_DATE;
+  doc["buildTime"] = BUILD_TIME;
   doc["currentAngle"] = servo.getCurrentAngle();
   doc["speed"] = servo.getSpeed();
   doc["feedRepeats"] = feedRepeats;
@@ -191,7 +194,7 @@ void ApiHandlers::handleSetAngle() {
   if(server.hasArg("angle") && !servo.isMoving()) {
     int angle = server.arg("angle").toInt();
     servo.setAngle(angle, true);
-    Serial.printf("[SERVO] Angle set to %d\n", angle);
+    ets_printf("[SET] Angle: %d\n", angle);
     invalidateCache();
   }
   server.send(200, "text/plain", "ok");
@@ -205,15 +208,15 @@ void ApiHandlers::handleFeedNow() {
     repeatsForFeed = constrain(server.arg("repeats").toInt(), 1, 20);
   }
   if (!scheduler.canFeedNow()) {
-    Serial.println("[FEED] Blocked: recently fed (cooldown active)");
+    ets_printf("[FEED] Blocked: recently fed (cooldown active)\n");
     server.send(429, "text/plain", "feeding blocked: recently fed");
     return;
   }
 
-  Serial.printf("[FEED] Starting feed sequence: %d repeat(s)\n", repeatsForFeed);
+  ets_printf("[FEED] Starting feed sequence: %d repeat(s)\n", repeatsForFeed);
   server.send(200, "text/plain", "feeding");
   servo.feedSequenceAsync(repeatsForFeed, [this]() {
-    Serial.println("[FEED] Feed sequence complete");
+    ets_printf("[FEED] Feed sequence complete\n");
     scheduler.recordManualFeed();
     invalidateCache();
   });
@@ -224,7 +227,7 @@ void ApiHandlers::handleSetSpeed() {
   noteClientActivity();
   if(server.hasArg("speed")) {
     float speed = server.arg("speed").toFloat();
-    Serial.printf("[SPEED] Set to %.1f\n", speed);
+    ets_printf("[SET] Speed: %.1f\n", speed);
     servo.setSpeed(speed);
     preferences.putFloat("speed", speed);
     invalidateCache();
@@ -238,7 +241,7 @@ void ApiHandlers::handleSetRepeats() {
   if(server.hasArg("repeats")) {
     feedRepeats = server.arg("repeats").toInt();
     preferences.putInt("feedRepeats", feedRepeats);
-    Serial.printf("[FEED] Default repeats set to %d\n", feedRepeats);
+    ets_printf("[SET] Feed repeats: %d\n", feedRepeats);
     invalidateCache();
   }
   server.send(200, "text/plain", "ok");
@@ -275,13 +278,14 @@ void ApiHandlers::saveFeedTimes(const FeedTime* newFeedTimes, int count) {
   scheduler.setFeedTimes(newFeedTimes, count);
   scheduler.saveToPreferences(preferences);
   invalidateCache();
-  Serial.printf("Feed times saved: count=%d\n", count);
+  static const char* const DAY_NAMES[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+  ets_printf("[SET] Schedule saved: %d slot(s)\n", count);
   for (int i = 0; i < count; i++) {
-    Serial.printf("  [%d] %02d:%02d (repeats=%d)\n",
-                  i,
-                  newFeedTimes[i].hour,
-                  newFeedTimes[i].minute,
-                  newFeedTimes[i].repeats);
+    int d = newFeedTimes[i].day;
+    const char* dayStr = (d == -1) ? "daily" : (d >= 0 && d <= 6 ? DAY_NAMES[d] : "?");
+    ets_printf("  [%d] %02d:%02d x%d %s\n",
+               i, newFeedTimes[i].hour, newFeedTimes[i].minute,
+               newFeedTimes[i].repeats, dayStr);
   }
 }
 
@@ -333,7 +337,7 @@ void ApiHandlers::handleSetPowerMode() {
     updated = true;
   }
   if (updated) {
-    Serial.printf("[POWER] Power save: %s, deep sleep idle: %u s\n",
+    ets_printf("[SET] Power save: %s, deep sleep idle: %u s\n",
       powerSaveMode ? "ON" : "OFF", deepSleepIdleSec);
     invalidateCache();
   }
@@ -347,14 +351,14 @@ void ApiHandlers::handleSetDisplayMode() {
   if(server.hasArg("enabled")) {
     displayEnabled = server.arg("enabled") == "true";
     preferences.putBool("displayEnabled", displayEnabled);
-    Serial.printf("Display %s\n", displayEnabled ? "enabled" : "disabled");
+    ets_printf("[SET] Display: %s\n", displayEnabled ? "enabled" : "disabled");
     updated = true;
   }
   if (server.hasArg("sec")) {
     int v = server.arg("sec").toInt();
     setDisplayOffAfterSec(static_cast<uint16_t>(v));
     preferences.putUInt("displayOffSec", displayOffAfterSec);
-    Serial.printf("Display off after %u s (power-save ON)\n", displayOffAfterSec);
+    ets_printf("[SET] Display off after: %u s\n", displayOffAfterSec);
     updated = true;
   }
   if (updated) {
@@ -371,7 +375,7 @@ void ApiHandlers::handleSetDisplayOff() {
     setDisplayOffAfterSec(static_cast<uint16_t>(v));
     preferences.putUInt("displayOffSec", displayOffAfterSec);
     invalidateCache();
-    Serial.printf("Display off after %u s (power-save ON)\n", displayOffAfterSec);
+    ets_printf("[SET] Display off after: %u s\n", displayOffAfterSec);
   }
   server.send(200, "text/plain", "ok");
 }
@@ -385,7 +389,7 @@ void ApiHandlers::handleSetDeepSleep() {
     preferences.putUInt("dsIdleSec", deepSleepIdleSec);
   }
   invalidateCache();
-  Serial.printf("Deep sleep idle: %u s (wake: button + timer before feed)\n", deepSleepIdleSec);
+  ets_printf("[SET] Deep sleep idle: %u s\n", deepSleepIdleSec);
   server.send(200, "text/plain", "ok");
 }
 
@@ -397,7 +401,7 @@ void ApiHandlers::handleSetTimezone() {
     FeedingScheduler::setTimezoneOffsetMinutes(offsetMin);
     preferences.putInt("tzOffsetMin", FeedingScheduler::getTimezoneOffsetMinutes());
     invalidateCache();
-    Serial.printf("Timezone offset set to %d minutes\n", FeedingScheduler::getTimezoneOffsetMinutes());
+    ets_printf("[SET] Timezone: %d min\n", FeedingScheduler::getTimezoneOffsetMinutes());
   }
   server.send(200, "text/plain", "ok");
 }
@@ -409,7 +413,7 @@ void ApiHandlers::handleSetFeedInterval() {
     scheduler.setMinFeedIntervalMinutes(server.arg("minutes").toInt());
     preferences.putInt("minFeedGapMin", scheduler.getMinFeedIntervalMinutes());
     invalidateCache();
-    Serial.printf("Manual feed interval: %d min\n", scheduler.getMinFeedIntervalMinutes());
+    ets_printf("[SET] Manual feed interval: %d min\n", scheduler.getMinFeedIntervalMinutes());
   }
   server.send(200, "text/plain", "ok");
 }
@@ -442,7 +446,7 @@ void ApiHandlers::handleSetBatteryCalibration() {
   preferences.putFloat("battCal", battery.getCalibrationFactor());
   battery.update();
 
-  Serial.printf("[BATT] Calibration: %.4f -> %.4f (measured=%.3fV, raw=%.3fV)\n",
+  ets_printf("[SET] Battery calibration: %.4f -> %.4f (measured=%.3fV, raw=%.3fV)\n",
     oldCalibration, newCalibration, measuredVoltage, currentVoltage);
   invalidateCache();
   server.send(200, "text/plain", "ok");

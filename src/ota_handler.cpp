@@ -24,20 +24,20 @@ void OtaHandler::handleOtaUploadBody() {
     batteryTooLow = false;
 
     if (!isTrustedMutationRequest(server)) {
-      Serial.println("[OTA] Rejected: unauthorized");
+      ets_printf("[OTA] Rejected: unauthorized\n");
       otaError = true;
       return;
     }
 
     battery.update();
     if (battery.getPercent() < OTA_MIN_BATTERY_PERCENT) {
-      Serial.printf("[OTA] Rejected: battery too low (%d%%)\n", battery.getPercent());
+      ets_printf("[OTA] Rejected: battery too low (%d%%)\n", battery.getPercent());
       otaError = true;
       batteryTooLow = true;
       return;
     }
 
-    Serial.printf("[OTA] Start: %s\n", upload.filename.c_str());
+    ets_printf("[OTA] Start: %s\n", upload.filename.c_str());
     if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
       Update.printError(Serial);
       otaError = true;
@@ -59,7 +59,7 @@ void OtaHandler::handleOtaUploadBody() {
         Update.printError(Serial);
         otaError = true;
       } else {
-        Serial.println("[OTA] Done, rebooting...");
+        ets_printf("[OTA] Done, rebooting...\n");
       }
     }
   }
@@ -67,7 +67,7 @@ void OtaHandler::handleOtaUploadBody() {
   if (upload.status == UPLOAD_FILE_ABORTED) {
     Update.abort();
     otaError = true;
-    Serial.println("[OTA] Aborted");
+    ets_printf("[OTA] Aborted\n");
   }
 }
 

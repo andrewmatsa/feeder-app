@@ -293,12 +293,12 @@ bool FeedingScheduler::checkAndFeed(void (*feedCallback)(int repeats)) {
     if (dayMatches && curHour == feedTimes[i].hour && curMinute == feedTimes[i].minute && !feedTimes[i].done) {
       repeatsToRun += max(1, feedTimes[i].repeats);
       feedTimes[i].done = true;
-      Serial.printf("[SCHED] Slot %d triggered at %02d:%02d, repeats: %d\n", i+1, curHour, curMinute, feedTimes[i].repeats);
+      ets_printf("[SCHED] Slot %d triggered at %02d:%02d, repeats: %d\n", i+1, curHour, curMinute, feedTimes[i].repeats);
     }
   }
 
   if (repeatsToRun > 0) {
-    Serial.printf("[SCHED] Running auto feed at %02d:%02d, total repeats: %d\n", curHour, curMinute, repeatsToRun);
+    ets_printf("[SCHED] Running auto feed at %02d:%02d, total repeats: %d\n", curHour, curMinute, repeatsToRun);
     if (feedCallback) {
       feedCallback(repeatsToRun);
     }
