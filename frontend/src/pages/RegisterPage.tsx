@@ -41,11 +41,13 @@ export function RegisterPage() {
 
   return (
     <div className="auth-panel">
-      <div className="lang-toggle">
-        <button type="button" className={lang === 'uk' ? 'active' : ''} onClick={() => setLang('uk')}>UK</button>
-        <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
+      <div className="auth-title-row">
+        <h2>{t.title}</h2>
+        <div className="lang-toggle">
+          <button type="button" className={lang === 'uk' ? 'active' : ''} onClick={() => setLang('uk')}>UK</button>
+          <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
+        </div>
       </div>
-      <h2>{t.title}</h2>
       <form className="auth-form" onSubmit={(e) => void handleSubmit(e)}>
         <label>
           Email

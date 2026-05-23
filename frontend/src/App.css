@@ -1517,11 +1517,18 @@
 }
 
 /* ── Auth panel ── */
+.auth-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.auth-title-row h2 {
+  margin: 0;
+}
 .lang-toggle {
   display: flex;
-  justify-content: flex-end;
   gap: 6px;
-  margin-bottom: 16px;
 }
 .lang-toggle button {
   border: 1px solid rgba(0,0,0,0.18);
@@ -1554,7 +1561,7 @@
   font-size: 20px;
   font-weight: 700;
   color: #1f2937;
-  margin: 0 0 24px;
+  margin: 0;
 }
 
 .auth-form {
