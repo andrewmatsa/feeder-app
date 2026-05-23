@@ -13,6 +13,7 @@ try:
     from .auth import router as auth_router
     from .devices import router as devices_router
     from .mock_realtime import mock_record_feed, mock_touch_last_seen
+    from .activity import record_feed, touch_last_seen
     from .config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
     from .dependencies import UserClaims, get_current_user
     from .device_client import close_http_client, get_device_base_url, request_firmware
@@ -40,6 +41,7 @@ except ImportError:
     from auth import router as auth_router
     from devices import router as devices_router
     from mock_realtime import mock_record_feed, mock_touch_last_seen
+    from activity import record_feed, touch_last_seen
     from config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
     from dependencies import UserClaims, get_current_user
     from device_client import close_http_client, get_device_base_url, request_firmware
@@ -114,7 +116,7 @@ async def get_status(
     if MOCK_DEVICE:
         mock_touch_last_seen(current_user.id, device_id)
         return mock_status(device_id)
-    mock_touch_last_seen(current_user.id, device_id)
+    touch_last_seen(current_user.id, device_id)
     response = await request_firmware("/api/status", base_url=get_device_base_url(device_id))
     return map_firmware_status(response.json())
 
@@ -132,7 +134,7 @@ async def feed_now(
         "/api/feedNow", method="POST", data={"repeats": request.repeats},
         base_url=get_device_base_url(device_id),
     )
-    mock_record_feed(current_user.id, request.repeats, device_id)
+    record_feed(current_user.id, request.repeats, device_id)
     return CommandResponse(success=True, message=f"Feeding started with {request.repeats} repeats")
 
 
