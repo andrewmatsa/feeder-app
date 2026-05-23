@@ -1,6 +1,7 @@
 #include "device_runtime.h"
 
 #include "time.h"
+#include "wifi_manager.h"
 
 DeviceRuntime::DeviceRuntime(ApiHandlers& apiHandlers,
                              FeedingScheduler& scheduler,
@@ -63,6 +64,7 @@ DisplayData DeviceRuntime::buildDisplayData(const NextFeedInfo& nextFeed,
   displayData.minutesUntilNext = nextFeed.minutesUntil;
   displayData.scheduledFeedsCount = scheduler.getFeedTimesCount();
   displayData.isAPMode = isAPMode;
+  displayData.apSSID = apSSID.c_str();
   displayData.wifiConnected = (WiFi.status() == WL_CONNECTED);
   displayData.isFeeding = servo.isMoving();
   displayData.isCharging = battery.isCharging();

@@ -85,6 +85,17 @@ void OledDisplay::showDeepSleepNotice(bool scheduleTimerWakeEnabled) {
   delay(2000);
 }
 
+void OledDisplay::drawAPModeScreen(const DisplayData& data) {
+  u8g2.setFont(u8g2_font_helvB08_tr);
+  u8g2.drawStr(0, 10, "WiFi Setup");
+  u8g2.setFont(u8g2_font_helvR08_tr);
+  u8g2.drawStr(0, 24, "1. Connect WiFi:");
+  const char* ssid = (data.apSSID && data.apSSID[0]) ? data.apSSID : "FishFeeder-????";
+  u8g2.drawStr(4, 35, ssid);
+  u8g2.drawStr(0, 47, "2. Open browser:");
+  u8g2.drawStr(4, 58, "192.168.4.1/wifi");
+}
+
 void OledDisplay::clear() {
   if (!isInitialized) {
     return;
@@ -157,15 +168,17 @@ void OledDisplay::update(const DisplayData& data) {
   lastUpdateTime = currentTime;
   
   u8g2.clearBuffer();
-  
-  if (showFeedingScreen) {
+
+  if (data.isAPMode) {
+    drawAPModeScreen(data);
+  } else if (showFeedingScreen) {
     drawFeedingScreen();
   } else if (currentScreen == 0) {
     drawSimpleScreen(data);
   } else {
     drawFishAnimation();
   }
-  
+
   u8g2.sendBuffer();
 }
 

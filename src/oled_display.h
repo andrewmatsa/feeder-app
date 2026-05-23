@@ -17,6 +17,7 @@ struct DisplayData {
   int minutesUntilNext;
   int scheduledFeedsCount;
   bool isAPMode;
+  const char* apSSID = "";
   bool wifiConnected;
   bool isFeeding;
   bool isCharging;
@@ -48,6 +49,7 @@ private:
   bool checkDisplay();
   
   void drawSimpleScreen(const DisplayData& data);
+  void drawAPModeScreen(const DisplayData& data);
   void drawFeedingScreen();
   void drawFishAnimation();
   void formatTime(char* buffer, int hour, int minute);
