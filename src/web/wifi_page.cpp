@@ -137,11 +137,17 @@ body {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
   padding: 22px 18px 18px;
 }
+.title-lang-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.title-lang-row h1 { margin: 0; }
 .lang-row {
   display: flex;
   gap: 6px;
-  align-self: flex-end;
-  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 .lang-btn {
   width: auto;
@@ -228,10 +234,6 @@ button:hover { opacity: 0.85; }
 </head>
 <body>
   <div class="shell">
-    <div class="lang-row">
-      <button type="button" id="langUkBtn" class="lang-btn" onclick="setLang('uk')">UK</button>
-      <button type="button" id="langEnBtn" class="lang-btn" onclick="setLang('en')">EN</button>
-    </div>
     <div class="hero-header">
       <div class="app-heading">
         <div class="app-title">AquaFeed Control</div>
@@ -257,7 +259,13 @@ button:hover { opacity: 0.85; }
       </div>
     </div>
     <div class="card">
-      <h1 id="title">Розблокувати налаштування</h1>
+      <div class="title-lang-row">
+        <h1 id="title">Розблокувати налаштування</h1>
+        <div class="lang-row">
+          <button type="button" id="langUkBtn" class="lang-btn" onclick="setLang('uk')">UK</button>
+          <button type="button" id="langEnBtn" class="lang-btn" onclick="setLang('en')">EN</button>
+        </div>
+      </div>
       <p id="desc">Введіть пароль точки доступу, щоб перейти до налаштування домашнього WiFi.</p>
       <label id="passwordLabel" for="password">Пароль точки доступу</label>
       <input id="password" type="password" placeholder="12345678">
@@ -488,11 +496,17 @@ body {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
   padding: 22px 18px 18px;
 }
+.title-lang-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.title-lang-row h1 { margin: 0; }
 .lang-row {
   display: flex;
   gap: 6px;
-  align-self: flex-end;
-  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 .lang-btn {
   width: auto;
@@ -588,10 +602,6 @@ button:hover { opacity: 0.85; }
 </head>
 <body>
   <div class="shell">
-    <div class="lang-row">
-      <button type="button" id="langUkBtn" class="lang-btn" onclick="setConnectLang('uk')">UK</button>
-      <button type="button" id="langEnBtn" class="lang-btn" onclick="setConnectLang('en')">EN</button>
-    </div>
     <div class="hero-header">
       <div class="app-heading">
         <div class="app-title">AquaFeed Control</div>
@@ -617,7 +627,13 @@ button:hover { opacity: 0.85; }
       </div>
     </div>
     <div class="card">
-      <h1 id="title">Підключіть домашній WiFi</h1>
+      <div class="title-lang-row">
+        <h1 id="title">Підключіть домашній WiFi</h1>
+        <div class="lang-row">
+          <button type="button" id="langUkBtn" class="lang-btn" onclick="setConnectLang('uk')">UK</button>
+          <button type="button" id="langEnBtn" class="lang-btn" onclick="setConnectLang('en')">EN</button>
+        </div>
+      </div>
       <p id="desc">Введіть дані домашнього WiFi. Після успішного підключення відкриється повна сторінка налаштувань WiFi.</p>
       <label id="ssidLabel" for="ssid">Назва WiFi мережі</label>
       <input id="ssid" type="text" placeholder="МійДомашнійWiFi">
