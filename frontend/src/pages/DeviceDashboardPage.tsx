@@ -4,14 +4,17 @@ import { api, getApiErrorMessage } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useUiStore } from '../store/uiStore'
 import { TRANSLATIONS, type Lang } from '../translations'
-import type { FeedTime, StatusResponse, Device, DeviceFeedEvent, DeviceStats, LightStats } from '../types'
+import type { StatusResponse, Device, DeviceFeedEvent, DeviceStats, LightStats } from '../types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tab = 'home' | 'info' | 'settings' | 'stats'
 
-interface LocalFeedTime extends FeedTime {
-  day: string
+interface LocalFeedTime {
+  hour: number
+  minute: number
+  repeats: number
+  day: string  // UI select value: '0'=every day, '1'=Mon…'6'=Sat, '7'=Sun
 }
 
 // ─── Battery gauge SVG ────────────────────────────────────────────────────────
@@ -431,7 +434,12 @@ export function DeviceDashboardPage() {
 
       if (!scheduleEdited.current) {
         setLocalSchedule(
-          data.feedTimes.map((ft) => ({ ...ft, day: '0' }))
+          data.feedTimes.map((ft) => ({
+            ...ft,
+            // firmware: -1=every day, 0=Sun, 1=Mon…6=Sat
+            // UI days[]: 0=every day, 1=Mon…6=Sat, 7=Sun
+            day: ft.day === -1 ? '0' : ft.day === 0 ? '7' : String(ft.day),
+          }))
         )
       }
 
@@ -556,7 +564,14 @@ export function DeviceDashboardPage() {
   const saveSchedule = async () => {
     try {
       await api.setSchedule({
-        times: localSchedule.map((ft) => ({ hour: ft.hour, minute: ft.minute, repeats: ft.repeats })),
+        times: localSchedule.map((ft) => ({
+          hour: ft.hour,
+          minute: ft.minute,
+          repeats: ft.repeats,
+          // UI days[]: 0=every day, 1=Mon…6=Sat, 7=Sun
+          // firmware: -1=every day, 1=Mon…6=Sat, 0=Sun
+          day: ft.day === '0' ? -1 : ft.day === '7' ? 0 : parseInt(ft.day),
+        })),
       }, deviceId)
       setScheduleDirty(false)
       showToast(T.toastScheduleSaved)
@@ -1652,7 +1667,14 @@ export function DeviceDashboardPage() {
           </div>
           <div style={{ flex: 1 }}>
             <div className="aq-section-title">{T.otaTitle}</div>
-            <div className="aq-section-sub">{T.otaCurrentVersion} <span style={{ fontWeight: 600, color: '#444' }}>{status?.firmwareVersion ?? '—'}</span></div>
+            <div className="aq-section-sub">
+              {T.otaCurrentVersion} <span style={{ fontWeight: 600, color: '#444' }}>{status?.firmwareVersion ?? '—'}</span>
+              {(status?.buildDate || status?.buildTime) && (
+                <span style={{ color: '#888', marginLeft: 6 }}>
+                  ({[status.buildDate, status.buildTime].filter(Boolean).join(' ')})
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

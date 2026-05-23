@@ -58,9 +58,10 @@ void OledDisplay::begin() {
 void OledDisplay::showSplash() {
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_ncenB14_tr);
-  u8g2.drawStr(10, 30, "AquaFeed");
+  u8g2.drawStr(10, 22, "AquaFeed");
   u8g2.setFont(u8g2_font_ncenR08_tr);
-  u8g2.drawStr(20, 50, "Fish Feeder v" AQUAFEED_FIRMWARE_VERSION);
+  u8g2.drawStr(20, 40, "v" AQUAFEED_FIRMWARE_VERSION);
+  u8g2.drawStr(20, 55, BUILD_DATE);
   u8g2.sendBuffer();
 }
 

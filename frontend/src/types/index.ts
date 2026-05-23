@@ -2,6 +2,7 @@ export interface FeedTime {
   hour: number
   minute: number
   repeats: number
+  day?: number  // -1=every day, 0=Sun, 1=Mon…6=Sat; absent treated as -1
 }
 
 export interface StatusResponse {
@@ -41,6 +42,8 @@ export interface StatusResponse {
   cacheValid?: boolean | null
   uptimeSeconds?: number | null
   lightLux?: number | null
+  buildDate?: string | null
+  buildTime?: string | null
 }
 
 export interface FeedRequest {

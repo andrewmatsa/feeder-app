@@ -15,6 +15,7 @@ class FeedTime(BaseModel):
     hour: int = Field(ge=0, le=23, description="Feeding hour")
     minute: int = Field(ge=0, le=59, description="Feeding minute")
     repeats: int = Field(default=1, ge=1, le=20, description="Feed repeats for this slot")
+    day: int = Field(default=-1, ge=-1, le=6, description="-1=every day, 0=Sun, 1=Mon … 6=Sat")
 
 
 class ScheduleRequest(BaseModel):
@@ -87,6 +88,8 @@ class StatusResponse(BaseModel):
     uptimeSeconds: int | None = None
     # Light sensor
     lightLux: int | None = None
+    buildDate: str | None = None
+    buildTime: str | None = None
 
 
 class CommandResponse(BaseModel):

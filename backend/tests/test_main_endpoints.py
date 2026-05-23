@@ -139,7 +139,7 @@ def test_schedule_endpoint_calls_firmware_with_encoded_payload() -> None:
         args, kwargs = mock_fw.await_args
         assert args[0] == "/api/setFeedTimes"
         assert kwargs["method"] == "POST"
-        assert kwargs["data"]["data"] == '[{"h":10,"m":0,"r":2},{"h":18,"m":30,"r":1}]'
+        assert kwargs["data"]["data"] == '[{"h":10,"m":0,"r":2,"d":-1},{"h":18,"m":30,"r":1,"d":-1}]'
 
 
 # ── Power mode ────────────────────────────────────────────────────────────────
@@ -202,8 +202,8 @@ def test_schedule_persists_and_is_returned_by_status_flow() -> None:
 
         body = client.get("/api/status").json()
         assert body["feedTimes"] == [
-            {"hour": 9, "minute": 15, "repeats": 2},
-            {"hour": 21, "minute": 45, "repeats": 1},
+            {"hour": 9, "minute": 15, "repeats": 2, "day": -1},
+            {"hour": 21, "minute": 45, "repeats": 1, "day": -1},
         ]
 
 
@@ -252,7 +252,7 @@ def test_set_endpoints_persist_core_fields_and_are_reflected_in_status() -> None
         assert body["speed"] == 12
         assert body["feedRepeats"] == 1  # /api/feed is one-shot, doesn't change status
         assert body["powerSaveMode"] is False
-        assert body["feedTimes"] == [{"hour": 6, "minute": 45, "repeats": 2}]
+        assert body["feedTimes"] == [{"hour": 6, "minute": 45, "repeats": 2, "day": -1}]
 
 
 # ── OTA firmware update ───────────────────────────────────────────────────────

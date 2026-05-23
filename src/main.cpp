@@ -15,6 +15,7 @@
 #include "device_runtime.h"
 #include "power_manager.h"
 #include "ota_handler.h"
+#include "version_info.h"
 
 // === Hardware pins ===
 const int SERVO_PIN = 4;
@@ -49,9 +50,12 @@ void performAutoFeeding(int repeats) {
 
 void printStartupBanner() {
   Serial.begin(115200);
+  delay(3000);
   Serial.println("\n========================================");
   Serial.println("=== AquaFeed System Starting ===");
+  Serial.printf("=== v%s  Built: %s %s ===\n", AQUAFEED_FIRMWARE_VERSION, BUILD_DATE, BUILD_TIME);
   Serial.println("========================================\n");
+  Serial.flush();
   esp_reset_reason_t reason = esp_reset_reason();
   Serial.printf("Reset reason: %d ", reason);
   switch (reason) {
@@ -132,6 +136,7 @@ void printConnectionSummary() {
     Serial.print(WiFi.localIP());
     Serial.println("/");
     Serial.println("mDNS: http://fish.local/");
+    ets_printf("[AquaFeed v%s] IP: %s\n", AQUAFEED_FIRMWARE_VERSION, WiFi.localIP().toString().c_str());
   } else {
     Serial.println("AP Mode - Connect to WiFi:");
     Serial.print("  SSID: ");
@@ -140,6 +145,7 @@ void printConnectionSummary() {
     Serial.println(apPassword);
     Serial.print("  Web interface: http://");
     Serial.println(WiFi.softAPIP());
+    ets_printf("[AquaFeed v%s] AP mode: %s\n", AQUAFEED_FIRMWARE_VERSION, WiFi.softAPIP().toString().c_str());
   }
   Serial.println("========================================\n");
 }
@@ -155,7 +161,7 @@ void printMemoryStatus() {
 
 void handleWakeCause(esp_sleep_wakeup_cause_t wakeCause) {
   if (wakeCause == ESP_SLEEP_WAKEUP_GPIO) {
-    Serial.println("Wake source: feed button");
+    ets_printf("[WAKE] Feed button\n");
     if (digitalRead(BUTTON_PIN) == LOW) {
       powerManager.markInteraction();
       deviceRuntime.tryRunFeedSequence(
@@ -165,7 +171,7 @@ void handleWakeCause(esp_sleep_wakeup_cause_t wakeCause) {
       );
     }
   } else if (wakeCause == ESP_SLEEP_WAKEUP_TIMER) {
-    Serial.println("Wake source: schedule timer");
+    ets_printf("[WAKE] Schedule timer\n");
   }
 }
 
@@ -178,13 +184,13 @@ void handleManualButtonPress() {
 
   if (lastButtonState == LOW && buttonState == HIGH) {
     uint32_t pressDuration = millis() - buttonPressStartMs;
-    Serial.printf("[BTN] Released after %ums\n", pressDuration);
+    ets_printf("[BTN] Released after %ums\n", pressDuration);
     if (pressDuration >= 5000) {
-      Serial.println("[BTN] Long press → entering AP mode");
+      ets_printf("[BTN] Long press -> AP mode\n");
       powerManager.markInteraction();
       startAPMode();
     } else if (!servo.isMoving()) {
-      Serial.println("[BTN] Short press → manual feed");
+      ets_printf("[BTN] Short press -> manual feed\n");
       powerManager.markInteraction();
       deviceRuntime.tryRunFeedSequence(
         apiHandlers.getFeedRepeats(),
@@ -237,6 +243,7 @@ void loop(){
   static uint32_t lastLoopMs = 0;
   if (millis() - lastLoopMs < 20) return;
   lastLoopMs = millis();
+
 
 
   server.handleClient();
