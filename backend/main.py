@@ -114,6 +114,7 @@ async def get_status(
     if MOCK_DEVICE:
         mock_touch_last_seen(current_user.id, device_id)
         return mock_status(device_id)
+    mock_touch_last_seen(current_user.id, device_id)
     response = await request_firmware("/api/status", base_url=get_device_base_url(device_id))
     return map_firmware_status(response.json())
 
@@ -131,6 +132,7 @@ async def feed_now(
         "/api/feedNow", method="POST", data={"repeats": request.repeats},
         base_url=get_device_base_url(device_id),
     )
+    mock_record_feed(current_user.id, request.repeats, device_id)
     return CommandResponse(success=True, message=f"Feeding started with {request.repeats} repeats")
 
 
