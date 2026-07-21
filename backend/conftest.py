@@ -1,9 +1,28 @@
 import os
 import sys
+from contextlib import contextmanager
 
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+_MISSING = object()
+
+
+@contextmanager
+def override_dependency(app, dependency, value):
+    """Temporarily override a FastAPI dependency, restoring whatever override
+    (if any) was already registered — never leave the shared `app` singleton
+    with a wiped-out override other test modules rely on."""
+    previous = app.dependency_overrides.get(dependency, _MISSING)
+    app.dependency_overrides[dependency] = value
+    try:
+        yield
+    finally:
+        if previous is _MISSING:
+            app.dependency_overrides.pop(dependency, None)
+        else:
+            app.dependency_overrides[dependency] = previous
 
 
 def pytest_addoption(parser):
