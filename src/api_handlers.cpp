@@ -42,7 +42,10 @@ void ApiHandlers::setDisplayOffAfterSec(uint16_t sec) {
 void ApiHandlers::setupRoutes() {
   configureRequestSecurity(server);
   server.on("/", HTTP_GET, [this]() {
-    server.send(200, "application/json", "{\"device\":\"AquaFeed\",\"api\":\"/api/status\"}");
+    server.send_P(200, "text/html", pageHome);
+  });
+  server.on("/info", HTTP_GET, [this]() {
+    server.send_P(200, "text/html", pageInfo);
   });
   server.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
   server.on("/api/setAngle", HTTP_POST, [this]() { handleSetAngle(); });
@@ -127,6 +130,7 @@ void ApiHandlers::appendMemoryStatus(JsonDocument& doc) const {
   doc["memoryTotalHeap"] = totalHeap;
   doc["memoryUsedHeap"] = (totalHeap - freeHeap);
   doc["cpuFrequency"] = getCpuFrequencyMhz();
+  doc["uptimeSeconds"] = millis() / 1000UL;
 }
 
 void ApiHandlers::populateStatusDocument(JsonDocument& doc) {

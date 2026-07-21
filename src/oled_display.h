@@ -50,7 +50,6 @@ private:
   
   void drawSimpleScreen(const DisplayData& data);
   void drawFeedingScreen();
-  void drawFishAnimation();
   void formatTime(char* buffer, int hour, int minute);
 };
 

@@ -11,6 +11,9 @@
 #include "feeding_scheduler.h"
 #include "wifi_manager.h"
 
+extern const char* pageHome;
+extern const char* pageInfo;
+
 class ApiHandlers {
 public:
   ApiHandlers(WebServer& server, Preferences& preferences,
