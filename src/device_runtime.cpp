@@ -54,6 +54,10 @@ DisplayData DeviceRuntime::buildDisplayData(const NextFeedInfo& nextFeed,
   getCurrentLocalTime(currentHour, currentMinute);
 
   DisplayData displayData;
+  displayData.ip[0] = '\0';
+  if (!isAPMode && WiFi.status() == WL_CONNECTED) {
+    apiHandlers.getWifiIp().toCharArray(displayData.ip, sizeof(displayData.ip));
+  }
   displayData.batteryVoltage = battery.getVoltage();
   displayData.batteryPercent = battery.getPercent();
   displayData.currentHour = currentHour;

@@ -21,6 +21,7 @@ struct DisplayData {
   bool isFeeding;
   bool isCharging;
   int cooldownSeconds;
+  char ip[16];
 };
 
 class OledDisplay {
