@@ -70,6 +70,7 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [simOfflineIds, setSimOfflineIds] = useState<Set<string>>(new Set())
+  const [simLowBatteryIds, setSimLowBatteryIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     api.listUserDevices(userId)
@@ -81,6 +82,12 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
   useEffect(() => {
     api.getSimulatedOfflineDevices()
       .then((ids) => setSimOfflineIds(new Set(ids)))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    api.getSimulatedLowBatteryDevices()
+      .then((ids) => setSimLowBatteryIds(new Set(ids)))
       .catch(() => {})
   }, [])
 
@@ -104,6 +111,21 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
       } else {
         await api.setSimulatedOffline(deviceId)
         setSimOfflineIds((prev) => new Set(prev).add(deviceId))
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Помилка'))
+    }
+  }
+
+  const toggleSimLowBattery = async (deviceId: string) => {
+    const isActive = simLowBatteryIds.has(deviceId)
+    try {
+      if (isActive) {
+        await api.clearSimulatedLowBattery(deviceId)
+        setSimLowBatteryIds((prev) => { const s = new Set(prev); s.delete(deviceId); return s })
+      } else {
+        await api.setSimulatedLowBattery(deviceId)
+        setSimLowBatteryIds((prev) => new Set(prev).add(deviceId))
       }
     } catch (err) {
       setError(getApiErrorMessage(err, 'Помилка'))
@@ -148,6 +170,14 @@ function DevicesRow({ userId, onDeviceDeleted }: DevicesRowProps) {
                       Відключити
                     </>
                   )}
+                </button>
+                <button
+                  type="button"
+                  className={`admin-btn-block${simLowBatteryIds.has(d.id) ? ' blocked' : ''}`}
+                  onClick={() => void toggleSimLowBattery(d.id)}
+                  title="Симулювати низький заряд батареї (5%, не заряджається)"
+                >
+                  {simLowBatteryIds.has(d.id) ? 'Заряд: OK' : 'Симул. розряд'}
                 </button>
                 <button
                   type="button"

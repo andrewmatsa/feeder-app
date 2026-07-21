@@ -9,7 +9,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    from .admin import router as admin_router, simulated_offline_devices
+    from .admin import router as admin_router, simulated_low_battery_devices, simulated_offline_devices
     from .auth import router as auth_router
     from .devices import router as devices_router
     from .mock_realtime import mock_record_feed, mock_touch_last_seen
@@ -36,7 +36,7 @@ try:
         TimezoneRequest,
     )
 except ImportError:
-    from admin import router as admin_router, simulated_offline_devices
+    from admin import router as admin_router, simulated_low_battery_devices, simulated_offline_devices
     from auth import router as auth_router
     from devices import router as devices_router
     from mock_realtime import mock_record_feed, mock_touch_last_seen
@@ -113,9 +113,16 @@ async def get_status(
         raise HTTPException(status_code=503, detail="Device offline (simulated)")
     if MOCK_DEVICE:
         mock_touch_last_seen(current_user.id, device_id)
-        return mock_status(device_id)
-    response = await request_firmware("/api/status", base_url=get_device_base_url(device_id))
-    return map_firmware_status(response.json())
+        result = mock_status(device_id)
+    else:
+        response = await request_firmware("/api/status", base_url=get_device_base_url(device_id))
+        result = map_firmware_status(response.json())
+
+    if device_id and device_id in simulated_low_battery_devices:
+        result.batteryPercent = 5
+        result.isCharging = False
+
+    return result
 
 
 @app.post("/api/feed", response_model=CommandResponse)

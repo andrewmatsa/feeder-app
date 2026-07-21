@@ -292,6 +292,19 @@ export const api = {
     await apiClient.delete(`/api/v1/admin/devices/${deviceId}/sim-offline`)
   },
 
+  async getSimulatedLowBatteryDevices(): Promise<string[]> {
+    const response = await apiClient.get<string[]>('/api/v1/admin/devices/sim-battery')
+    return response.data
+  },
+
+  async setSimulatedLowBattery(deviceId: string): Promise<void> {
+    await apiClient.post(`/api/v1/admin/devices/${deviceId}/sim-battery`)
+  },
+
+  async clearSimulatedLowBattery(deviceId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/admin/devices/${deviceId}/sim-battery`)
+  },
+
   async getAdminStats(): Promise<AdminStats> {
     const response = await apiClient.get<AdminStats>('/api/v1/admin/stats')
     return response.data
