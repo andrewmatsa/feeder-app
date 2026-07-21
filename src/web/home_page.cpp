@@ -95,27 +95,6 @@ R"rawliteral(
 )rawliteral"
 #include "shared/common_hero_styles.inc"
 R"rawliteral(
-.lang-section-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 4px;
-}
-.lang-btn {
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #fff;
-  color: #111;
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  width: auto;
-  flex: 0 0 auto;
-  margin-top: 0;
-}
-.lang-btn.active { background: #111; color: #fff; }
 .status-pill.success { background: rgba(76,175,80,0.14); color: #2e7d32; }
 .status-pill.warning { background: rgba(255,152,0,0.14); color: #f57c00; }
 .status-pill.error { background: rgba(244,67,54,0.14); color: #c62828; }
@@ -337,26 +316,6 @@ R"rawliteral(
   <div class="section-header">
     <div class="section-icon">
       <svg viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M2 12h20"></path>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-      </svg>
-    </div>
-    <div>
-      <div class="section-title" id="langSectionTitle">Мова інтерфейсу</div>
-      <div class="section-subtitle" id="langSectionSubtitle">Оберіть мову веб-інтерфейсу</div>
-    </div>
-  </div>
-  <div class="lang-section-row">
-    <button type="button" id="homeLangUkBtn" class="lang-btn">UK</button>
-    <button type="button" id="homeLangEnBtn" class="lang-btn">EN</button>
-  </div>
-</div>
-
-<div class="card">
-  <div class="section-header">
-    <div class="section-icon">
-      <svg viewBox="0 0 24 24">
         <path d="M4 9c4.5-4.5 11.5-4.5 16 0"></path>
         <path d="M7 12c2.8-2.8 7.2-2.8 10 0"></path>
         <path d="M10.5 15.5c1-1 3-1 4 0"></path>
@@ -446,8 +405,6 @@ function applyHomeLanguage() {
     const el = document.getElementById(id);
     if (el) el.textContent = homeIsEn() ? en : uk;
   };
-  setText('langSectionTitle', 'Interface language', 'Мова інтерфейсу');
-  setText('langSectionSubtitle', 'Choose the web interface language', 'Оберіть мову веб-інтерфейсу');
   setText('statusSectionTitle', 'Connection status', 'Статус підключення');
   setText('statusSectionSubtitle', 'Current WiFi mode', 'Поточний режим роботи WiFi');
   setText('scheduleSectionTitle', 'Feeding schedule', 'Розклад годування');
@@ -467,18 +424,8 @@ function applyHomeLanguage() {
   if (tabs[0]) tabs[0].textContent = homeIsEn() ? 'Home' : 'Головна';
   if (tabs[1]) tabs[1].textContent = homeIsEn() ? 'Info' : 'Інформація';
   if (tabs[2]) tabs[2].textContent = homeIsEn() ? 'Settings' : 'Налаштування';
-  const ukBtn = document.getElementById('homeLangUkBtn');
-  const enBtn = document.getElementById('homeLangEnBtn');
-  if (ukBtn) ukBtn.classList.toggle('active', !homeIsEn());
-  if (enBtn) enBtn.classList.toggle('active', homeIsEn());
   const heroFish = document.querySelector('.hero-svg-fish');
   if (heroFish) heroFish.setAttribute('aria-label', homeIsEn() ? 'Stylized fish' : 'Стилізована рибка');
-}
-
-function setHomeLanguage(lang) {
-  homeLang = lang;
-  try { localStorage.setItem('aqua_lang', lang); } catch (_) {}
-  applyHomeLanguage();
 }
 
 // ── Gauges (same geometry as frontend/src/pages/DeviceDashboardPage.tsx) ──
@@ -724,10 +671,6 @@ function updateStatus() {
 window.onload = function() {
   applyHomeLanguage();
   updateStatus();
-  const ukBtn = document.getElementById('homeLangUkBtn');
-  const enBtn = document.getElementById('homeLangEnBtn');
-  if (ukBtn) ukBtn.addEventListener('click', () => setHomeLanguage('uk'));
-  if (enBtn) enBtn.addEventListener('click', () => setHomeLanguage('en'));
   setInterval(updateStatus, 5000);
 };
 document.addEventListener('DOMContentLoaded', function() {

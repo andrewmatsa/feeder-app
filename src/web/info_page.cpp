@@ -21,24 +21,6 @@ R"rawliteral(
 )rawliteral"
 #include "shared/common_hero_styles.inc"
 R"rawliteral(
-.lang-section-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 4px;
-}
-.lang-btn {
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #fff;
-  color: #111;
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.lang-btn.active { background: #111; color: #fff; }
 .info-row {
   display: flex;
   justify-content: space-between;
@@ -64,26 +46,6 @@ R"rawliteral(
   <div class="app-heading">
     <div class="app-title">AquaFeed</div>
     <div class="app-subtitle" id="infoSubtitle">Інформація про пристрій</div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="section-header">
-    <div class="section-icon">
-      <svg viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M2 12h20"></path>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-      </svg>
-    </div>
-    <div>
-      <div class="section-title" id="langSectionTitle">Мова інтерфейсу</div>
-      <div class="section-subtitle" id="langSectionSubtitle">Оберіть мову веб-інтерфейсу</div>
-    </div>
-  </div>
-  <div class="lang-section-row">
-    <button type="button" id="infoLangUkBtn" class="lang-btn">UK</button>
-    <button type="button" id="infoLangEnBtn" class="lang-btn">EN</button>
   </div>
 </div>
 
@@ -128,6 +90,24 @@ R"rawliteral(
   <div class="section-header">
     <div class="section-icon">
       <svg viewBox="0 0 24 24">
+        <rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect>
+        <line x1="22" y1="11" x2="22" y2="13"></line>
+      </svg>
+    </div>
+    <div>
+      <div class="section-title" id="battSectionTitle">Батарея</div>
+      <div class="section-subtitle" id="battSectionSubtitle">Напруга та заряд</div>
+    </div>
+  </div>
+  <div class="info-row"><span class="info-label" id="lblVoltage">Напруга</span><span class="info-value" id="valVoltage">--</span></div>
+  <div class="info-row"><span class="info-label" id="lblPercent">Заряд</span><span class="info-value" id="valPercent">--</span></div>
+  <div class="info-row"><span class="info-label" id="lblIsCharging">Заряджається</span><span class="info-value" id="valIsCharging">--</span></div>
+</div>
+
+<div class="card">
+  <div class="section-header">
+    <div class="section-icon">
+      <svg viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10"></circle>
         <path d="M12 7v5"></path>
         <path d="M12 12l3 2"></path>
@@ -139,6 +119,8 @@ R"rawliteral(
     </div>
   </div>
   <div class="info-row"><span class="info-label" id="lblUptime">Час роботи</span><span class="info-value" id="valUptime">--</span></div>
+  <div class="info-row"><span class="info-label" id="lblDeviceTime">Час пристрою</span><span class="info-value" id="valDeviceTime">--</span></div>
+  <div class="info-row"><span class="info-label" id="lblCpuFreq">Частота CPU</span><span class="info-value" id="valCpuFreq">--</span></div>
   <div class="info-row"><span class="info-label" id="lblSleepReason">Причина сну</span><span class="info-value" id="valSleepReason">--</span></div>
   <div class="info-row"><span class="info-label" id="lblFreeHeap">Вільна пам'ять</span><span class="info-value" id="valFreeHeap">--</span></div>
 </div>
@@ -163,8 +145,6 @@ function applyInfoLanguage() {
     if (el) el.textContent = infoIsEn() ? en : uk;
   };
   setText('infoSubtitle', 'Device information', 'Інформація про пристрій');
-  setText('langSectionTitle', 'Interface language', 'Мова інтерфейсу');
-  setText('langSectionSubtitle', 'Choose the web interface language', 'Оберіть мову веб-інтерфейсу');
   setText('fwSectionTitle', 'Firmware', 'Прошивка');
   setText('fwSectionSubtitle', 'Version and build', 'Версія та збірка');
   setText('lblFwVersion', 'Version', 'Версія');
@@ -173,28 +153,25 @@ function applyInfoLanguage() {
   setText('netSectionSubtitle', 'WiFi and device address', 'WiFi та адреса пристрою');
   setText('lblWifiSsid', 'Network', 'Мережа');
   setText('lblWifiIp', 'IP address', 'IP-адреса');
+  setText('battSectionTitle', 'Battery', 'Батарея');
+  setText('battSectionSubtitle', 'Voltage and charge', 'Напруга та заряд');
+  setText('lblVoltage', 'Voltage', 'Напруга');
+  setText('lblPercent', 'Charge', 'Заряд');
+  setText('lblIsCharging', 'Charging', 'Заряджається');
   setText('runtimeSectionTitle', 'Runtime', 'Стан роботи');
   setText('runtimeSectionSubtitle', 'Uptime and sleep', 'Час роботи та сон');
   setText('lblUptime', 'Uptime', 'Час роботи');
+  setText('lblDeviceTime', 'Device time', 'Час пристрою');
+  setText('lblCpuFreq', 'CPU frequency', 'Частота CPU');
   setText('lblSleepReason', 'Sleep reason', 'Причина сну');
   setText('lblFreeHeap', 'Free memory', "Вільна пам'ять");
   const tabs = document.querySelectorAll('.bottom-tab span');
   if (tabs[0]) tabs[0].textContent = infoIsEn() ? 'Home' : 'Головна';
   if (tabs[1]) tabs[1].textContent = infoIsEn() ? 'Info' : 'Інформація';
   if (tabs[2]) tabs[2].textContent = infoIsEn() ? 'Settings' : 'Налаштування';
-  const ukBtn = document.getElementById('infoLangUkBtn');
-  const enBtn = document.getElementById('infoLangEnBtn');
-  if (ukBtn) ukBtn.classList.toggle('active', !infoIsEn());
-  if (enBtn) enBtn.classList.toggle('active', infoIsEn());
   const heroFish = document.querySelector('.hero-svg-fish');
   if (heroFish) heroFish.setAttribute('aria-label', infoIsEn() ? 'Stylized fish' : 'Стилізована рибка');
   updateStatus();
-}
-
-function setInfoLanguage(lang) {
-  infoLang = lang;
-  try { localStorage.setItem('aqua_lang', lang); } catch (_) {}
-  applyInfoLanguage();
 }
 
 function updateStatus() {
@@ -204,7 +181,12 @@ function updateStatus() {
     set('valBuildDate', (j.buildDate || '--') + (j.buildTime ? (' ' + j.buildTime) : ''));
     set('valWifiSsid', j.isAPMode ? (infoIsEn() ? 'AP mode' : 'Режим AP') : (j.wifiSSID || '--'));
     set('valWifiIp', j.wifiIP || '--');
+    set('valVoltage', typeof j.batteryVoltage === 'number' ? j.batteryVoltage.toFixed(2) + ' V' : '--');
+    set('valPercent', typeof j.batteryPercent === 'number' ? j.batteryPercent + '%' : '--');
+    set('valIsCharging', j.isCharging ? (infoIsEn() ? 'Yes' : 'Так') : (infoIsEn() ? 'No' : 'Ні'));
     set('valUptime', formatUptime(j.uptimeSeconds));
+    set('valDeviceTime', j.currentTime || '--');
+    set('valCpuFreq', typeof j.cpuFrequency === 'number' ? j.cpuFrequency + ' MHz' : '--');
     set('valSleepReason', j.sleepReason || '--');
     set('valFreeHeap', typeof j.memoryFreeHeap === 'number' ? Math.round(j.memoryFreeHeap / 1024) + ' KB' : '--');
   }).catch(() => {});
@@ -212,10 +194,6 @@ function updateStatus() {
 
 window.onload = function() {
   applyInfoLanguage();
-  const ukBtn = document.getElementById('infoLangUkBtn');
-  const enBtn = document.getElementById('infoLangEnBtn');
-  if (ukBtn) ukBtn.addEventListener('click', () => setInfoLanguage('uk'));
-  if (enBtn) enBtn.addEventListener('click', () => setInfoLanguage('en'));
   setInterval(updateStatus, 5000);
 };
 document.addEventListener('DOMContentLoaded', function() {
