@@ -19,6 +19,11 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 # In-memory set of device IDs with simulated offline (resets on server restart)
 simulated_offline_devices: set[str] = set()
 
+# In-memory set of device IDs with simulated low battery + not-charging
+# (resets on server restart) — lets QA exercise the low-battery banner and
+# OTA-block-at-low-battery flow without physical hardware.
+simulated_low_battery_devices: set[str] = set()
+
 
 def _service_client():
     if not SUPABASE_SERVICE_KEY:
@@ -380,3 +385,18 @@ async def set_simulated_offline(device_id: str, _: UserClaims = Depends(require_
 @router.delete("/devices/{device_id}/sim-offline", status_code=status.HTTP_204_NO_CONTENT)
 async def clear_simulated_offline(device_id: str, _: UserClaims = Depends(require_admin)):
     simulated_offline_devices.discard(device_id)
+
+
+@router.get("/devices/sim-battery", response_model=list[str])
+async def get_simulated_low_battery(_: UserClaims = Depends(require_admin)):
+    return list(simulated_low_battery_devices)
+
+
+@router.post("/devices/{device_id}/sim-battery", status_code=status.HTTP_204_NO_CONTENT)
+async def set_simulated_low_battery(device_id: str, _: UserClaims = Depends(require_admin)):
+    simulated_low_battery_devices.add(device_id)
+
+
+@router.delete("/devices/{device_id}/sim-battery", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_simulated_low_battery(device_id: str, _: UserClaims = Depends(require_admin)):
+    simulated_low_battery_devices.discard(device_id)
