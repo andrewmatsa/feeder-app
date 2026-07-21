@@ -127,45 +127,24 @@ void OledDisplay::update(const DisplayData& data) {
     feedingStartTime = 0;
   }
   
-  static unsigned long screenSwitchTime = 0;
-  static int currentScreen = 0;
-  
-  if (!showFeedingScreen) {
-    unsigned long elapsed = currentTime - screenSwitchTime;
-    if (currentScreen == 0 && elapsed > 55000) {
-      currentScreen = 1;
-      screenSwitchTime = currentTime;
-    } else if (currentScreen == 1 && elapsed > 5000) {
-      currentScreen = 0;
-      screenSwitchTime = currentTime;
-    }
-  }
-  
-  unsigned long updateInterval;
-  if (showFeedingScreen) {
-    updateInterval = 200;
-  } else {
-    updateInterval = (currentScreen == 1) ? 200 : UPDATE_INTERVAL_MS;
-  }
-  
+  unsigned long updateInterval = showFeedingScreen ? 200 : UPDATE_INTERVAL_MS;
+
   bool forceUpdate = (showFeedingScreen && !wasFeeding) || (!showFeedingScreen && wasFeeding);
   wasFeeding = showFeedingScreen;
-  
+
   if (!forceUpdate && currentTime - lastUpdateTime < updateInterval) {
     return;
   }
   lastUpdateTime = currentTime;
-  
+
   u8g2.clearBuffer();
-  
+
   if (showFeedingScreen) {
     drawFeedingScreen();
-  } else if (currentScreen == 0) {
-    drawSimpleScreen(data);
   } else {
-    drawFishAnimation();
+    drawSimpleScreen(data);
   }
-  
+
   u8g2.sendBuffer();
 }
 
@@ -264,58 +243,6 @@ void OledDisplay::drawFeedingScreen() {
     }
   }
 }
-
-void OledDisplay::drawFishAnimation() {
-  unsigned long currentTime = millis();
-  
-  int fishPos = ((currentTime / 200) % 180) + 10;
-  
-  float finPhase = (currentTime % 1000) / 1000.0f * 3.14159f * 2.0f;
-  int finOffset = sinf(finPhase) * 2;
-  
-  int fishY = 32;
-  
-  u8g2.drawEllipse(fishPos, fishY, 14, 7, U8G2_DRAW_ALL);
-  u8g2.drawEllipse(fishPos, fishY, 12, 5, U8G2_DRAW_ALL);
-  
-  u8g2.drawTriangle(fishPos - 14, fishY, fishPos - 20, fishY - 6, fishPos - 22, fishY);
-  u8g2.drawTriangle(fishPos - 14, fishY, fishPos - 20, fishY + 6, fishPos - 22, fishY);
-  
-  u8g2.drawDisc(fishPos + 7, fishY - 2, 3, U8G2_DRAW_ALL);
-  u8g2.drawDisc(fishPos + 8, fishY - 2, 1, U8G2_DRAW_ALL);
-  
-  u8g2.drawLine(fishPos + 14, fishY, fishPos + 16, fishY);
-  
-  u8g2.drawTriangle(fishPos + 3, fishY - 7, fishPos + 5, fishY - 11 + finOffset, fishPos + 7, fishY - 7);
-  
-  u8g2.drawTriangle(fishPos + 3, fishY + 7, fishPos + 5, fishY + 11 - finOffset, fishPos + 7, fishY + 7);
-  
-  u8g2.drawTriangle(fishPos + 8, fishY - 4, fishPos + 10, fishY - 5, fishPos + 10, fishY - 3);
-  u8g2.drawTriangle(fishPos + 8, fishY + 4, fishPos + 10, fishY + 5, fishPos + 10, fishY + 3);
-  
-  u8g2.drawPixel(fishPos + 4, fishY - 3);
-  u8g2.drawPixel(fishPos + 6, fishY);
-  u8g2.drawPixel(fishPos + 4, fishY + 3);
-  
-  int bubble1Pos = (currentTime / 300) % 64;
-  int bubble2Pos = ((currentTime / 400) + 20) % 64;
-  int bubble3Pos = ((currentTime / 500) + 40) % 64;
-  int bubble4Pos = ((currentTime / 350) + 55) % 64;
-  
-  if (bubble1Pos < 64) {
-    u8g2.drawCircle(25, 64 - bubble1Pos, 2, U8G2_DRAW_ALL);
-  }
-  if (bubble2Pos < 64) {
-    u8g2.drawCircle(85, 64 - bubble2Pos, 3, U8G2_DRAW_ALL);
-  }
-  if (bubble3Pos < 64) {
-    u8g2.drawCircle(105, 64 - bubble3Pos, 1, U8G2_DRAW_ALL);
-  }
-  if (bubble4Pos < 64) {
-    u8g2.drawCircle(50, 64 - bubble4Pos, 2, U8G2_DRAW_ALL);
-  }
-}
-
 
 void OledDisplay::formatTime(char* buffer, int hour, int minute) {
   if (hour < 0 || minute < 0) {
