@@ -234,6 +234,10 @@ void OledDisplay::drawSimpleScreen(const DisplayData& data) {
   } else {
     u8g2.drawStr(0, 43, nextStr);
   }
+
+  if (data.ip[0] != '\0') {
+    u8g2.drawStr(0, 58, data.ip);
+  }
 }
 
 void OledDisplay::drawFeedingScreen() {

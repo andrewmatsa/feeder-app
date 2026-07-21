@@ -268,6 +268,7 @@ export function DeviceDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState<boolean | null>(null)
   const failCountRef = useRef(0)
+  const lastKnownIpRef = useRef<string>('')
 
   // ── Tab ───────────────────────────────────────────────────────────────────
   const setPageSubtitle = useUiStore(s => s.setPageSubtitle)
@@ -407,6 +408,9 @@ export function DeviceDashboardPage() {
       failCountRef.current = 0
       setIsOnline(true)
       setStatus(data)
+      if (data.wifiIP) {
+        lastKnownIpRef.current = data.wifiIP
+      }
 
       const isLightOn = (data.lightLux ?? 0) > sLightThreshold
       if (isLightOn) {
@@ -2068,6 +2072,14 @@ export function DeviceDashboardPage() {
                 ? 'Годівниця недоступна. Якщо ви щойно забули мережу — пристрій очікує підключення до нового WiFi.'
                 : 'Feeder is unreachable. If you just forgot the network — the device is waiting for new WiFi credentials.'}
             </p>
+            {lastKnownIpRef.current && (
+              <p className="aq-offline-desc">
+                {lang === 'uk' ? 'Або, якщо сервер просто недоступний, а пристрій усе ще в мережі — спробуйте відкрити його напряму: ' : 'Or, if just the server is down and the device is still on the network — try opening it directly: '}
+                <a href={`http://${lastKnownIpRef.current}`} target="_blank" rel="noopener noreferrer">
+                  http://{lastKnownIpRef.current}
+                </a>
+              </p>
+            )}
             <div className="aq-offline-steps">
               <div className="aq-offline-step">
                 <span className="aq-offline-step-num">1</span>

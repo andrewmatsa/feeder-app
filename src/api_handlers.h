@@ -44,6 +44,7 @@ public:
   void setFeedRepeats(int repeats) { feedRepeats = repeats; }
   int getFeedRepeats() const { return feedRepeats; }
   unsigned long getLastClientActivityMillis() const { return lastClientActivityMillis; }
+  String getWifiIp() const;
   void setSleepStatus(const String& reason, long countdownSeconds, bool displayAwake) {
     sleepReason = reason;
     sleepCountdownSeconds = countdownSeconds;
@@ -84,7 +85,6 @@ private:
   void appendRuntimeStatus(JsonDocument& doc, const NextFeedInfo& nextFeed) const;
   void appendMemoryStatus(JsonDocument& doc) const;
   String getCurrentTimeString() const;
-  String getWifiIp() const;
   unsigned long computeCacheAge(bool hasCachedStatus) const;
   int parseFeedTimesJson(const String& jsonData, FeedTime* target, int maxCount) const;
   void saveFeedTimes(const FeedTime* newFeedTimes, int count);
