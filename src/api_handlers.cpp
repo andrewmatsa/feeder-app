@@ -42,7 +42,17 @@ void ApiHandlers::setDisplayOffAfterSec(uint16_t sec) {
 void ApiHandlers::setupRoutes() {
   configureRequestSecurity(server);
   server.on("/", HTTP_GET, [this]() {
-    server.send_P(200, "text/html", pageHome);
+    // Content negotiation: browsers get the Home page; a client that
+    // explicitly asks for JSON (and not HTML) gets the legacy stub this
+    // route used to always return, so any pre-existing script/monitor
+    // that set "Accept: application/json" keeps working unchanged.
+    String accept = server.header("Accept");
+    bool wantsJson = accept.indexOf("application/json") >= 0 && accept.indexOf("text/html") < 0;
+    if (wantsJson) {
+      server.send(200, "application/json", "{\"device\":\"AquaFeed\",\"api\":\"/api/status\"}");
+    } else {
+      server.send_P(200, "text/html", pageHome);
+    }
   });
   server.on("/info", HTTP_GET, [this]() {
     server.send_P(200, "text/html", pageInfo);

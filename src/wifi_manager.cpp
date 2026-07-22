@@ -144,8 +144,8 @@ bool connectToWiFiInternal(bool keepApAlive) {
 }  // namespace
 
 void configureRequestSecurity(WebServer& server) {
-  const char* headerKeys[] = {kMutationClientHeader, kApSessionHeader, kCookieHeader};
-  server.collectHeaders(headerKeys, 3);
+  const char* headerKeys[] = {kMutationClientHeader, kApSessionHeader, kCookieHeader, "Accept"};
+  server.collectHeaders(headerKeys, 4);
 }
 
 bool isApSessionAuthorized(WebServer& server) {
