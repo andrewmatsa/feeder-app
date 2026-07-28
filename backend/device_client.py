@@ -37,6 +37,34 @@ def get_device_base_url(device_id: str | None) -> str | None:
     return None
 
 
+def register_device_ip(mac_address: str, ip: str) -> int:
+    """Update endpoint_url + last_seen for every device matching this MAC.
+
+    Called from an unauthenticated endpoint (firmware has no user token), so this
+    uses the service-role client directly rather than DeviceService — same pattern
+    as get_device_base_url. Returns the number of device rows updated (0 if the
+    device hasn't been claimed in any account yet, or its mac_address is unknown).
+    """
+    if not SUPABASE_SERVICE_KEY or not SUPABASE_URL:
+        return 0
+    try:
+        from supabase import create_client
+        client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        from datetime import datetime, timezone
+        result = (
+            client.table("devices")
+            .update({
+                "endpoint_url": f"http://{ip}",
+                "last_seen": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("mac_address", mac_address.strip().lower())
+            .execute()
+        )
+        return len(result.data or [])
+    except Exception:
+        return 0
+
+
 async def request_firmware(
     path: str,
     *,

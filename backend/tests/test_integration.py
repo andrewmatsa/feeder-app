@@ -13,15 +13,17 @@ from fastapi.testclient import TestClient
 pytestmark = pytest.mark.mock
 
 try:
-    from backend.main import app
+    from backend.main import app, get_device_service
     import backend.main as _main
     import backend.mock_device as _mock_device
     from backend.dependencies import UserClaims, get_current_user
+    from backend.device_service import InMemoryDeviceService
 except ImportError:
-    from main import app
+    from main import app, get_device_service
     import main as _main
     import mock_device as _mock_device
     from dependencies import UserClaims, get_current_user
+    from device_service import InMemoryDeviceService
 
 
 # ── Auth bypass ──────────────────────────────────────────────────────────────
@@ -31,6 +33,10 @@ def _fake_user() -> UserClaims:
 
 
 app.dependency_overrides[get_current_user] = _fake_user
+# get_status also depends on get_device_service (last_seen/mac self-heal),
+# which has its own independent bearer-token dependency not covered by the
+# get_current_user override above.
+app.dependency_overrides[get_device_service] = lambda: InMemoryDeviceService()
 client = TestClient(app)
 
 

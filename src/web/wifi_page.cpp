@@ -624,7 +624,7 @@ button:hover { opacity: 0.85; }
       <label id="passwordLabel" for="password">WiFi password</label>
       <input id="password" type="password" placeholder="Enter WiFi password">
       <button type="button" id="connectBtn" onclick="connectWifi()">Connect and unlock</button>
-      <div id="hintText" class="hint">If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open <strong>http://fish.local/</strong>.</div>
+      <div id="hintText" class="hint">If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open the AquaFeed app to add this feeder.</div>
       <div id="msg"></div>
       <div id="postConnectActions" class="post-connect-actions">
         <button type="button" id="openFishLocalBtn" onclick="openProvisionedWifiPage()">Open fish.local</button>
@@ -645,12 +645,12 @@ const CONNECT_I18N = {
     passwordLabel: 'Пароль WiFi',
     passwordPlaceholder: 'Введіть пароль WiFi',
     connectBtn: 'Підключити і розблокувати',
-    hint: 'Після успішного підключення відʼєднайтеся від точки доступу AquaFeed, підʼєднайте телефон до домашнього WiFi і відкрийте <strong>http://fish.local/</strong>.',
+    hint: 'Після успішного підключення відʼєднайтеся від точки доступу AquaFeed, підʼєднайте телефон до домашнього WiFi і відкрийте застосунок AquaFeed, щоб додати цю годівницю.',
     openFishLocalBtn: 'Відкрити fish.local',
     enterSsid: 'Введіть назву WiFi мережі',
     connecting: 'Підключення...',
     connectedPrefix: 'Підключено до ',
-    connectedFollowUp: 'Відʼєднайтеся від точки доступу AquaFeed, підʼєднайте телефон до домашнього WiFi і відкрийте http://fish.local/',
+    connectedFollowUp: 'Відʼєднайтеся від точки доступу AquaFeed і підʼєднайте телефон до домашнього WiFi. Далі відкрийте застосунок AquaFeed (мобільний або веб) і додайте цю годівницю там — або відкрийте її власну сторінку напряму: http://fish.local/',
     connectedIpPrefix: ' або http://',
     connectedIpSuffix: '/',
     failed: 'Не вдалося підключитися до цього WiFi. Перевірте SSID/пароль і спробуйте ще раз.',
@@ -669,12 +669,12 @@ const CONNECT_I18N = {
     passwordLabel: 'WiFi password',
     passwordPlaceholder: 'Enter WiFi password',
     connectBtn: 'Connect and unlock',
-    hint: 'If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open <strong>http://fish.local/</strong>.',
+    hint: 'If connection succeeds, disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and then open the AquaFeed app to add this feeder.',
     openFishLocalBtn: 'Open fish.local',
     enterSsid: 'Enter WiFi network name',
     connecting: 'Connecting...',
     connectedPrefix: 'Connected to ',
-    connectedFollowUp: 'Disconnect from the AquaFeed setup access point, reconnect your phone to your home WiFi, and open http://fish.local/',
+    connectedFollowUp: 'Disconnect from the AquaFeed setup access point and reconnect your phone to your home WiFi. Then open the AquaFeed app (mobile or web) and add this feeder there — or open its own page directly: http://fish.local/',
     connectedIpPrefix: ' or http://',
     connectedIpSuffix: '/',
     failed: 'Could not connect to this WiFi. Check SSID/password and try again.',

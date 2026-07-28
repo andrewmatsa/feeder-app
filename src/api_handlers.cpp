@@ -50,6 +50,10 @@ void ApiHandlers::setupRoutes() {
     bool wantsJson = accept.indexOf("application/json") >= 0 && accept.indexOf("text/html") < 0;
     if (wantsJson) {
       server.send(200, "application/json", "{\"device\":\"AquaFeed\",\"api\":\"/api/status\"}");
+    } else if (isAPMode) {
+      // In AP mode there's no real device status to show — land straight on
+      // the WiFi setup form instead of the (meaningless here) Home page.
+      server.send_P(200, "text/html", pageWiFiConnect);
     } else {
       server.send_P(200, "text/html", pageHome);
     }
@@ -123,6 +127,7 @@ void ApiHandlers::appendRuntimeStatus(JsonDocument& doc, const NextFeedInfo& nex
   doc["minFeedIntervalMin"] = scheduler.getMinFeedIntervalMinutes();
   doc["timezoneOffsetMin"] = FeedingScheduler::getTimezoneOffsetMinutes();
   doc["wifiIP"] = getWifiIp();
+  doc["macAddress"] = WiFi.macAddress();
   doc["cacheSize"] = cachedStatusJson.length();
   doc["cacheAge"] = computeCacheAge(hasCachedStatus);
   doc["cacheValid"] = hasCachedStatus;

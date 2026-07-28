@@ -23,6 +23,7 @@ class DeviceRecord:
     mac_address: str | None
     created_at: datetime
     last_seen: datetime | None
+    endpoint_url: str | None = None
 
 
 def resolve_device_name(name: str | None, existing_names: list[str]) -> str:
@@ -93,6 +94,18 @@ class DeviceService(Protocol):
 
     def delete_device(self, user_id: str, device_id: str) -> None: ...
 
+    def set_mac_if_missing(self, device_id: str, mac_address: str) -> None:
+        """Self-heal: record the firmware-reported MAC the first time we see it, so
+        register-ip (an unauthenticated, MAC-keyed call) can later find this device."""
+        ...
+
+    def touch_last_seen(self, device_id: str) -> None:
+        """Record proof-of-life: called after any successful firmware status fetch,
+        not just WiFi-reconnect events (register-ip), so a freshly claimed device
+        shows online as soon as its dashboard is opened once instead of waiting for
+        a reboot/reconnect cycle."""
+        ...
+
 
 class InMemoryDeviceService:
     """Test/dev store when Supabase is not configured."""
@@ -160,6 +173,16 @@ class InMemoryDeviceService:
     def delete_device(self, user_id: str, device_id: str) -> None:
         record = self.get_device(user_id, device_id)
         del self._devices[record.id]
+
+    def set_mac_if_missing(self, device_id: str, mac_address: str) -> None:
+        record = self._devices.get(device_id)
+        if record is not None and not record.mac_address:
+            record.mac_address = mac_address.strip().lower()
+
+    def touch_last_seen(self, device_id: str) -> None:
+        record = self._devices.get(device_id)
+        if record is not None:
+            record.last_seen = datetime.now(timezone.utc)
 
 
 class SupabaseDeviceService:
@@ -272,6 +295,24 @@ class SupabaseDeviceService:
         self.get_device(user_id, device_id)
         self._client().table("devices").delete().eq("id", device_id).eq("user_id", user_id).execute()
 
+    def set_mac_if_missing(self, device_id: str, mac_address: str) -> None:
+        # Conditional UPDATE (only writes when mac_address is still null) avoids an extra
+        # read on every status poll — a no-op write is cheap, a read-then-write is not.
+        try:
+            self._client().table("devices").update({"mac_address": mac_address.strip().lower()}).eq(
+                "id", device_id
+            ).is_("mac_address", "null").execute()
+        except Exception:
+            pass
+
+    def touch_last_seen(self, device_id: str) -> None:
+        try:
+            self._client().table("devices").update(
+                {"last_seen": datetime.now(timezone.utc).isoformat()}
+            ).eq("id", device_id).execute()
+        except Exception:
+            pass
+
 
 def _row_to_record(row: dict) -> DeviceRecord:
     return DeviceRecord(
@@ -281,6 +322,7 @@ def _row_to_record(row: dict) -> DeviceRecord:
         mac_address=row.get("mac_address"),
         created_at=_parse_datetime(row["created_at"]),
         last_seen=_parse_datetime(row["last_seen"]) if row.get("last_seen") else None,
+        endpoint_url=row.get("endpoint_url"),
     )
 
 

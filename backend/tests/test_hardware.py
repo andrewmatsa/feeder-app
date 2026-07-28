@@ -12,14 +12,16 @@ from unittest.mock import patch
 pytestmark = pytest.mark.hardware
 
 try:
-    from backend.main import app
+    from backend.main import app, get_device_service
     import backend.main as _main
     from backend.dependencies import UserClaims, get_current_user
+    from backend.device_service import InMemoryDeviceService
     GET_BASE_URL_TARGET = "backend.main.get_device_base_url"
 except ImportError:
-    from main import app
+    from main import app, get_device_service
     import main as _main
     from dependencies import UserClaims, get_current_user
+    from device_service import InMemoryDeviceService
     GET_BASE_URL_TARGET = "main.get_device_base_url"
 
 
@@ -28,6 +30,10 @@ def _fake_user() -> UserClaims:
 
 
 app.dependency_overrides[get_current_user] = _fake_user
+# get_status also depends on get_device_service (last_seen/mac self-heal),
+# which has its own independent bearer-token dependency not covered by the
+# get_current_user override above.
+app.dependency_overrides[get_device_service] = lambda: InMemoryDeviceService()
 client = TestClient(app)
 
 

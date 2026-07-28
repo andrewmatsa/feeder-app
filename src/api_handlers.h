@@ -47,6 +47,7 @@ public:
   void setFeedRepeats(int repeats) { feedRepeats = repeats; }
   int getFeedRepeats() const { return feedRepeats; }
   unsigned long getLastClientActivityMillis() const { return lastClientActivityMillis; }
+  bool isDisplayAwake() const { return displayAwakeNow; }
   String getWifiIp() const;
   void setSleepStatus(const String& reason, long countdownSeconds, bool displayAwake) {
     sleepReason = reason;

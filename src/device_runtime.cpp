@@ -1,6 +1,7 @@
 #include "device_runtime.h"
 
 #include "time.h"
+#include "wifi_manager.h"
 
 DeviceRuntime::DeviceRuntime(ApiHandlers& apiHandlers,
                              FeedingScheduler& scheduler,
@@ -71,6 +72,16 @@ DisplayData DeviceRuntime::buildDisplayData(const NextFeedInfo& nextFeed,
   displayData.isFeeding = servo.isMoving();
   displayData.isCharging = battery.isCharging();
   displayData.cooldownSeconds = scheduler.getSecondsUntilManualFeedAllowed();
+  displayData.deviceClaimed = isDeviceClaimed;
+  displayData.apSsid[0] = '\0';
+  displayData.provisionState[0] = '\0';
+  displayData.provisionSsid[0] = '\0';
+  if (isAPMode) {
+    apSSID.toCharArray(displayData.apSsid, sizeof(displayData.apSsid));
+    strncpy(displayData.provisionState, getProvisionStateStr(), sizeof(displayData.provisionState) - 1);
+    displayData.provisionState[sizeof(displayData.provisionState) - 1] = '\0';
+    getProvisionTargetSsid().toCharArray(displayData.provisionSsid, sizeof(displayData.provisionSsid));
+  }
   return displayData;
 }
 

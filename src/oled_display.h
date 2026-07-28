@@ -22,6 +22,11 @@ struct DisplayData {
   bool isCharging;
   int cooldownSeconds;
   char ip[16];
+  bool deviceClaimed;
+  char apSsid[24];
+  /** "idle" | "pending" | "connecting" | "connected" | "failed" — see wifi_manager's ProvisionState. */
+  char provisionState[16];
+  char provisionSsid[24];
 };
 
 class OledDisplay {
@@ -50,6 +55,8 @@ private:
   
   void drawSimpleScreen(const DisplayData& data);
   void drawFeedingScreen();
+  void drawNotAddedScreen(const DisplayData& data);
+  void drawAPModeScreen(const DisplayData& data);
   void formatTime(char* buffer, int hour, int minute);
 };
 

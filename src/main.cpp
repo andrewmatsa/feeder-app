@@ -161,14 +161,12 @@ void printMemoryStatus() {
 
 void handleWakeCause(esp_sleep_wakeup_cause_t wakeCause) {
   if (wakeCause == ESP_SLEEP_WAKEUP_GPIO) {
-    ets_printf("[WAKE] Feed button\n");
+    ets_printf("[WAKE] Feed button -> waking display only, not feeding\n");
     if (digitalRead(BUTTON_PIN) == LOW) {
+      // Waking the device just to check on it is the common case; feeding on
+      // this same press was surprising. Wake the display; a second short
+      // press (now that the device/display are awake) triggers the feed.
       powerManager.markInteraction();
-      deviceRuntime.tryRunFeedSequence(
-        apiHandlers.getFeedRepeats(),
-        "Wake-up button feed blocked: recently fed",
-        false
-      );
     }
   } else if (wakeCause == ESP_SLEEP_WAKEUP_TIMER) {
     ets_printf("[WAKE] Schedule timer\n");
@@ -189,6 +187,9 @@ void handleManualButtonPress() {
       ets_printf("[BTN] Long press -> AP mode\n");
       powerManager.markInteraction();
       startAPMode();
+    } else if (!apiHandlers.isDisplayAwake()) {
+      ets_printf("[BTN] Short press -> display was off, waking it (not feeding)\n");
+      powerManager.markInteraction();
     } else if (!servo.isMoving()) {
       ets_printf("[BTN] Short press -> manual feed\n");
       powerManager.markInteraction();
@@ -248,6 +249,7 @@ void loop(){
 
   server.handleClient();
   updateWiFiProvisioning();
+  recheckClaimStatusIfNeeded();
   handleManualButtonPress();
   updateWiFiPowerSaveMode();
 

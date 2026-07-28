@@ -1,6 +1,7 @@
 #include "wifi_manager.h"
 #include <Arduino.h>
 #include <esp_system.h>
+#include <HTTPClient.h>
 
 // === WiFi Variables ===
 String savedSSID = "";
@@ -8,6 +9,7 @@ String savedPassword = "";
 String apSSID = "FishFeeder-Setup";
 String apPassword = "";
 bool isAPMode = false;
+bool isDeviceClaimed = true;
 
 namespace {
 const char* kMutationClientHeader = "X-AquaFeed-Client";
@@ -17,6 +19,11 @@ const char* kWebUiClient = "webui";
 const char* kBackendClient = "backend";
 const char* kDefaultApPassword = "12345678";
 const char* kSessionCookieName = "AquaFeedSession";
+// Backend host on the same LAN — must match wherever `docker compose up` / uvicorn
+// runs (see backend/.env's own ESP32_BASE_URL, which points the other direction).
+// Update this if the backend host's IP changes; there is no discovery mechanism
+// for this side of the connection, only for the device's own IP (see below).
+const char* kBackendBaseUrl = "http://192.168.0.218:8000";
 constexpr unsigned long PROVISION_RESPONSE_GRACE_MS = 8000UL;
 constexpr unsigned long PROVISION_CONNECT_TIMEOUT_MS = 20000UL;
 String apSessionToken = "";
@@ -112,6 +119,27 @@ bool hasValidApSession(WebServer& server) {
   return false;
 }
 
+// Fire-and-forget: tell the backend our current IP so it can keep its per-device
+// endpoint_url fresh across DHCP lease changes (see backend's
+// POST /api/v1/devices/register-ip). Short timeout, no retries — a failure here
+// (backend unreachable/restarting) must never block boot or drain battery.
+void announceIpToBackend() {
+  HTTPClient http;
+  http.setTimeout(3000);
+  const String url = String(kBackendBaseUrl) + "/api/v1/devices/register-ip";
+  if (!http.begin(url)) return;
+  http.addHeader("Content-Type", "application/json");
+  const String body = "{\"mac\":\"" + WiFi.macAddress() + "\",\"ip\":\"" + WiFi.localIP().toString() + "\"}";
+  int httpCode = http.POST(body);
+  if (httpCode == 200) {
+    // Tiny fixed-shape body ({"claimed":true} / {"claimed":false}) — a substring
+    // check is enough here, no need to pull in full JSON parsing for one bool.
+    String response = http.getString();
+    isDeviceClaimed = response.indexOf("\"claimed\":true") >= 0;
+  }
+  http.end();
+}
+
 bool connectToWiFiInternal(bool keepApAlive) {
   if(savedSSID.length() == 0) return false;
 
@@ -135,6 +163,7 @@ bool connectToWiFiInternal(bool keepApAlive) {
     if (!keepApAlive) {
       isAPMode = false;
     }
+    announceIpToBackend();
     return true;
   }
 
@@ -143,13 +172,43 @@ bool connectToWiFiInternal(bool keepApAlive) {
 }
 }  // namespace
 
+const char* getProvisionStateStr() {
+  return provisionStateToString();
+}
+
+// announceIpToBackend() only ever fires once, at the moment WiFi connects —
+// so a device that connects *before* being added to any account (the normal
+// order: pair WiFi, then save it in the app) would show "Not added" on its
+// OLED forever, since nothing tells it the claim happened afterward. Recheck
+// on a slow interval, bounded to only run while actually unclaimed, so it
+// self-corrects within a bit of the user finishing the add-device flow
+// without adding any ongoing cost once claimed.
+void recheckClaimStatusIfNeeded() {
+  if (isAPMode || isDeviceClaimed || WiFi.status() != WL_CONNECTED) return;
+  static unsigned long lastCheckMs = 0;
+  const unsigned long kRecheckIntervalMs = 20000UL;
+  unsigned long now = millis();
+  if (lastCheckMs != 0 && (now - lastCheckMs) < kRecheckIntervalMs) return;
+  lastCheckMs = now;
+  announceIpToBackend();
+}
+
+String getProvisionTargetSsid() {
+  return provisionTargetSsid;
+}
+
 void configureRequestSecurity(WebServer& server) {
   const char* headerKeys[] = {kMutationClientHeader, kApSessionHeader, kCookieHeader, "Accept"};
   server.collectHeaders(headerKeys, 4);
 }
 
 bool isApSessionAuthorized(WebServer& server) {
-  return !isAPMode || hasValidApSession(server);
+  // Joining the AP network at all already requires its WPA2 password
+  // (kDefaultApPassword) — that's the real access-control boundary. A second
+  // app-level login on top of it was redundant friction; drop it so the WiFi
+  // setup form works immediately for anyone who reached AP mode.
+  (void)server;
+  return true;
 }
 
 bool isTrustedMutationRequest(WebServer& server) {
@@ -216,10 +275,6 @@ void setupWiFiHandlers(WebServer& server, Preferences& preferences) {
 
 // === WiFi Handlers ===
 void handleWiFi(WebServer& server) {
-  if (isAPMode && !hasValidApSession(server)) {
-    server.send_P(200, "text/html", pageWiFiLocked);
-    return;
-  }
   if (isAPMode) {
     server.send_P(200, "text/html", pageWiFiConnect);
     return;
@@ -262,10 +317,10 @@ void handleApLoginStatus(WebServer& server) {
     return;
   }
 
-  const bool authenticated = !isAPMode || hasValidApSession(server);
-  String response = String("{\"requiresLogin\":") + (isAPMode ? "true" : "false") +
-                    ",\"authenticated\":" + (authenticated ? "true" : "false") + "}";
-  server.send(200, "application/json", response);
+  // AP-mode login was removed — the AP's own WPA2 password is the access
+  // gate now (see isApSessionAuthorized). Always report authenticated so the
+  // WiFi setup page never shows a redundant login prompt.
+  server.send(200, "application/json", "{\"requiresLogin\":false,\"authenticated\":true}");
 }
 
 void handleProvisionWiFi(WebServer& server, Preferences& preferences) {
@@ -294,10 +349,6 @@ void handleProvisionWiFi(WebServer& server, Preferences& preferences) {
 }
 
 void handleProvisionWiFiStatus(WebServer& server) {
-  if (isAPMode && !hasValidApSession(server)) {
-    server.send(403, "text/plain", "login required");
-    return;
-  }
   String response = "{\"ok\":true,\"status\":\"" + String(provisionStateToString()) +
                     "\",\"ssid\":\"" + provisionTargetSsid +
                     "\",\"ip\":\"" + provisionStationIp +
