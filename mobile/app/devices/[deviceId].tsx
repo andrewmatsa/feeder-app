@@ -17,8 +17,10 @@ import {
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { BatteryGauge, LightGauge, NextFeedGauge } from '../../src/components/Gauges'
+import { AquariumScreen } from '../../src/components/AquariumScreen'
+import { FeedingCelebration } from '../../src/components/FeedingCelebration'
 import { FishLogo } from '../../src/components/FishLogo'
+import { BatteryGauge, LightGauge, NextFeedGauge } from '../../src/components/Gauges'
 import { SectionIcon, type SectionIconName } from '../../src/components/SectionIcon'
 import { Sparkline } from '../../src/components/Sparkline'
 import { HomeIcon, InfoIcon, SettingsIcon, StatsIcon } from '../../src/components/TabIcons'
@@ -83,7 +85,13 @@ export default function DeviceDashboardScreen() {
     void SecureStore.setItemAsync(LANG_KEY, l)
   }
 
+  useEffect(() => {
+    if (!deviceId) return
+    api.getDevice(deviceId).then((d) => setDeviceName(d.name)).catch(() => {})
+  }, [deviceId])
+
   const [tab, setTab] = useState<Tab>('home')
+  const [deviceName, setDeviceName] = useState<string | null>(null)
   const [status, setStatus] = useState<StatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -92,6 +100,7 @@ export default function DeviceDashboardScreen() {
   const failCountRef = useRef(0)
 
   const [feeding, setFeeding] = useState(false)
+  const [showFeedCelebration, setShowFeedCelebration] = useState(false)
   const [feedRepeats, setFeedRepeats] = useState(1)
   const [cooldown, setCooldown] = useState(0)
   const [feedError, setFeedError] = useState<string | null>(null)
@@ -340,9 +349,11 @@ export default function DeviceDashboardScreen() {
 
   if (!deviceId) {
     return (
-      <View style={styles.center}>
-        <Text>No device ID</Text>
-      </View>
+      <AquariumScreen interactive>
+        <View style={styles.center}>
+          <Text style={styles.centerText}>No device ID</Text>
+        </View>
+      </AquariumScreen>
     )
   }
 
@@ -353,6 +364,8 @@ export default function DeviceDashboardScreen() {
     try {
       await api.feedNow({ repeats: feedRepeats }, deviceId)
       setCooldown(status?.minFeedIntervalMin ? status.minFeedIntervalMin * 60 : 300)
+      setShowFeedCelebration(true)
+      setTimeout(() => setShowFeedCelebration(false), 3000)
       setTimeout(() => {
         setFeeding(false)
         void fetchStatus()
@@ -611,33 +624,37 @@ export default function DeviceDashboardScreen() {
 
   if (loading && !status) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
+      <AquariumScreen interactive>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#fff" />
+        </View>
+      </AquariumScreen>
     )
   }
 
   if (wifiForgetDone) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.sectionTitle}>{T.forgetWifiDone}</Text>
-        <Pressable style={[styles.feedButton, { marginTop: 20, paddingHorizontal: 24 }]} onPress={() => router.replace('/devices')}>
-          <Text style={styles.feedButtonText}>{T.backToDevices}</Text>
-        </Pressable>
-      </View>
+      <AquariumScreen interactive>
+        <View style={styles.center}>
+          <Text style={styles.centerTitle}>{T.forgetWifiDone}</Text>
+          <Pressable style={[styles.feedButton, { marginTop: 20, paddingHorizontal: 24 }]} onPress={() => router.replace('/devices')}>
+            <Text style={styles.feedButtonText}>{T.backToDevices}</Text>
+          </Pressable>
+        </View>
+      </AquariumScreen>
     )
   }
 
   return (
-    <View style={styles.container}>
+    <AquariumScreen interactive>
       <View style={[styles.headerBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.backText}>←</Text>
         </Pressable>
         <View style={styles.brand}>
           <FishLogo size={32} />
-          <View>
-            <Text style={styles.brandTitle}>AquaFeed</Text>
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitle} numberOfLines={1}>{deviceName ?? '…'}</Text>
             <Text style={styles.brandSubtitle}>{tab === 'home' ? T.tabHomeSubtitle : tab === 'info' ? T.tabInfo : T.tabSettings}</Text>
           </View>
         </View>
@@ -793,7 +810,9 @@ export default function DeviceDashboardScreen() {
           <Text style={[styles.tabLabel, tab === 'stats' && styles.tabLabelActive]}>{T.tabStats}</Text>
         </Pressable>
       </View>
-    </View>
+
+      <FeedingCelebration visible={showFeedCelebration} />
+    </AquariumScreen>
   )
 }
 
@@ -1695,8 +1714,9 @@ function StatsTab({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centerText: { color: '#fff', fontSize: 15 },
+  centerTitle: { fontSize: 18, fontWeight: '700', color: '#fff6e4' },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1704,14 +1724,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.96)',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(15,23,42,0.07)',
   },
-  backText: { fontSize: 22, width: 32 },
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#eef2ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backText: { fontSize: 18, fontWeight: '800', color: '#1f8fb8' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandTitle: { fontSize: 15, fontWeight: '700', color: '#1f2937' },
-  brandSubtitle: { fontSize: 11, color: '#9ca3af' },
-  headerSpacer: { width: 32 },
+  brandTextCol: { alignItems: 'center' },
+  brandTitle: { fontSize: 15, fontWeight: '700', color: '#1f2937', textAlign: 'center' },
+  brandSubtitle: { fontSize: 11, color: '#9ca3af', textAlign: 'center' },
+  headerSpacer: { width: 34 },
   langToggle: { flexDirection: 'row', gap: 4 },
   langBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: '#f0f0f0' },
   langBtnActive: { backgroundColor: '#2563eb' },
@@ -1719,7 +1749,7 @@ const styles = StyleSheet.create({
   langBtnTextActive: { color: '#fff' },
   offlineBanner: { backgroundColor: '#fee2e2', paddingVertical: 6, alignItems: 'center' },
   offlineBannerText: { color: '#991b1b', fontWeight: '600', fontSize: 12 },
-  error: { color: '#c0392b', paddingHorizontal: 16, marginTop: 4 },
+  error: { color: '#ffb199', fontWeight: '600', paddingHorizontal: 16, marginTop: 4 },
   content: { padding: 16, gap: 12, paddingBottom: 24 },
   card: { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 16, marginBottom: 12, backgroundColor: '#fafafa' },
   gaugesRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: 8 },
@@ -1818,7 +1848,7 @@ const styles = StyleSheet.create({
   tabItemActive: { backgroundColor: 'rgba(15,23,42,0.08)' },
   tabLabel: { fontSize: 11, color: '#4b5563', fontWeight: '500' },
   tabLabelActive: { color: '#111827', fontWeight: '700' },
-  pullHint: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 13 },
+  pullHint: { textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 40, fontSize: 13 },
   toast: { backgroundColor: '#111', paddingVertical: 8, alignItems: 'center', marginHorizontal: 16, borderRadius: 8, marginTop: 4 },
   toastText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   langChoiceBtn: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },

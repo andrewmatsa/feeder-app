@@ -11,7 +11,9 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { AppHeader } from '../../src/components/AppHeader'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { ChevronRightIcon, EditIcon, TrashIcon } from '../../src/components/ActionIcons'
+import { AquariumScreen } from '../../src/components/AquariumScreen'
 import { api, getApiErrorMessage } from '../../src/services/api'
 import { registerForPushNotificationsAsync } from '../../src/services/pushNotifications'
 import { useAuthStore } from '../../src/store/authStore'
@@ -42,6 +44,7 @@ const T = {
 }
 
 export default function DevicesScreen() {
+  const insets = useSafeAreaInsets()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const logout = useAuthStore((s) => s.logout)
   const router = useRouter()
@@ -152,19 +155,17 @@ export default function DevicesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.screen}>
-        <AppHeader subtitle={T.title} />
+      <AquariumScreen interactive>
         <View style={styles.center}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color="#fff" />
         </View>
-      </View>
+      </AquariumScreen>
     )
   }
 
   return (
-    <View style={styles.screen}>
-      <AppHeader subtitle={T.title} />
-      <View style={styles.container}>
+    <AquariumScreen interactive>
+      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
       <View style={styles.toolbar}>
         <Text style={styles.title}>{T.title}</Text>
         <Link href="/devices/new" style={styles.addButton}>
@@ -226,18 +227,33 @@ export default function DevicesScreen() {
 
             <View style={styles.cardActions}>
               <Pressable
-                style={[styles.openButton, openBlocked && styles.openButtonDisabled]}
+                style={({ pressed }) => [
+                  styles.openButton,
+                  openBlocked && styles.openButtonDisabled,
+                  pressed && !openBlocked && styles.openButtonPressed,
+                ]}
                 onPress={() => router.push(`/devices/${device.id}`)}
                 disabled={openBlocked}
               >
                 <Text style={[styles.openButtonText, openBlocked && styles.openButtonTextDisabled]}>{T.open}</Text>
+                <ChevronRightIcon color={openBlocked ? '#9ca3af' : '#fff'} size={15} />
               </Pressable>
-              <Pressable style={styles.iconButton} onPress={() => startRename(device)}>
-                <Text>✏️</Text>
-              </Pressable>
-              <Pressable style={styles.iconButton} onPress={() => handleDelete(device)}>
-                <Text>🗑️</Text>
-              </Pressable>
+              <View style={styles.cardActionsRight}>
+                <Pressable
+                  style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+                  onPress={() => startRename(device)}
+                  hitSlop={6}
+                >
+                  <EditIcon color="#1f4a5c" />
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.iconButton, styles.iconButtonDanger, pressed && styles.iconButtonDangerPressed]}
+                  onPress={() => handleDelete(device)}
+                  hitSlop={6}
+                >
+                  <TrashIcon color="#c1462b" />
+                </Pressable>
+              </View>
             </View>
           </View>
           )
@@ -248,23 +264,22 @@ export default function DevicesScreen() {
         <Text style={styles.logoutButtonText}>{T.logout}</Text>
       </Pressable>
       </View>
-    </View>
+    </AquariumScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, padding: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  title: { fontSize: 22, fontWeight: '700' },
-  addButton: { backgroundColor: '#2563eb', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  title: { fontSize: 22, fontWeight: '700', color: '#fff6e4' },
+  addButton: { backgroundColor: '#ec6a3b', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   addButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  error: { color: '#c0392b', marginBottom: 8 },
+  error: { color: '#ffb199', marginBottom: 8, fontWeight: '600' },
   list: { gap: 12, paddingBottom: 24 },
   emptyContainer: { flexGrow: 1, justifyContent: 'center' },
   emptyState: { alignItems: 'center', gap: 16 },
-  emptyText: { color: '#666', fontSize: 15 },
+  emptyText: { color: 'rgba(255,255,255,0.75)', fontSize: 15 },
   card: { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 16, marginBottom: 12, backgroundColor: '#fafafa' },
   badge: { fontSize: 12, marginBottom: 6, fontWeight: '600' },
   badgeOnline: { color: '#16a34a' },
@@ -272,16 +287,50 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '600', marginBottom: 14 },
   renameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   renameInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6 },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  openButton: { backgroundColor: '#2563eb', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 8 },
-  openButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  openButtonDisabled: { backgroundColor: '#e5e7eb' },
+  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardActionsRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  openButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ec6a3b',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    shadowColor: '#ec6a3b',
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  openButtonPressed: { backgroundColor: '#d85c30' },
+  openButtonText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  openButtonDisabled: { backgroundColor: '#e5e7eb', shadowOpacity: 0 },
   openButtonTextDisabled: { color: '#9ca3af' },
-  iconButton: { padding: 8, borderRadius: 999, backgroundColor: '#f0f0f0' },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef2ff',
+  },
+  iconButtonPressed: { backgroundColor: '#dde5fb' },
+  iconButtonDanger: { backgroundColor: '#fdeae4' },
+  iconButtonDangerPressed: { backgroundColor: '#fad9cd' },
   smallButton: { backgroundColor: '#2563eb', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   smallButtonText: { color: '#fff', fontWeight: '600', fontSize: 12 },
   ghostButton: { backgroundColor: '#eee' },
   ghostButtonText: { color: '#333', fontWeight: '600', fontSize: 12 },
-  logoutButton: { alignSelf: 'center', marginTop: 8, paddingVertical: 10 },
-  logoutButtonText: { color: '#c0392b', fontWeight: '600' },
+  logoutButton: {
+    alignSelf: 'center',
+    marginTop: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 22,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,177,153,0.55)',
+  },
+  logoutButtonText: { color: '#ffb199', fontWeight: '800', fontSize: 14 },
 })

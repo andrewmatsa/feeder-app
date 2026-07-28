@@ -39,7 +39,7 @@ function GaugeSvg({ fraction, color, label }: { fraction: number; color: string;
         strokeDasharray={`${TRACK_LEN}`}
         strokeDashoffset={offset}
       />
-      <SvgText x={130} y={138} textAnchor="middle" fontSize={28} fontWeight="700" fill={color}>
+      <SvgText x={130} y={140} textAnchor="middle" fontSize={38} fontWeight="700" fill={color}>
         {label}
       </SvgText>
     </Svg>
@@ -121,8 +121,8 @@ export function LightGauge({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', flex: 1, minWidth: 0, maxWidth: 160 },
-  title: { fontSize: 11, fontWeight: '600', color: '#333', marginTop: 4, textAlign: 'center' },
-  sub: { fontSize: 10, color: '#888', marginTop: 2, textAlign: 'center' },
+  wrap: { alignItems: 'center', flex: 1, minWidth: 0, maxWidth: 170 },
+  title: { fontSize: 12, fontWeight: '600', color: '#333', marginTop: 4, textAlign: 'center' },
+  sub: { fontSize: 11, color: '#888', marginTop: 2, textAlign: 'center' },
   subOn: { color: '#D97706', fontWeight: '700' },
 })

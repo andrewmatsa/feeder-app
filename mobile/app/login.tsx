@@ -1,7 +1,9 @@
 import { Link, Redirect, useRouter } from 'expo-router'
 import { useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { AppHeader } from '../src/components/AppHeader'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { AquaMascot } from '../src/components/AquaMascot'
+import { AquariumScreen } from '../src/components/AquariumScreen'
 import { useAuthStore } from '../src/store/authStore'
 
 const T = {
@@ -13,9 +15,11 @@ const T = {
   error: 'Помилка входу',
   noAccount: 'Немає акаунта?',
   register: 'Зареєструватися',
+  tagline: 'Автоматична годівниця',
 }
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets()
   const login = useAuthStore((s) => s.login)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const router = useRouter()
@@ -34,8 +38,6 @@ export default function LoginScreen() {
     setError(null)
     try {
       await login({ email, password })
-      // TODO(Phase 3): once app/devices/[deviceId].tsx exists, jump straight
-      // into the first device's dashboard here, mirroring the web SPA.
       router.replace('/devices')
     } catch (err) {
       setError(err instanceof Error ? err.message : T.error)
@@ -45,69 +47,112 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <AppHeader subtitle={T.title} />
-      <View style={styles.container}>
-        <Text style={styles.title}>{T.title}</Text>
+    <AquariumScreen interactive>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 24 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+          <View style={styles.hero}>
+            <AquaMascot size={168} />
+            <View style={styles.wordmark}>
+              <Text style={styles.wordmarkText}>
+                <Text style={styles.wordAqua}>Aqua</Text>
+                <Text style={styles.wordFeed}>Feed</Text>
+              </Text>
+              <Text style={styles.tagline}>{T.tagline}</Text>
+            </View>
+          </View>
 
-        <Text style={styles.label}>{T.email}</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
+          <View style={styles.card}>
+            <Text style={styles.title}>{T.title}</Text>
 
-        <Text style={styles.label}>{T.password}</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="current-password"
-        />
+            <Text style={styles.label}>{T.email}</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+              placeholderTextColor="#94a8b0"
+            />
 
-        {error && <Text style={styles.error}>{error}</Text>}
+            <Text style={styles.label}>{T.password}</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete="current-password"
+              placeholderTextColor="#94a8b0"
+            />
 
-        <Pressable style={styles.button} onPress={() => void handleSubmit()} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{T.submit}</Text>}
-        </Pressable>
+            {error && <Text style={styles.error}>{error}</Text>}
 
-        <View style={styles.switchRow}>
-          <Text>{T.noAccount} </Text>
-          <Link href="/register">
-            <Text style={styles.link}>{T.register}</Text>
-          </Link>
-        </View>
-      </View>
-    </View>
+            <Pressable style={styles.button} onPress={() => void handleSubmit()} disabled={submitting}>
+              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{T.submit}</Text>}
+            </Pressable>
+
+            <View style={styles.switchRow}>
+              <Text style={styles.switchText}>{T.noAccount} </Text>
+              <Link href="/register">
+                <Text style={styles.link}>{T.register}</Text>
+              </Link>
+            </View>
+          </View>
+      </ScrollView>
+    </AquariumScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 28, fontWeight: '700', marginBottom: 24 },
-  label: { fontSize: 14, color: '#444', marginBottom: 4, marginTop: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+  scrollContent: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 20, paddingTop: 28, paddingBottom: 40 },
+  hero: { alignItems: 'center', marginBottom: 18 },
+  wordmark: { marginTop: 8, alignItems: 'center' },
+  wordmarkText: { fontSize: 34, fontWeight: '800', letterSpacing: 0.3 },
+  wordAqua: { color: '#7fe3ff' },
+  wordFeed: { color: '#fff6e4' },
+  tagline: { marginTop: 2, fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+  card: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    borderRadius: 22,
+    padding: 24,
+    shadowColor: '#021420',
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
-  error: { color: '#c0392b', marginTop: 12 },
+  title: { fontSize: 21, fontWeight: '800', color: '#05222f', marginBottom: 18 },
+  label: { fontSize: 13, fontWeight: '700', color: '#1f4a5c', marginBottom: 6, marginTop: 12 },
+  input: {
+    borderWidth: 1.5,
+    borderColor: '#dcebf1',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#05222f',
+    backgroundColor: '#f4fafc',
+  },
+  error: { color: '#c14a24', marginTop: 12, fontWeight: '700', fontSize: 13 },
   button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
+    backgroundColor: '#ec6a3b',
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 22,
+    shadowColor: '#ec6a3b',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
-  link: { color: '#2563eb', fontWeight: '600' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
+  switchText: { color: '#6b8894', fontWeight: '600', fontSize: 13 },
+  link: { color: '#1f8fb8', fontWeight: '800', fontSize: 13 },
 })

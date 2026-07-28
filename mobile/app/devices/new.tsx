@@ -1,7 +1,8 @@
 import { Redirect, useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { AppHeader } from '../../src/components/AppHeader'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { AquariumScreen } from '../../src/components/AquariumScreen'
 import { api, checkBackendReachable, getApiErrorMessage } from '../../src/services/api'
 import {
   fetchProvisionStatus,
@@ -61,6 +62,7 @@ const T = {
 type Step = 'choice' | 1 | 2 | 3
 
 export default function AddDeviceScreen() {
+  const insets = useSafeAreaInsets()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const router = useRouter()
   const [step, setStep] = useState<Step>('choice')
@@ -202,9 +204,9 @@ export default function AddDeviceScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <AppHeader subtitle="Додати годівницю" />
-      <ScrollView contentContainerStyle={styles.container}>
+    <AquariumScreen interactive>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
+      <View style={styles.container}>
       {step !== 'choice' && (
         <View style={styles.stepIndicator}>
           {([1, 2, 3] as const).map((s) => (
@@ -380,14 +382,24 @@ export default function AddDeviceScreen() {
           </View>
         </View>
       )}
+      </View>
       </ScrollView>
-    </View>
+    </AquariumScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
-  container: { padding: 20, flexGrow: 1 },
+  scrollContent: { flexGrow: 1, padding: 16 },
+  container: {
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    borderRadius: 22,
+    padding: 20,
+    shadowColor: '#021420',
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
+  },
   stepIndicator: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#ddd' },
   dotActive: { backgroundColor: '#2563eb' },
