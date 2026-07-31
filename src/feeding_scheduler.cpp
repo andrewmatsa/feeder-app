@@ -150,7 +150,9 @@ NextFeedInfo FeedingScheduler::computeNextFeed() {
   
   const int nowTotal = localTime.tm_hour * 60 + localTime.tm_min;
   const int nowDay = localTime.tm_wday;
-  int bestDiff = (24 * 60) + 1;
+  // Must exceed the largest possible wraparound diff: weekday-specific slots
+  // (day >= 0) can wrap a full week (7*24*60), not just a day.
+  int bestDiff = (7 * 24 * 60) + 1;
   bool found = false;
   
   auto considerSlot = [&](int hour, int minute, int day) {
