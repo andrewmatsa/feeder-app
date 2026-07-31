@@ -42,7 +42,21 @@ void ApiHandlers::setDisplayOffAfterSec(uint16_t sec) {
 void ApiHandlers::setupRoutes() {
   configureRequestSecurity(server);
   server.on("/", HTTP_GET, [this]() {
-    server.send_P(200, "text/html", pageHome);
+    // Content negotiation: browsers get the Home page; a client that
+    // explicitly asks for JSON (and not HTML) gets the legacy stub this
+    // route used to always return, so any pre-existing script/monitor
+    // that set "Accept: application/json" keeps working unchanged.
+    String accept = server.header("Accept");
+    bool wantsJson = accept.indexOf("application/json") >= 0 && accept.indexOf("text/html") < 0;
+    if (wantsJson) {
+      server.send(200, "application/json", "{\"device\":\"AquaFeed\",\"api\":\"/api/status\"}");
+    } else if (isAPMode) {
+      // In AP mode there's no real device status to show — land straight on
+      // the WiFi setup form instead of the (meaningless here) Home page.
+      server.send_P(200, "text/html", pageWiFiConnect);
+    } else {
+      server.send_P(200, "text/html", pageHome);
+    }
   });
   server.on("/info", HTTP_GET, [this]() {
     server.send_P(200, "text/html", pageInfo);
@@ -113,6 +127,7 @@ void ApiHandlers::appendRuntimeStatus(JsonDocument& doc, const NextFeedInfo& nex
   doc["minFeedIntervalMin"] = scheduler.getMinFeedIntervalMinutes();
   doc["timezoneOffsetMin"] = FeedingScheduler::getTimezoneOffsetMinutes();
   doc["wifiIP"] = getWifiIp();
+  doc["macAddress"] = WiFi.macAddress();
   doc["cacheSize"] = cachedStatusJson.length();
   doc["cacheAge"] = computeCacheAge(hasCachedStatus);
   doc["cacheValid"] = hasCachedStatus;

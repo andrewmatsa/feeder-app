@@ -54,6 +54,7 @@ def normalize_feed_times(raw_feed_times: Any) -> list[FeedTime]:
 def map_firmware_status(payload: dict[str, Any]) -> StatusResponse:
     return StatusResponse(
         firmwareVersion=payload.get("firmwareVersion") or None,
+        macAddress=payload.get("macAddress") or None,
         angle=max(0, min(180, to_int(payload.get("currentAngle", payload.get("angle")), 0))),
         speed=max(1.0, min(20.0, to_float(payload.get("speed"), 20.0))),
         feedRepeats=max(1, to_int(payload.get("feedRepeats"), 1)),

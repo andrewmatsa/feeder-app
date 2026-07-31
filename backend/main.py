@@ -1,5 +1,6 @@
 """FastAPI entrypoint for the AquaFeed backend adapter."""
 
+import asyncio
 from datetime import datetime
 import os
 
@@ -14,9 +15,11 @@ try:
     from .devices import router as devices_router
     from .mock_realtime import mock_record_feed, mock_touch_last_seen
     from .config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
-    from .dependencies import UserClaims, get_current_user
+    from .dependencies import UserClaims, get_bearer_token, get_current_user
     from .device_client import close_http_client, get_device_base_url, request_firmware
+    from .device_service import DeviceService, build_device_service
     from .mappers import encode_schedule, map_firmware_status
+    from .push_notifications import run_alert_check_loop
     from .mock_device import (
         mock_calibrate, mock_feed, mock_set_angle, mock_set_display_settings,
         mock_set_min_interval, mock_set_power_mode, mock_set_schedule,
@@ -41,9 +44,11 @@ except ImportError:
     from devices import router as devices_router
     from mock_realtime import mock_record_feed, mock_touch_last_seen
     from config import APP_VERSION, CORS_ORIGINS, FIRMWARE_VERSION, MOCK_DEVICE
-    from dependencies import UserClaims, get_current_user
+    from dependencies import UserClaims, get_bearer_token, get_current_user
     from device_client import close_http_client, get_device_base_url, request_firmware
+    from device_service import DeviceService, build_device_service
     from mappers import encode_schedule, map_firmware_status
+    from push_notifications import run_alert_check_loop
     from mock_device import (
         mock_calibrate, mock_feed, mock_set_angle, mock_set_display_settings,
         mock_set_min_interval, mock_set_power_mode, mock_set_schedule,
@@ -65,7 +70,9 @@ except ImportError:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    alert_task = asyncio.create_task(run_alert_check_loop())
     yield
+    alert_task.cancel()
     await close_http_client()
 
 
@@ -104,9 +111,14 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
+def get_device_service(access_token: str = Depends(get_bearer_token)) -> DeviceService:
+    return build_device_service(access_token)
+
+
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status(
     current_user: UserClaims = Depends(get_current_user),
+    device_service: DeviceService = Depends(get_device_service),
     device_id: str | None = None,
 ):
     if device_id and device_id in simulated_offline_devices:
@@ -117,6 +129,13 @@ async def get_status(
     else:
         response = await request_firmware("/api/status", base_url=get_device_base_url(device_id))
         result = map_firmware_status(response.json())
+        if device_id:
+            try:
+                device_service.touch_last_seen(device_id)
+                if result.macAddress:
+                    device_service.set_mac_if_missing(device_id, result.macAddress)
+            except Exception:
+                pass  # best-effort self-heal; never fail a status read over this
 
     if device_id and device_id in simulated_low_battery_devices:
         result.batteryPercent = 5

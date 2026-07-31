@@ -51,6 +51,7 @@ class TimezoneRequest(BaseModel):
 
 class StatusResponse(BaseModel):
     firmwareVersion: str | None = None
+    macAddress: str | None = None
     angle: int
     speed: float
     feedRepeats: int
@@ -117,3 +118,8 @@ class CreateDeviceRequest(BaseModel):
 
 class UpdateDeviceRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=40)
+
+
+class RegisterIpRequest(BaseModel):
+    mac: str = Field(description="Device MAC address, e.g. AA:BB:CC:DD:EE:FF")
+    ip: str = Field(description="Device's current local IP address")

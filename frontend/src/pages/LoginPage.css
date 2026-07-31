@@ -1,0 +1,332 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@500;600;700&display=swap');
+
+/* ── Page shell — a self-contained "aquarium" scoped to /login, doesn't touch
+   global App.css so /register and everything else stay exactly as they are. ── */
+.lp2-page {
+  --lp2-deep: #05222f;
+  --lp2-mid: #0d4a63;
+  --lp2-shallow: #1f8fb8;
+  --lp2-glow: #7fe3ff;
+  --lp2-coral: #ff8a5c;
+  --lp2-coral-dark: #ec6a3b;
+  --lp2-cream: #fff6e4;
+
+  position: relative;
+  isolation: isolate;
+  margin: -24px -16px -48px;
+  padding: 44px 16px 56px;
+  min-height: calc(100vh - 158px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 65% at 50% 0%, var(--lp2-shallow) 0%, var(--lp2-mid) 46%, var(--lp2-deep) 100%);
+  font-family: 'Quicksand', sans-serif;
+}
+
+.lp2-ocean-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.lp2-ray {
+  position: absolute;
+  top: -10%;
+  width: 42%;
+  height: 130%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 70%);
+  transform: rotate(10deg);
+  filter: blur(2px);
+  animation: lp2-ray-drift 9s ease-in-out infinite;
+}
+.lp2-ray-1 { left: 6%; animation-delay: 0s; }
+.lp2-ray-2 { left: 52%; width: 30%; transform: rotate(-8deg); animation-delay: -4.5s; opacity: 0.7; }
+
+@keyframes lp2-ray-drift {
+  0%, 100% { transform: rotate(10deg) translateX(0); opacity: 0.55; }
+  50% { transform: rotate(6deg) translateX(18px); opacity: 0.9; }
+}
+
+/* ── Seaweed — anchored to the ocean floor at the bottom of the page ── */
+.lp2-seaweed-field {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 190px;
+  opacity: 0.85;
+}
+
+.lp2-weed {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: lp2-sway 4.5s ease-in-out infinite;
+}
+
+.lp2-weed-a { animation-duration: 5.2s; animation-delay: -0.6s; }
+.lp2-weed-b { animation-duration: 4.1s; animation-delay: -2.1s; }
+.lp2-weed-c { animation-duration: 5.6s; animation-delay: -3.4s; }
+.lp2-weed-d { animation-duration: 4.6s; animation-delay: -1.2s; }
+.lp2-weed-e { animation-duration: 6s; animation-delay: -4s; }
+
+@keyframes lp2-sway {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(7deg); }
+}
+
+.lp2-bubble {
+  position: absolute;
+  bottom: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95), rgba(255,255,255,0.15) 65%, rgba(255,255,255,0.05));
+  animation: lp2-rise linear infinite;
+  opacity: 0.8;
+}
+
+@keyframes lp2-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  8% { opacity: 0.85; }
+  92% { opacity: 0.5; }
+  100% { transform: translateY(-115vh) translateX(var(--drift, 24px)); opacity: 0; }
+}
+
+/* ── Hero: mascot + wordmark ── */
+.lp2-hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.lp2-fish-wrap {
+  cursor: pointer;
+  width: 190px;
+  animation: lp2-swim 4.2s ease-in-out infinite;
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 14px 22px rgba(2, 20, 30, 0.45));
+}
+
+.lp2-fish-wrap.lp2-dart {
+  animation: lp2-swim 4.2s ease-in-out infinite, lp2-dart-burst 0.9s cubic-bezier(.36,.07,.19,.97) 1;
+}
+
+@keyframes lp2-swim {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-14px) rotate(2deg); }
+}
+
+@keyframes lp2-dart-burst {
+  0% { transform: translateX(0) rotate(0deg) scale(1); }
+  30% { transform: translateX(-26px) rotate(-14deg) scale(1.05); }
+  55% { transform: translateX(30px) rotate(10deg) scale(0.98); }
+  100% { transform: translateX(0) rotate(0deg) scale(1); }
+}
+
+.lp2-tail {
+  transform-origin: 156px 72px;
+  animation: lp2-tail-wag 0.85s ease-in-out infinite;
+}
+
+@keyframes lp2-tail-wag {
+  0%, 100% { transform: rotate(-14deg); }
+  50% { transform: rotate(12deg); }
+}
+
+.lp2-fin {
+  transform-origin: 100px 98px;
+  animation: lp2-fin-flap 1.4s ease-in-out infinite;
+}
+
+@keyframes lp2-fin-flap {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(10deg); }
+}
+
+.lp2-eyelid {
+  animation: lp2-blink 4.6s ease-in-out infinite;
+  transform-origin: 68px 52px;
+}
+
+@keyframes lp2-blink {
+  0%, 92%, 100% { transform: scaleY(0); }
+  95% { transform: scaleY(1); }
+}
+
+.lp2-mouth-bubble {
+  animation: lp2-mouth-rise 2.6s ease-in infinite;
+  opacity: 0;
+}
+.lp2-mouth-bubble:nth-child(1) { animation-delay: 0s; }
+.lp2-mouth-bubble:nth-child(2) { animation-delay: 0.9s; }
+.lp2-mouth-bubble:nth-child(3) { animation-delay: 1.8s; }
+
+@keyframes lp2-mouth-rise {
+  0% { transform: translate(0, 0) scale(0.3); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translate(-10px, -34px) scale(1); opacity: 0; }
+}
+
+.lp2-wordmark {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.lp2-word {
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.lp2-word-aqua { color: var(--lp2-glow); text-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+.lp2-word-feed { color: var(--lp2-cream); text-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+
+.lp2-tagline {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ── Card ── */
+.lp2-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  border-radius: 22px;
+  padding: 28px 26px 24px;
+  box-shadow: 0 20px 44px rgba(2, 20, 30, 0.35), 0 1px 0 rgba(255,255,255,0.4) inset;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.lp2-card h2 {
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--lp2-deep);
+  margin: 0 0 20px;
+}
+
+.lp2-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.lp2-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f4a5c;
+}
+
+.lp2-form input {
+  padding: 12px 14px;
+  border: 1.5px solid #dcebf1;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 600;
+  color: var(--lp2-deep);
+  background: #f4fafc;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.lp2-form input:focus {
+  border-color: var(--lp2-shallow);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(31, 143, 184, 0.15);
+}
+
+.lp2-error {
+  background: #fff1ec;
+  border: 1px solid #ffcdb8;
+  color: #c14a24;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lp2-submit {
+  margin-top: 4px;
+  padding: 13px 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--lp2-coral) 0%, var(--lp2-coral-dark) 100%);
+  color: #fff;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(236, 106, 59, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.lp2-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(236, 106, 59, 0.48);
+}
+
+.lp2-submit:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.97);
+}
+
+.lp2-submit:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.lp2-switch {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b8894;
+}
+
+.lp2-switch a {
+  color: var(--lp2-shallow);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.lp2-switch a:hover { text-decoration: underline; }
+
+@media (max-width: 520px) {
+  .lp2-page { margin: -12px -8px -32px; padding: 32px 12px 40px; }
+  .lp2-fish-wrap { width: 150px; }
+  .lp2-word { font-size: 32px; }
+  .lp2-card { padding: 22px 20px 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp2-fish-wrap,
+  .lp2-tail,
+  .lp2-fin,
+  .lp2-eyelid,
+  .lp2-mouth-bubble,
+  .lp2-bubble,
+  .lp2-ray,
+  .lp2-weed {
+    animation: none !important;
+  }
+}

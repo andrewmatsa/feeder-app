@@ -13,6 +13,16 @@ extern String savedPassword;
 extern String apSSID;
 extern String apPassword;
 extern bool isAPMode;
+// True until the backend confirms this device's MAC is claimed by an account
+// (see backend/devices.py's register-ip response). Starts true so we never
+// flash a false "not added" screen before the first successful backend reply.
+extern bool isDeviceClaimed;
+// WiFi-provisioning progress (AP-mode "connect to home WiFi" flow) — used by
+// the OLED to show live connecting/connected/failed feedback instead of a
+// static "join FishFeeder-XXXX" screen for the whole duration.
+const char* getProvisionStateStr();
+String getProvisionTargetSsid();
+void recheckClaimStatusIfNeeded();
 
 // === WiFi Management Functions ===
 bool connectToWiFi();

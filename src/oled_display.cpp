@@ -5,6 +5,7 @@
 #include "time.h"
 #include "version_info.h"
 #include <math.h>
+#include <string.h>
 
 OledDisplay::OledDisplay(int sdaPin, int sclPin)
   : u8g2(U8G2_R0, /* clock=*/ sclPin, /* data=*/ sdaPin, /* reset=*/ U8X8_PIN_NONE),
@@ -141,6 +142,10 @@ void OledDisplay::update(const DisplayData& data) {
 
   if (showFeedingScreen) {
     drawFeedingScreen();
+  } else if (data.isAPMode) {
+    drawAPModeScreen(data);
+  } else if (data.wifiConnected && !data.deviceClaimed) {
+    drawNotAddedScreen(data);
   } else {
     drawSimpleScreen(data);
   }
@@ -213,9 +218,69 @@ void OledDisplay::drawSimpleScreen(const DisplayData& data) {
   } else {
     u8g2.drawStr(0, 43, nextStr);
   }
+}
+
+void OledDisplay::drawAPModeScreen(const DisplayData& data) {
+  u8g2.setFont(u8g2_font_helvB08_tr);
+  bool isPending = strcmp(data.provisionState, "pending") == 0 || strcmp(data.provisionState, "connecting") == 0;
+  bool isConnected = strcmp(data.provisionState, "connected") == 0;
+  bool isFailed = strcmp(data.provisionState, "failed") == 0;
+
+  if (isPending) {
+    u8g2.drawStr(0, 10, "Connecting to WiFi");
+    u8g2.setFont(u8g2_font_helvR08_tr);
+    u8g2.drawStr(0, 24, "Network:");
+    u8g2.setFont(u8g2_font_helvB08_tr);
+    u8g2.drawStr(0, 36, data.provisionSsid);
+    u8g2.setFont(u8g2_font_helvR08_tr);
+    u8g2.drawStr(0, 50, "Please wait...");
+    return;
+  }
+
+  if (isConnected) {
+    u8g2.drawStr(0, 10, "Connected!");
+    u8g2.setFont(u8g2_font_helvR08_tr);
+    u8g2.drawStr(0, 24, data.provisionSsid);
+    u8g2.drawStr(0, 40, "Returning to normal");
+    u8g2.drawStr(0, 52, "operation...");
+    return;
+  }
+
+  if (isFailed) {
+    u8g2.drawStr(0, 10, "Connection failed");
+    u8g2.setFont(u8g2_font_helvR08_tr);
+    u8g2.drawStr(0, 24, "Could not join:");
+    u8g2.setFont(u8g2_font_helvB08_tr);
+    u8g2.drawStr(0, 36, data.provisionSsid);
+    u8g2.setFont(u8g2_font_helvR08_tr);
+    u8g2.drawStr(0, 50, "Try again below");
+    return;
+  }
+
+  u8g2.drawStr(0, 10, "WiFi setup mode");
+
+  u8g2.setFont(u8g2_font_helvR08_tr);
+  u8g2.drawStr(0, 24, "Connect phone WiFi to:");
+  u8g2.setFont(u8g2_font_helvB08_tr);
+  u8g2.drawStr(0, 36, data.apSsid);
+  u8g2.setFont(u8g2_font_helvR08_tr);
+  u8g2.drawStr(0, 48, "Password: 12345678");
+  u8g2.drawStr(0, 60, "Then open the app");
+}
+
+void OledDisplay::drawNotAddedScreen(const DisplayData& data) {
+  u8g2.setFont(u8g2_font_helvB08_tr);
+  u8g2.drawStr(0, 10, "Not added to any account");
+
+  u8g2.setFont(u8g2_font_helvR08_tr);
+  u8g2.drawStr(0, 24, "1. Open AquaFeed app");
+  u8g2.drawStr(0, 35, "2. Add device");
+  u8g2.drawStr(0, 46, "3. \"Already on WiFi\"");
 
   if (data.ip[0] != '\0') {
-    u8g2.drawStr(0, 58, data.ip);
+    char ipLine[24];
+    snprintf(ipLine, sizeof(ipLine), "IP: %s", data.ip);
+    u8g2.drawStr(0, 60, ipLine);
   }
 }
 

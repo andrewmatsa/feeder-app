@@ -59,6 +59,19 @@ export function DevicesPage() {
       setError(null)
       const list = await api.listDevices()
       setDevices(list)
+
+      // last_seen only advances while a device's own dashboard is open and
+      // actively polling — otherwise the online badge here would go stale
+      // within a minute regardless of whether the feeder is actually up.
+      // Ping each device once (best-effort) so the list reflects live state
+      // without requiring the user to open every dashboard first. One-off
+      // per list load/focus, not a background poll, so it doesn't add
+      // continuous firmware traffic.
+      if (list.length > 0) {
+        await Promise.allSettled(list.map(d => api.getStatus(d.id)))
+        const refreshed = await api.listDevices()
+        setDevices(refreshed)
+      }
     } catch (err) {
       setError(getApiErrorMessage(err, t.loadError))
     } finally {
@@ -68,6 +81,22 @@ export function DevicesPage() {
 
   useEffect(() => {
     void loadDevices()
+  }, [loadDevices])
+
+  // Devices can be added/renamed/deleted from other clients (e.g. the mobile
+  // app) that share the same backend/account — refetch when this tab regains
+  // focus so an already-open web tab doesn't keep showing a stale list.
+  useEffect(() => {
+    const onFocus = () => void loadDevices()
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void loadDevices()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
   }, [loadDevices])
 
   const startRename = (device: Device) => {

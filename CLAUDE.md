@@ -26,6 +26,7 @@ Primary product themes:
 Frontend -> Backend -> ESP32 firmware
 ```
 
+- Scoped exception: during AP-mode WiFi provisioning (device hotspot `FishFeeder-XXXX`), the client has no upstream internet, so the backend is unreachable by definition. `src/web/wifi_page.cpp` and `mobile/src/services/deviceProvision.ts` both call the device's own `192.168.4.1` API directly for this one screen only — this is intentional, not a violation.
 - The backend is the public contract layer. If firmware payloads change, update backend mappers and frontend types together.
 - `versions.json` is the single source of truth for version strings across firmware, backend, and frontend.
 - Battery-first behavior is the default product assumption. Do not trade away deep sleep or low-power behavior casually.
@@ -56,7 +57,8 @@ Hardcoded pins in `src/main.cpp`:
 
 | Press duration | Action |
 |----------------|--------|
-| Short press (<3s) | Manual feed sequence |
+| Short press (<3s), display/device already awake | Manual feed sequence |
+| Short press (<3s), display off or waking from deep sleep | Wakes the display/device only — does **not** feed. Press again once awake to feed. |
 | Long press (≥5s) | Enter AP mode (`FishFeeder-<MAC>`) for WiFi reconfiguration |
 
 To change WiFi when the device is unreachable: hold the button for 3+ seconds → connect to `FishFeeder-XXXX` (password: `12345678`) → open `192.168.4.1/wifi`.

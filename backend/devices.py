@@ -4,17 +4,44 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 try:
-    from .config import SUPABASE_SERVICE_KEY, SUPABASE_URL
+    from .config import MOCK_DEVICE, SUPABASE_SERVICE_KEY, SUPABASE_URL
     from .dependencies import UserClaims, get_bearer_token, get_current_user
+    from .device_client import get_device_base_url, register_device_ip, request_firmware
     from .device_service import DeviceRecord, DeviceService, build_device_service
+    from .models import RegisterIpRequest
+    from .push_notifications import register_push_token
     from .admin import simulated_offline_devices
 except ImportError:
-    from config import SUPABASE_SERVICE_KEY, SUPABASE_URL
+    from config import MOCK_DEVICE, SUPABASE_SERVICE_KEY, SUPABASE_URL
     from dependencies import UserClaims, get_bearer_token, get_current_user
+    from device_client import get_device_base_url, register_device_ip, request_firmware
     from device_service import DeviceRecord, DeviceService, build_device_service
+    from models import RegisterIpRequest
+    from push_notifications import register_push_token
     from admin import simulated_offline_devices
 
 router = APIRouter(prefix="/api/v1/devices", tags=["devices"])
+
+
+class RegisterIpResponse(BaseModel):
+    claimed: bool
+
+
+@router.post("/register-ip", response_model=RegisterIpResponse)
+async def register_ip(request: RegisterIpRequest):
+    """Firmware calls this on every WiFi connect to keep its endpoint_url current.
+
+    Intentionally unauthenticated: firmware has no Supabase user token. Matches by
+    MAC address across all accounts (mac_address is enforced globally unique on
+    creation, see ensure_unique_mac) and updates endpoint_url/last_seen for any
+    match; silently no-ops if the MAC isn't claimed by any device yet — see
+    set_mac_if_missing in device_service.py for how devices first learn their MAC.
+
+    Returns whether this MAC is claimed by any account yet, so the firmware can
+    show "not added" setup instructions on its own OLED screen until it is.
+    """
+    matched = register_device_ip(request.mac, request.ip)
+    return RegisterIpResponse(claimed=matched > 0)
 
 
 class DeviceResponse(BaseModel):
@@ -340,4 +367,35 @@ async def delete_device(
     service: DeviceService = Depends(get_device_service),
 ):
     user_id = str(current_user.id)
+    service.get_device(user_id, device_id)  # 404s if not the caller's device
+
+    # Best-effort: tell the physical device to forget its WiFi credentials so
+    # it doesn't keep sitting on the network under an account it's no longer
+    # part of. Deleting the account record must still succeed even if the
+    # device is offline/unreachable right now — this is not a hard dependency.
+    if not MOCK_DEVICE:
+        try:
+            await request_firmware(
+                "/api/forgetWiFi", method="POST",
+                base_url=get_device_base_url(device_id),
+            )
+        except Exception:
+            pass
+
     service.delete_device(user_id, device_id)
+
+
+class PushTokenRequest(BaseModel):
+    token: str = Field(description="Expo push token, e.g. ExponentPushToken[...]")
+
+
+@router.post("/{device_id}/push-token", status_code=204)
+async def register_push_token_route(
+    device_id: str,
+    request: PushTokenRequest,
+    current_user: UserClaims = Depends(get_current_user),
+    service: DeviceService = Depends(get_device_service),
+):
+    user_id = str(current_user.id)
+    service.get_device(user_id, device_id)  # 404s if this device isn't the caller's
+    register_push_token(user_id, device_id, request.token)
